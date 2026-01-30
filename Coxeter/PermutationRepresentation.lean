@@ -59,5 +59,5 @@ theorem word_t_neq (ω : List B) (hω : cs.IsReduced ω) (i j : Fin ω.length) (
   calc
     ω.length = cs.length (cs.wordProd ω) := by rw [hω]
     _ = cs.length (cs.wordProd (erase2Idx ω hij)) := by rw [h]
-    _ ≤ ((ω.eraseIdx j).eraseIdx i).length := cs.length_wordProd_le _
+    _ ≤ (erase2Idx ω hij).length := cs.length_wordProd_le _
     _ < ω.length := length_erase2Idx_lt ω hij
