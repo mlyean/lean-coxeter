@@ -22,34 +22,42 @@ theorem left_mul_t (ω : List B) (i : Fin ω.length) :
     simp [List.eraseIdx_eq_take_drop_succ]
   exact Fin.is_lt i
 
+def erase2Idx (ω : List B) {i j : Fin ω.length} (_ : i < j) := ((ω.eraseIdx j).eraseIdx i)
+
+theorem length_erase2Idx_lt (ω : List B) {i j : Fin ω.length} (hij : i < j) :
+  (erase2Idx ω hij).length < ω.length := by
+  calc
+    (erase2Idx ω hij).length = ((ω.eraseIdx j).eraseIdx i).length := rfl
+    _ ≤ (ω.eraseIdx j).length := by apply List.length_eraseIdx_le
+    _ < ω.length := ?_
+  rw [List.length_eraseIdx_of_lt]
+  · apply Nat.sub_one_lt
+    exact Nat.ne_zero_of_lt (Fin.is_lt j)
+  · exact Fin.is_lt j
+
 /- Bjorner--Brenti Lemma 1.3.1 -/
 theorem word_t_neq (ω : List B) (hω : cs.IsReduced ω) (i j : Fin ω.length) (hij : i < j) :
   word_t cs ω i ≠ word_t cs ω j := by
   intro heq
-  have h : cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
+  have h : cs.wordProd ω = cs.wordProd (erase2Idx ω hij) := by
     calc
-      cs.wordProd ω = word_t cs ω i * word_t cs ω j * cs.wordProd ω := ?_
+      cs.wordProd ω = word_t cs ω i * word_t cs ω j * cs.wordProd ω :=
+        by rw [heq, word_t_mul_word_t, one_mul]
       _ = word_t cs ω i * cs.wordProd (ω.eraseIdx j) := by rw [mul_assoc, left_mul_t]
-      _ = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := ?_
-    · rw [heq, word_t_mul_word_t, one_mul]
-    · have hi : i < (ω.eraseIdx j).length := by
-        calc
-          ↑i < ↑j := hij
-          _ ≤ ω.length - 1 := Nat.le_sub_one_of_lt (Fin.is_lt j)
-          _ = (ω.eraseIdx j).length := by rw [List.length_eraseIdx_of_lt (Fin.is_lt j)]
-      rw [←left_mul_t cs (ω.eraseIdx j) (Fin.mk i hi)]
-      simp only [word_t, List.get_eq_getElem, mul_left_inj]
-      rw [List.take_eraseIdx_eq_take_of_le, List.getElem_eraseIdx_of_lt]
-      · exact hij
-      · exact le_of_lt hij
+      _ = cs.wordProd (erase2Idx ω hij) := ?_
+    have hi : i < (ω.eraseIdx j).length := by
+      calc
+        ↑i < ↑j := hij
+        _ ≤ ω.length - 1 := Nat.le_sub_one_of_lt (Fin.is_lt j)
+        _ = (ω.eraseIdx j).length := by rw [List.length_eraseIdx_of_lt (Fin.is_lt j)]
+    rw [erase2Idx, ←left_mul_t cs (ω.eraseIdx j) (Fin.mk i hi)]
+    simp only [word_t, List.get_eq_getElem, mul_left_inj]
+    rw [List.take_eraseIdx_eq_take_of_le, List.getElem_eraseIdx_of_lt]
+    · exact hij
+    · exact le_of_lt hij
   apply (lt_self_iff_false ω.length).mp
   calc
     ω.length = cs.length (cs.wordProd ω) := by rw [hω]
-    _ = cs.length (cs.wordProd ((ω.eraseIdx j).eraseIdx i)) := by rw [h]
-    _ ≤ ((ω.eraseIdx j).eraseIdx i).length := by apply cs.length_wordProd_le
-    _ ≤ (ω.eraseIdx j).length := by apply List.length_eraseIdx_le
-    _ < ω.length := ?_
-  · rw [List.length_eraseIdx_of_lt]
-    · apply Nat.sub_one_lt
-      exact Nat.ne_zero_of_lt (Fin.is_lt j)
-    · exact Fin.is_lt j
+    _ = cs.length (cs.wordProd (erase2Idx ω hij)) := by rw [h]
+    _ ≤ ((ω.eraseIdx j).eraseIdx i).length := cs.length_wordProd_le _
+    _ < ω.length := length_erase2Idx_lt ω hij
