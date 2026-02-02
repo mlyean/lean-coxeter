@@ -1,63 +1,50 @@
 import Mathlib.GroupTheory.Coxeter.Length
+import Mathlib.GroupTheory.Coxeter.Inversion
+
+namespace CoxeterSystem
 
 variable {B : Type*}
-variable {W : Type*} [Group W]
+variable {W : Type*} [Group W] [hdeceq : DecidableEq W]
 variable {M : CoxeterMatrix B} (cs : CoxeterSystem M W)
 
-def word_t (ω : List B) (i : Fin ω.length) : W :=
-  cs.wordProd (List.take i ω) * cs.simple (List.get ω i) * (cs.wordProd (List.take i ω))⁻¹
+def T := setOf cs.IsReflection
 
-/- t_i is a reflection -/
-theorem word_t_mul_word_t (ω : List B) (i : Fin ω.length) : word_t cs ω i * word_t cs ω i = 1 := by
-  simp [word_t]
+def R := cs.T × ZMod 2
 
-theorem left_mul_t (ω : List B) (i : Fin ω.length) :
-  (word_t cs ω i) * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
-  nth_rw 2 [←List.take_append_drop i ω]
-  rw [word_t, cs.wordProd_append]
-  simp only [List.get_eq_getElem, mul_assoc, inv_mul_cancel_left]
-  rw [List.drop_eq_getElem_cons, cs.wordProd_cons]
-  · simp [←cs.wordProd_append]
-    congr
-    simp [List.eraseIdx_eq_take_drop_succ]
-  exact Fin.is_lt i
+def η (i : B) (t : cs.T) : ZMod 2 := if cs.simple i = t.val then 1 else 0
 
-def erase2Idx (ω : List B) {i j : Fin ω.length} (_ : i < j) := ((ω.eraseIdx j).eraseIdx i)
+def π (i : B) : cs.R → cs.R
+  | (t, ε) => (⟨cs.simple i * t.val * cs.simple i, aux t⟩, ε + cs.η i t)
+  where
+    aux t :=  by
+      nth_rw 2 [←cs.inv_simple i]
+      exact CoxeterSystem.IsReflection.conj t.prop _
 
-theorem length_erase2Idx_lt (ω : List B) {i j : Fin ω.length} (hij : i < j) :
-  (erase2Idx ω hij).length < ω.length := by
-  calc
-    (erase2Idx ω hij).length = ((ω.eraseIdx j).eraseIdx i).length := rfl
-    _ ≤ (ω.eraseIdx j).length := by apply List.length_eraseIdx_le
-    _ < ω.length := ?_
-  rw [List.length_eraseIdx_of_lt]
-  · apply Nat.sub_one_lt
-    exact Nat.ne_zero_of_lt (Fin.is_lt j)
-  · exact Fin.is_lt j
+theorem pi_involution (i : B) : (cs.π i) ∘ (cs.π i) = id := by
+  ext ⟨t, ε⟩
+  simp only [Function.comp_apply, π, mul_assoc, simple_mul_simple_cancel_left,
+    simple_mul_simple_self, mul_one, Subtype.coe_eta, id_eq]
+  apply Prod.ext (Eq.refl t)
+  match hdeceq (cs.simple i) t.val with
+  | isTrue h =>
+      simp only [η, h, t.prop.mul_self]
+      grind
+  | isFalse h =>
+      have h2 : ¬ t.val * cs.simple i = 1 := by
+        rw [mul_eq_one_iff_eq_inv, cs.inv_simple, Eq.comm]
+        exact h
+      simp [h, h2, η]
 
-/- Bjorner--Brenti Lemma 1.3.1 -/
-theorem word_t_neq (ω : List B) (hω : cs.IsReduced ω) (i j : Fin ω.length) (hij : i < j) :
-  word_t cs ω i ≠ word_t cs ω j := by
-  intro heq
-  have h : cs.wordProd ω = cs.wordProd (erase2Idx ω hij) := by
-    calc
-      cs.wordProd ω = word_t cs ω i * word_t cs ω j * cs.wordProd ω :=
-        by rw [heq, word_t_mul_word_t, one_mul]
-      _ = word_t cs ω i * cs.wordProd (ω.eraseIdx j) := by rw [mul_assoc, left_mul_t]
-      _ = cs.wordProd (erase2Idx ω hij) := ?_
-    have hi : i < (ω.eraseIdx j).length := by
-      calc
-        ↑i < ↑j := hij
-        _ ≤ ω.length - 1 := Nat.le_sub_one_of_lt (Fin.is_lt j)
-        _ = (ω.eraseIdx j).length := by rw [List.length_eraseIdx_of_lt (Fin.is_lt j)]
-    rw [erase2Idx, ←left_mul_t cs (ω.eraseIdx j) (Fin.mk i hi)]
-    simp only [word_t, List.get_eq_getElem, mul_left_inj]
-    rw [List.take_eraseIdx_eq_take_of_le, List.getElem_eraseIdx_of_lt]
-    · exact hij
-    · exact le_of_lt hij
-  apply (lt_self_iff_false ω.length).mp
-  calc
-    ω.length = cs.length (cs.wordProd ω) := by rw [hω]
-    _ = cs.length (cs.wordProd (erase2Idx ω hij)) := by rw [h]
-    _ ≤ (erase2Idx ω hij).length := cs.length_wordProd_le _
-    _ < ω.length := length_erase2Idx_lt ω hij
+def π_equiv (i : B) : Equiv.Perm cs.R := {
+  toFun := cs.π i
+  invFun := cs.π i
+  left_inv := congr_fun (cs.pi_involution i)
+  right_inv := congr_fun (cs.pi_involution i)
+}
+
+/-- Bjorner--Brenti Theorem 1.3.2(i) -/
+theorem pi_liftable : M.IsLiftable cs.π_equiv := by
+  intros i i'
+  sorry
+
+end CoxeterSystem
