@@ -36,7 +36,7 @@ theorem pi_involution (i : B) : (cs.π i) ∘ (cs.π i) = id := by
       simp only [η, h, ↓reduceIte, add_zero, left_eq_mul, h2]
 
 /- Unused lemma -/
-theorem pi_foldr (ω : List B) (r : cs.R) :
+theorem foldr_pi (ω : List B) (r : cs.R) :
   foldr cs.π r ω
     = ⟨⟨MulAut.conj (cs.wordProd ω) r.1, r.1.property.conj _⟩,
         r.2 + count r.1.val (cs.rightInvSeq ω)⟩ := by
@@ -56,7 +56,7 @@ theorem pi_foldr (ω : List B) (r : cs.R) :
         nth_rw 2 [Eq.comm]
         rw [mul_inv_eq_iff_eq_mul, mul_assoc, inv_mul_eq_iff_eq_mul, eq_iff_iff, Eq.comm]
 
-theorem pi_foldl (ω : List B) (r : cs.R) :
+theorem foldl_pi (ω : List B) (r : cs.R) :
   foldl (fun x i => cs.π i x) r ω
     = ⟨⟨MulAut.conj ((cs.wordProd ω)⁻¹) r.1, r.1.property.conj _⟩,
         r.2 + count r.1.val (cs.leftInvSeq ω)⟩ := by
@@ -89,9 +89,9 @@ def π_equiv (i : B) : Equiv.Perm cs.R := {
   right_inv := congr_fun (cs.pi_involution i)
 }
 
-theorem odd_div_2 (n : ℕ) : (2 * n + 1) / 2 = n := by grind
+private theorem odd_div_2 (n : ℕ) : (2 * n + 1) / 2 = n := by grind
 
-/-- Part of Bjorner--Brenti Theorem 1.3.2(i) -/
+/-- Bjorner--Brenti Theorem 1.3.2(i): extension -/
 theorem pi_liftable : M.IsLiftable cs.π_equiv := by
   intros i i'
   ext r
@@ -110,7 +110,7 @@ theorem pi_liftable : M.IsLiftable cs.π_equiv := by
           foldl_nil]
         rw [ih]
         simp only [π_equiv, Equiv.coe_fn_mk]
-  rw [h, pi_foldl, prod_alternatingWord_eq_mul_pow]
+  rw [h, foldl_pi, prod_alternatingWord_eq_mul_pow]
   simp only [even_two, Even.mul_right, ↓reduceIte, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
     mul_div_cancel_left₀, simple_mul_simple_pow', mul_one, inv_one, map_one, MulAut.one_apply,
     Subtype.coe_eta, Equiv.Perm.coe_one, id_eq]
@@ -152,6 +152,53 @@ theorem pi_liftable : M.IsLiftable cs.π_equiv := by
       count_append, h2, ←two_mul]
     apply dvd_mul_right
 
-def π_lift : W →* Equiv.Perm cs.R := cs.lift.toFun ⟨cs.π_equiv, cs.pi_liftable⟩
+def π_lift : W →* Equiv.Perm cs.R := cs.lift ⟨cs.π_equiv, cs.pi_liftable⟩
+
+theorem pi_lift_wordProd (ω : List B) (r : cs.R) :
+  cs.π_lift ((cs.wordProd ω)⁻¹) r = foldl (fun x i => cs.π i x) r ω := by
+  revert r
+  induction ω with
+  | nil => simp
+  | cons i is ih =>
+      intro r
+      rw [wordProd_cons, foldl, ←ih]
+      simp only [mul_inv_rev, inv_simple, map_mul, map_inv, Equiv.Perm.coe_mul, Equiv.Perm.coe_inv,
+        comp_apply, EmbeddingLike.apply_eq_iff_eq]
+      rw [π_lift, cs.lift_apply_simple, π_equiv]
+      rfl
+
+/-- Bjorner--Brenti Theorem 1.3.2(i): injectivity -/
+theorem pi_inj : Function.Injective cs.π_lift := by
+  rw [injective_iff_map_eq_one]
+  intro w hw
+  cases cs.exists_reduced_word (w⁻¹) with
+  | intro ω hω =>
+      rw [inv_eq_iff_eq_inv, length_inv] at hω
+      have hω_reduced : cs.IsReduced ω := by
+        rw [←isReduced_reverse_iff]
+        unfold IsReduced
+        rw [wordProd_reverse, ←hω.right, length_reverse, hω.left]
+      apply by_contradiction
+      intro h
+      rw [←cs.length_eq_zero_iff] at h
+      change cs.length w ≠ 0 at h
+      rw [←pos_iff_ne_zero, ←hω.left] at h
+      rw [hω.right] at hw
+      have h2 := cs.pi_lift_wordProd ω (⟨⟨cs.simple (ω[0]'h), cs.isReflection_simple _⟩, 0⟩)
+      rw [hw, foldl_pi] at h2
+      simp only [Equiv.Perm.coe_one, id_eq, map_inv, MulAut.inv_apply, MulAut.conj_symm_apply,
+        zero_add] at h2
+      have h3 : count (cs.simple ω[0]) (cs.leftInvSeq ω) = 1 := by
+        apply count_eq_one_of_mem
+        · apply hω_reduced.nodup_leftInvSeq
+        · change Mem (cs.simple ω[0]) (cs.leftInvSeq ω)
+          induction ω with
+          | nil => contradiction
+          | cons i is ih =>
+              simp only [getElem_cons_zero, leftInvSeq]
+              apply Mem.head
+      rw [h3] at h2
+      have h4 := congr_arg Prod.snd h2
+      simp at h4
 
 end CoxeterSystem
