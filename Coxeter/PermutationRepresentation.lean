@@ -100,7 +100,7 @@ theorem pi_liftable : M.IsLiftable cs.π_equiv := by
     intro k
     induction k with
     | zero =>
-        unfold alternatingWord;
+        unfold alternatingWord
         rfl
     | succ k ih =>
         rw [mul_add, alternatingWord_succ, alternatingWord_succ]
@@ -154,6 +154,10 @@ theorem pi_liftable : M.IsLiftable cs.π_equiv := by
 
 def π_lift : W →* Equiv.Perm cs.R := cs.lift ⟨cs.π_equiv, cs.pi_liftable⟩
 
+/-- Bjorner--Brenti Theorem 1.3.2(i): uniqueness -/
+theorem pi_lift_ext {φ : W →* Equiv.Perm cs.R}
+  (h : ∀ (i : B), φ (cs.simple i) = cs.π_lift (cs.simple i)) : φ = cs.π_lift := cs.ext_simple h
+
 theorem pi_lift_wordProd (ω : List B) (r : cs.R) :
   cs.π_lift ((cs.wordProd ω)⁻¹) r = foldl (fun x i => cs.π i x) r ω := by
   revert r
@@ -198,7 +202,11 @@ theorem pi_inj : Function.Injective cs.π_lift := by
               simp only [getElem_cons_zero, leftInvSeq]
               apply Mem.head
       rw [h3] at h2
-      have h4 := congr_arg Prod.snd h2
-      simp at h4
+      have h4 : (0 : ZMod 2) = 1 := congr_arg Prod.snd h2
+      contradiction
+
+/-- Bjorner--Brenti Theorem 1.3.2(ii) -/
+theorem pi_reflection (t : cs.T) (ε : ZMod 2) : cs.π_lift t ⟨t, ε⟩ = ⟨t, ε + 1⟩ := by
+  sorry
 
 end CoxeterSystem
