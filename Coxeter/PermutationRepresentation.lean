@@ -103,8 +103,7 @@ theorem pi_liftable : M.IsLiftable cs.π_equiv := by
         unfold alternatingWord
         rfl
     | succ k ih =>
-        rw [mul_add, alternatingWord_succ, alternatingWord_succ]
-        rw [add_comm, pow_add]
+        rw [mul_add, alternatingWord_succ, alternatingWord_succ, add_comm, pow_add]
         simp only [pow_one, Equiv.Perm.coe_mul, comp_apply, concat_eq_append,
           append_assoc, cons_append, nil_append, foldl_append, foldl_cons,
           foldl_nil]
@@ -154,6 +153,11 @@ theorem pi_liftable : M.IsLiftable cs.π_equiv := by
 
 def π_lift : W →* Equiv.Perm cs.R := cs.lift ⟨cs.π_equiv, cs.pi_liftable⟩
 
+@[simp]
+theorem pi_lift_simple (i : B) : cs.π_lift (cs.simple i) = cs.π i := by
+  ext
+  simp [π_lift, π_equiv]
+
 /-- Bjorner--Brenti Theorem 1.3.2(i): uniqueness -/
 theorem pi_lift_ext {φ : W →* Equiv.Perm cs.R}
   (h : ∀ (i : B), φ (cs.simple i) = cs.π_lift (cs.simple i)) : φ = cs.π_lift := cs.ext_simple h
@@ -179,9 +183,7 @@ theorem pi_inj : Function.Injective cs.π_lift := by
   | intro ω hω =>
       rw [inv_eq_iff_eq_inv, length_inv] at hω
       have hω_reduced : cs.IsReduced ω := by
-        rw [←isReduced_reverse_iff]
-        unfold IsReduced
-        rw [wordProd_reverse, ←hω.right, length_reverse, hω.left]
+        rw [←isReduced_reverse_iff, IsReduced, wordProd_reverse, ←hω.right, length_reverse, hω.left]
       apply by_contradiction
       intro h
       rw [←cs.length_eq_zero_iff] at h
@@ -205,8 +207,54 @@ theorem pi_inj : Function.Injective cs.π_lift := by
       have h4 : (0 : ZMod 2) = 1 := congr_arg Prod.snd h2
       contradiction
 
+omit hdeceq in
+theorem reflection_induction {P : cs.T → Prop}
+  (hs : ∀ (i : B), P (⟨cs.simple i, cs.isReflection_simple i⟩))
+  (hind : ∀ (t : cs.T) (i : B),
+    P t → P (⟨(cs.simple i) * t.val * (cs.simple i)⁻¹, t.prop.conj (cs.simple i)⟩)) :
+  ∀ (t : cs.T), P t := by
+  intro t
+  let ⟨w, ⟨i, hi⟩⟩ := t.prop
+  let ⟨ω, hω⟩ := cs.wordProd_surjective w
+  replace hi : t = ⟨w * cs.simple i * w⁻¹, (cs.isReflection_simple i).conj _⟩ := by
+    ext
+    exact hi
+  rw [hi, ←hω]
+  clear hω
+  induction ω with
+  | nil =>
+      simp only [wordProd_nil, one_mul, inv_one, mul_one]
+      apply hs
+  | cons j js ih =>
+      simp only [wordProd_cons, mul_inv_rev, inv_simple]
+      rw [congr_arg P]
+      · apply hind ⟨cs.wordProd js * cs.simple i * (cs.wordProd js)⁻¹,
+          (cs.isReflection_simple i).conj _⟩ j
+        exact ih
+      · simp
+        group
+
 /-- Bjorner--Brenti Theorem 1.3.2(ii) -/
 theorem pi_reflection (t : cs.T) (ε : ZMod 2) : cs.π_lift t ⟨t, ε⟩ = ⟨t, ε + 1⟩ := by
-  sorry
+  revert t ε
+  apply reflection_induction
+  · simp [π_lift, π_equiv, π, η]
+  · intro t i ih ε
+    simp only [inv_simple, map_mul, Equiv.Perm.coe_mul, pi_lift_simple, comp_apply]
+    conv in cs.π i (⟨cs.simple i * ↑t * cs.simple i, _⟩, ε) =>
+      unfold π
+      simp [mul_assoc]
+    rw [ih]
+    simp only [π]
+    congr 1
+    have h : cs.η i ⟨cs.simple i * (↑t * cs.simple i),
+      by rw [←mul_assoc]; nth_rw 2 [←inv_simple]; exact (t.prop.conj _)⟩
+      = cs.η i t := by
+      unfold η
+      congr 1
+      simp only [left_eq_mul, eq_iff_iff]
+      rw [mul_eq_one_iff_eq_inv, Eq.comm, inv_simple]
+    rw [h]
+    grind
 
 end CoxeterSystem
