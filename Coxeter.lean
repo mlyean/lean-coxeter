@@ -1,1 +1,2 @@
+import Coxeter.Basic
 import Coxeter.PermutationRepresentation
