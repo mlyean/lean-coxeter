@@ -122,8 +122,7 @@ noncomputable def π_equiv (i : B) : Equiv.Perm cs.R := {
 private theorem odd_div_2 (n : ℕ) : (2 * n + 1) / 2 = n := by grind
 
 open Classical in
-/-- Bjorner--Brenti Theorem 1.3.2(i): extension -/
-theorem pi_liftable : M.IsLiftable cs.π_equiv := by
+private theorem pi_liftable : M.IsLiftable cs.π_equiv := by
   intros i i'
   ext r
   have h (k : ℕ) : ((cs.π_equiv i * cs.π_equiv i') ^ k) r
@@ -165,6 +164,7 @@ theorem pi_liftable : M.IsLiftable cs.π_equiv := by
     · grind
     · grind
 
+/-- Bjorner--Brenti Theorem 1.3.2(i): extension -/
 noncomputable def π_lift : W →* Equiv.Perm cs.R := cs.lift ⟨cs.π_equiv, cs.pi_liftable⟩
 
 @[simp]
@@ -184,8 +184,7 @@ theorem pi_lift_wordProd (ω : List B) (r : cs.R) :
   | cons i is ih =>
       intro r
       rw [wordProd_cons, foldl, ←ih, mul_inv_rev, map_mul, Equiv.Perm.coe_mul, inv_simple,
-        comp_apply, π_lift, cs.lift_apply_simple, π_equiv]
-      rfl
+        comp_apply, pi_lift_simple]
 
 open Classical in
 /-- Bjorner--Brenti Theorem 1.3.2(i): injectivity -/
@@ -197,10 +196,8 @@ theorem pi_inj : Function.Injective cs.π_lift := by
   subst hω2
   rw [inv_inv] at hω1
   rw [inv_eq_one, ←cs.length_eq_zero_iff, ←hω1]
-  apply Classical.by_contradiction
-  intro h
   cases ω with
-  | nil => contradiction
+  | nil => rfl
   | cons i is =>
       have h2 := cs.pi_lift_wordProd (i :: is) (⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩)
       rw [hw, foldl_pi] at h2
@@ -219,7 +216,7 @@ theorem pi_inj : Function.Injective cs.π_lift := by
 theorem pi_reflection (t : cs.T) (ε : ZMod 2) : cs.π_lift t ⟨t, ε⟩ = ⟨t, ε + 1⟩ := by
   revert t ε
   apply T.ind
-  · simp [π_lift, π_equiv, π, η]
+  · simp [pi_lift_simple, π, η]
   · intro t i ih ε
     simp only [inv_simple, map_mul, Equiv.Perm.coe_mul, pi_lift_simple, comp_apply]
     conv in cs.π i (⟨cs.simple i * ↑t * cs.simple i, _⟩, ε) =>
@@ -228,14 +225,10 @@ theorem pi_reflection (t : cs.T) (ε : ZMod 2) : cs.π_lift t ⟨t, ε⟩ = ⟨t
     rw [ih]
     simp only [π]
     congr 1
-    have h : cs.η i ⟨cs.simple i * (↑t * cs.simple i),
-      by rw [←mul_assoc]; nth_rw 2 [←inv_simple]; exact (t.prop.conj _)⟩
-      = cs.η i t := by
+    conv in cs.η i ⟨cs.simple i * (↑t * cs.simple i), _⟩ =>
       unfold η
-      congr 1
-      simp only [left_eq_mul, eq_iff_iff]
-      rw [mul_eq_one_iff_eq_inv, Eq.comm, inv_simple]
-    rw [h]
+      rw [left_eq_mul, mul_eq_one_iff_eq_inv, inv_simple, Eq.comm]
+      change cs.η i t
     grind
 
 end CoxeterSystem
