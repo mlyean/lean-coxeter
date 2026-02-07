@@ -231,4 +231,54 @@ theorem pi_reflection (t : cs.T) (ε : ZMod 2) : cs.π_lift t ⟨t, ε⟩ = ⟨t
       change cs.η i t
     grind
 
+open Classical in
+noncomputable def η2 (w : W) (t : cs.T) : ZMod 2 :=
+  count t.val (cs.leftInvSeq (choose (cs.wordProd_surjective w)))
+
+open Classical in
+theorem eta2_spec (ω : List B) (t : cs.T) :
+  cs.η2 (cs.wordProd ω) t = count t.val (cs.leftInvSeq ω) := by
+  unfold η2
+  have h : cs.wordProd (choose (cs.wordProd_surjective (cs.wordProd ω))) = cs.wordProd ω :=
+    choose_spec (cs.wordProd_surjective (cs.wordProd ω))
+  have h2 := cs.pi_lift_wordProd (choose (cs.wordProd_surjective (cs.wordProd ω))) ⟨t, 0⟩
+  rw [foldl_pi, h, pi_lift_wordProd, foldl_pi] at h2
+  simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add] at h2
+  rw [Eq.comm]
+  exact congr_arg Prod.snd h2
+
+open Classical in
+theorem eta2_eq_one (w : W) (t : cs.T) (h : cs.η2 w t = 1) : cs.length (t * w) < cs.length w := by
+  let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word w
+  subst hω2
+  rw [eta2_spec] at h
+  have h2 : 0 < count t.val (cs.leftInvSeq ω) := by
+    rw [pos_iff_ne_zero]
+    intro heq
+    rw [heq] at h
+    contradiction
+  rw [count_pos_iff, mem_iff_get] at h2
+  let ⟨i, hi⟩ := h2
+  rw [←hi, ←getD_eq_get _ 1, getD_leftInvSeq_mul_wordProd]
+  calc
+    cs.length (cs.wordProd (ω.eraseIdx i.val))
+      ≤ (ω.eraseIdx i.val).length := by apply length_wordProd_le
+    _ = ω.length - 1 := ?_
+    _ < ω.length := ?_
+    _ = cs.length (cs.wordProd ω) := hω1
+  · apply length_eraseIdx_of_lt
+    rw [←cs.length_leftInvSeq]
+    exact i.prop
+  · apply Nat.sub_one_lt
+    simp only [ne_eq, List.length_eq_zero_iff]
+    intro h3
+    subst h3
+    simp at h
+
+theorem eta2_eq_zero (w : W) (t : cs.T) (h : cs.η2 w t = 0) : cs.length (t * w) > cs.length w := by
+  sorry
+
+theorem strong_exchange (ω : List B) (t : cs.T) : ∃ i < ω.length, t * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
+  sorry
+
 end CoxeterSystem
