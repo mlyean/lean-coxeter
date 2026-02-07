@@ -188,7 +188,7 @@ theorem pi_lift_wordProd (ω : List B) (r : cs.R) :
 
 open Classical in
 /-- Bjorner--Brenti Theorem 1.3.2(i): injectivity -/
-theorem pi_inj : Function.Injective cs.π_lift := by
+theorem pi_lift_inj : Function.Injective cs.π_lift := by
   rw [injective_iff_map_eq_one]
   intro w hw
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word (w⁻¹)
@@ -213,7 +213,7 @@ theorem pi_inj : Function.Injective cs.π_lift := by
       contradiction
 
 /-- Bjorner--Brenti Theorem 1.3.2(ii) -/
-theorem pi_reflection (t : cs.T) (ε : ZMod 2) : cs.π_lift t ⟨t, ε⟩ = ⟨t, ε + 1⟩ := by
+theorem pi_lift_reflection (t : cs.T) (ε : ZMod 2) : cs.π_lift t ⟨t, ε⟩ = ⟨t, ε + 1⟩ := by
   revert t ε
   apply T.ind
   · simp [pi_lift_simple, π, η]
@@ -235,6 +235,20 @@ open Classical in
 noncomputable def η2 (w : W) (t : cs.T) : ZMod 2 :=
   count t.val (cs.leftInvSeq (choose (cs.wordProd_surjective w)))
 
+theorem pi_lift_eq' (w : W) (r : cs.R) : cs.π_lift w⁻¹ r
+  = ⟨⟨MulAut.conj w⁻¹ r.1, r.1.prop.conj _⟩, r.2 + cs.η2 w r.1⟩ := by
+  unfold η2
+  have h := Exists.choose_spec (cs.wordProd_surjective w)
+  rw [←h, pi_lift_wordProd, foldl_pi]
+  grind
+
+theorem pi_lift_eq (w : W) (r : cs.R) : cs.π_lift w r
+  = ⟨⟨MulAut.conj w r.1, r.1.prop.conj _⟩, r.2 + cs.η2 w⁻¹ r.1⟩ := by
+  have h := cs.pi_lift_eq' w⁻¹ r
+  rw [inv_inv] at h
+  exact h
+
+/- TODO: Simplify this using pi_eq -/
 open Classical in
 theorem eta2_spec (ω : List B) (t : cs.T) :
   cs.η2 (cs.wordProd ω) t = count t.val (cs.leftInvSeq ω) := by
@@ -276,9 +290,56 @@ theorem eta2_eq_one (w : W) (t : cs.T) (h : cs.η2 w t = 1) : cs.length (t * w) 
     simp at h
 
 theorem eta2_eq_zero (w : W) (t : cs.T) (h : cs.η2 w t = 0) : cs.length (t * w) > cs.length w := by
-  sorry
+  suffices h2 : cs.length (t * (t * w)) < cs.length (t * w) by
+    rw [←mul_assoc, t.prop.mul_self, one_mul] at h2
+    exact h2
+  apply eta2_eq_one
+  have h2 := cs.pi_lift_eq' (t * w) ⟨t, 0⟩
+  rw [mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, t.prop.inv,
+    pi_lift_eq', pi_lift_reflection, h] at h2
+  simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add, add_zero, map_mul,
+    MulAut.mul_apply, MulAut.conj_apply, mul_inv_cancel_right] at h2
+  have h3 := congr_arg Prod.snd h2
+  rw [Eq.comm] at h3
+  exact h3
 
-theorem strong_exchange (ω : List B) (t : cs.T) : ∃ i < ω.length, t * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
-  sorry
+theorem zmod2_cases (n : ZMod 2) : n.val = 0 ∨ n.val = 1 := by grind
+
+theorem eta2_eq_one_iff (w : W) (t : cs.T) : cs.η2 w t = 1 ↔ cs.length (t * w) < cs.length w := by
+  constructor
+  · apply eta2_eq_one
+  · intro h
+    apply by_contradiction
+    intro h2
+    replace h2 : ¬(cs.η2 w t).val = (1 : ZMod 2).val := by
+      intro h
+      have := Fin.ext h
+      contradiction
+    have h3 : cs.η2 w t = 0 := by
+      apply Fin.ext
+      have : (cs.η2 w t).val < 2 := (cs.η2 w t).prop
+      cases zmod2_cases (cs.η2 w t) with
+      | inl h4 => exact h4
+      | inr h4 => contradiction
+    have := cs.eta2_eq_zero w t h3
+    grind
+
+open Classical in
+theorem strong_exchange (ω : List B) (t : cs.T)
+  (h : cs.length (t * cs.wordProd ω) < cs.length (cs.wordProd ω)) :
+  ∃ i < ω.length, t * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
+  rw [←cs.eta2_eq_one_iff, eta2_spec] at h
+  have h2 : 0 < count (↑t) (cs.leftInvSeq ω) := by
+    rw [pos_iff_ne_zero]
+    intro heq
+    rw [heq] at h
+    contradiction
+  rw [count_pos_iff, mem_iff_get] at h2
+  let ⟨i, hi⟩ := h2
+  exists i
+  constructor
+  · rw [←cs.length_leftInvSeq ω]
+    exact i.prop
+  · rw [←hi, ←getD_leftInvSeq_mul_wordProd, getD_eq_get]
 
 end CoxeterSystem
