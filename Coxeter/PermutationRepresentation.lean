@@ -13,8 +13,8 @@ def T := setOf cs.IsReflection
 
 /-- Induction principle for reflections -/
 theorem T.ind {P : cs.T → Prop}
-  (hs : ∀ (i : B), P (⟨cs.simple i, cs.isReflection_simple i⟩))
-  (hind : ∀ (t : cs.T) (i : B),
+  (sh : ∀ (i : B), P (⟨cs.simple i, cs.isReflection_simple i⟩))
+  (ih : ∀ (t : cs.T) (i : B),
     P t → P (⟨(cs.simple i) * t.val * (cs.simple i)⁻¹, t.prop.conj (cs.simple i)⟩)) :
   ∀ (t : cs.T), P t := by
   intro t
@@ -27,24 +27,25 @@ theorem T.ind {P : cs.T → Prop}
   induction ω with
   | nil =>
       rw [congr_arg P]
-      · apply hs i
+      · apply sh i
       · congr
         rw [wordProd_nil, one_mul, inv_one, mul_one]
-  | cons j js ih =>
+  | cons j js ih2 =>
       simp only [wordProd_cons, mul_inv_rev, inv_simple]
       rw [congr_arg P]
-      · apply hind ⟨cs.wordProd js * cs.simple i * (cs.wordProd js)⁻¹,
-          (cs.isReflection_simple i).conj _⟩ j
-        exact ih
+      · exact ih ⟨cs.wordProd js * cs.simple i * (cs.wordProd js)⁻¹,
+          (cs.isReflection_simple i).conj _⟩ j ih2
       · simp only [inv_simple, Subtype.mk.injEq]
         group
 
 def R := cs.T × ZMod 2
 
-open Classical in
-noncomputable def η (i : B) (t : cs.T) : ZMod 2 := if cs.simple i = t.val then 1 else 0
+noncomputable section
 
-noncomputable def π (i : B) : cs.R → cs.R
+open Classical in
+def η (i : B) (t : cs.T) : ZMod 2 := if cs.simple i = t.val then 1 else 0
+
+def π (i : B) : cs.R → cs.R
   | (t, ε) => (⟨cs.simple i * t.val * cs.simple i,
                   by nth_rw 2 [←cs.inv_simple i]; apply t.prop.conj⟩
                 , ε + cs.η i t)
@@ -112,7 +113,7 @@ theorem foldl_pi (ω : List B) (r : cs.R) :
       simp only [beq_iff_eq, comp_apply, MulAut.conj_apply, inv_simple]
       rw [←mul_inv_eq_iff_eq_mul, ←inv_mul_eq_iff_eq_mul, mul_assoc, inv_simple]
 
-noncomputable def π_equiv (i : B) : Equiv.Perm cs.R := {
+def π_equiv (i : B) : Equiv.Perm cs.R := {
   toFun := cs.π i
   invFun := cs.π i
   left_inv := congr_fun (cs.pi_involution i)
@@ -165,7 +166,7 @@ private theorem pi_liftable : M.IsLiftable cs.π_equiv := by
     · grind
 
 /-- Bjorner--Brenti Theorem 1.3.2(i): extension -/
-noncomputable def π_lift : W →* Equiv.Perm cs.R := cs.lift ⟨cs.π_equiv, cs.pi_liftable⟩
+def π_lift : W →* Equiv.Perm cs.R := cs.lift ⟨cs.π_equiv, cs.pi_liftable⟩
 
 @[simp]
 theorem pi_lift_simple (i : B) : cs.π_lift (cs.simple i) = cs.π i := by
@@ -232,7 +233,7 @@ theorem pi_lift_reflection (t : cs.T) (ε : ZMod 2) : cs.π_lift t ⟨t, ε⟩ =
     grind
 
 open Classical in
-noncomputable def η2 (w : W) (t : cs.T) : ZMod 2 :=
+def η2 (w : W) (t : cs.T) : ZMod 2 :=
   count t.val (cs.leftInvSeq (choose (cs.wordProd_surjective w)))
 
 theorem pi_lift_eq' (w : W) (r : cs.R) : cs.π_lift w⁻¹ r
@@ -248,18 +249,13 @@ theorem pi_lift_eq (w : W) (r : cs.R) : cs.π_lift w r
   rw [inv_inv] at h
   exact h
 
-/- TODO: Simplify this using pi_eq -/
 open Classical in
 theorem eta2_spec (ω : List B) (t : cs.T) :
   cs.η2 (cs.wordProd ω) t = count t.val (cs.leftInvSeq ω) := by
-  unfold η2
-  have h : cs.wordProd (choose (cs.wordProd_surjective (cs.wordProd ω))) = cs.wordProd ω :=
-    choose_spec (cs.wordProd_surjective (cs.wordProd ω))
-  have h2 := cs.pi_lift_wordProd (choose (cs.wordProd_surjective (cs.wordProd ω))) ⟨t, 0⟩
-  rw [foldl_pi, h, pi_lift_wordProd, foldl_pi] at h2
-  simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add] at h2
-  rw [Eq.comm]
-  exact congr_arg Prod.snd h2
+  have h := cs.pi_lift_eq' (cs.wordProd ω) ⟨t, 0⟩
+  rw [pi_lift_wordProd, foldl_pi] at h
+  simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add] at h
+  exact (congr_arg Prod.snd h).symm
 
 open Classical in
 theorem eta2_eq_one (w : W) (t : cs.T) (h : cs.η2 w t = 1) : cs.length (t * w) < cs.length w := by
@@ -299,32 +295,23 @@ theorem eta2_eq_zero (w : W) (t : cs.T) (h : cs.η2 w t = 0) : cs.length (t * w)
     pi_lift_eq', pi_lift_reflection, h] at h2
   simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add, add_zero, map_mul,
     MulAut.mul_apply, MulAut.conj_apply, mul_inv_cancel_right] at h2
-  have h3 := congr_arg Prod.snd h2
-  rw [Eq.comm] at h3
-  exact h3
+  exact (congr_arg Prod.snd h2).symm
 
-theorem zmod2_cases (n : ZMod 2) : n.val = 0 ∨ n.val = 1 := by grind
+private theorem zmod2_eq_one_iff (n : ZMod 2) : n = 1 ↔ ¬ n = 0 := by
+  rw [Fin.ext_iff, Fin.ext_iff]
+  grind
 
 theorem eta2_eq_one_iff (w : W) (t : cs.T) : cs.η2 w t = 1 ↔ cs.length (t * w) < cs.length w := by
   constructor
   · apply eta2_eq_one
   · intro h
-    apply by_contradiction
+    rw [zmod2_eq_one_iff]
     intro h2
-    replace h2 : ¬(cs.η2 w t).val = (1 : ZMod 2).val := by
-      intro h
-      have := Fin.ext h
-      contradiction
-    have h3 : cs.η2 w t = 0 := by
-      apply Fin.ext
-      have : (cs.η2 w t).val < 2 := (cs.η2 w t).prop
-      cases zmod2_cases (cs.η2 w t) with
-      | inl h4 => exact h4
-      | inr h4 => contradiction
-    have := cs.eta2_eq_zero w t h3
+    have := cs.eta2_eq_zero w t h2
     grind
 
 open Classical in
+/-- Bjorner--Brenti Theorem 1.4.3 -/
 theorem strong_exchange (ω : List B) (t : cs.T)
   (h : cs.length (t * cs.wordProd ω) < cs.length (cs.wordProd ω)) :
   ∃ i < ω.length, t * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
@@ -341,5 +328,7 @@ theorem strong_exchange (ω : List B) (t : cs.T)
   · rw [←cs.length_leftInvSeq ω]
     exact i.prop
   · rw [←hi, ←getD_leftInvSeq_mul_wordProd, getD_eq_get]
+
+end
 
 end CoxeterSystem
