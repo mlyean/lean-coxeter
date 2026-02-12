@@ -1,2 +1,3 @@
 import Coxeter.Basic
 import Coxeter.PermutationRepresentation
+import Coxeter.StrongExchange
