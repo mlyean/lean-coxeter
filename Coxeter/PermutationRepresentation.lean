@@ -311,23 +311,77 @@ theorem eta2_eq_one_iff (w : W) (t : cs.T) : cs.η2 w t = 1 ↔ cs.length (t * w
     grind
 
 open Classical in
-/-- Bjorner--Brenti Theorem 1.4.3 -/
-theorem strong_exchange (ω : List B) (t : cs.T)
-  (h : cs.length (t * cs.wordProd ω) < cs.length (cs.wordProd ω)) :
-  ∃ i < ω.length, t * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
-  rw [←cs.eta2_eq_one_iff, eta2_spec] at h
-  have h2 : 0 < count (↑t) (cs.leftInvSeq ω) := by
+/-- Bjorner--Brenti Corollary 1.4.4 (a) implies (c) -/
+theorem mem_leftInvSeq_of_isLeftInversion
+  {ω : List B} {t : W} (ht : cs.IsReflection t) (h : cs.IsLeftInversion (cs.wordProd ω) t) :
+  t ∈ cs.leftInvSeq ω := by
+  have hrw := cs.eta2_eq_one_iff (cs.wordProd ω) ⟨t, ht⟩
+  dsimp at hrw
+  rw [IsLeftInversion, ←hrw, eta2_spec] at h
+  have h2 : 0 < count t (cs.leftInvSeq ω) := by
     rw [pos_iff_ne_zero]
     intro heq
     rw [heq] at h
+    have := h.2
     contradiction
-  rw [count_pos_iff, mem_iff_get] at h2
+  rw [←count_pos_iff]
+  exact h2
+
+/-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
+theorem isLeftInversion_iff_mem_leftInvSeq
+  {ω : List B} (t : W) (hω : cs.IsReduced ω) :
+  cs.IsLeftInversion (cs.wordProd ω) t ↔ t ∈ cs.leftInvSeq ω := by
+  constructor
+  · intro h
+    exact cs.mem_leftInvSeq_of_isLeftInversion h.1 h
+  · exact cs.isLeftInversion_of_mem_leftInvSeq hω
+
+open Classical in
+/-- Bjorner--Brenti Theorem 1.4.3 -/
+theorem strong_exchange
+  {ω : List B} {t : W} (ht : cs.IsReflection t) (h : cs.IsLeftInversion (cs.wordProd ω) t) :
+  ∃ i < ω.length, t * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
+  have h2 := cs.mem_leftInvSeq_of_isLeftInversion ht h
+  rw [mem_iff_get] at h2
   let ⟨i, hi⟩ := h2
   exists i
   constructor
   · rw [←cs.length_leftInvSeq ω]
     exact i.prop
   · rw [←hi, ←getD_leftInvSeq_mul_wordProd, getD_eq_get]
+
+open Classical in
+theorem leftInversionSet_eq {ω : List B} (hω : cs.IsReduced ω) :
+  setOf (cs.IsLeftInversion (cs.wordProd ω)) = (cs.leftInvSeq ω).toFinset := by
+  ext t
+  simp only [Set.mem_setOf_eq, coe_toFinset]
+  exact cs.isLeftInversion_iff_mem_leftInvSeq _ hω
+
+theorem finite_of_isLeftInversion (w : W) : Set.Finite (cs.IsLeftInversion w) := by
+  let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word w
+  subst hω2
+  rw [Eq.comm] at hω1
+  change cs.IsReduced ω at hω1
+  change Finite (setOf (cs.IsLeftInversion (cs.wordProd ω)))
+  rw [cs.leftInversionSet_eq hω1]
+  apply finite_toSet
+
+open Classical in
+/-- Bjorner--Brenti Corollary 1.4.5 -/
+theorem card_of_leftInversionSet (w : W) :
+  Nat.card (setOf (cs.IsLeftInversion w)) = cs.length w := by
+  let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word w
+  subst hω2
+  rw [Eq.comm] at hω1
+  change cs.IsReduced ω at hω1
+  rw [Nat.subtype_card (cs.leftInvSeq ω).toFinset]
+  · rw [toFinset_card_of_nodup]
+    · simp only [length_leftInvSeq]
+      exact hω1.symm
+    · exact hω1.nodup_leftInvSeq
+  · simp only [mem_toFinset, Set.mem_setOf_eq]
+    intro x
+    exact (cs.isLeftInversion_iff_mem_leftInvSeq x hω1).symm
 
 end
 
