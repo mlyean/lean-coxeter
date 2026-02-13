@@ -112,23 +112,22 @@ theorem deletion_property {ω : List B} (hω : cs.length (cs.wordProd ω) < ω.l
     exists ω.length - 1
   let i := Nat.find h2
   have h3 : cs.IsReduced (drop (i + 1) ω) := Nat.find_spec h2
-  have h4 : ¬ cs.IsReduced ω := by
-    unfold IsReduced
-    grind
-  have h5 : ¬ cs.IsReduced (drop i ω) := by
+  have h4 : ¬ cs.IsReduced (drop i ω) := by
     cases Nat.eq_zero_or_pos i with
     | inl h =>
         rw [h]
-        exact h4
+        unfold IsReduced
+        grind
     | inr h =>
         replace h : i ≠ 0 := by grind
         rw [←Nat.sub_one_add_one h]
         apply Nat.find_min h2
-        grind
-  have h6 : i < ω.length := by
+        exact Nat.sub_one_lt h
+  have h5 : i < ω.length := by
     rw [Nat.find_lt_iff]
+    exists ω.length - 1
     grind
-  have h7 : cs.length (cs.simple ω[i] * cs.wordProd (drop (i + 1) ω)) + 1
+  have h6 : cs.length (cs.simple ω[i] * cs.wordProd (drop (i + 1) ω)) + 1
     = cs.length (cs.wordProd (drop (i + 1) ω)):= by
     rw [←isLeftDescent_iff]
     by_contra h
@@ -136,23 +135,57 @@ theorem deletion_property {ω : List B} (hω : cs.length (cs.wordProd ω) < ω.l
     simp only [getElem_cons_drop] at h
     unfold IsReduced at *
     grind
-  have h8 : cs.IsLeftInversion (cs.wordProd (drop (i + 1) ω)) (cs.simple ω[i]) := by
+  have h7 : cs.IsLeftInversion (cs.wordProd (drop (i + 1) ω)) (cs.simple ω[i]) := by
     constructor
     · exact cs.isReflection_simple _
     · grind
-  let ⟨k, ⟨hk1, hk2⟩⟩ := cs.strong_exchange (cs.isReflection_simple ω[i]) h8
+  let ⟨k, ⟨hk1, hk2⟩⟩ := cs.strong_exchange (cs.isReflection_simple ω[i]) h7
   exists i
   exists i + k + 1
   dsimp at *
   apply And.intro (by grind) (And.intro (by grind) _)
   rw [eraseIdx_eq_take_drop_succ, take_eraseIdx_eq_take_of_le _ i (i + k + 1) (by grind)]
   nth_rw 1 [←take_append_drop i ω]
-  rw [wordProd_append, wordProd_append, mul_right_inj]
   rw [←wordProd_cons, getElem_cons_drop] at hk2
-  rw [hk2]
+  rw [wordProd_append, wordProd_append, mul_right_inj, hk2, add_right_comm]
   congr
-  have h9 := drop_eraseIdx ω (i + 1) k
-  rw [add_right_comm] at h9
-  exact h9
+  apply drop_eraseIdx
+
+theorem deletion_property' {ω : List B} (hω : ¬ cs.IsReduced ω) :
+  ∃ i j, i < j ∧ j < ω.length ∧ cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
+  apply deletion_property
+  unfold IsReduced at hω
+  have := cs.length_wordProd_le ω
+  grind
+
+/-- Bjorner--Brenti Corollary 1.4.8 (i) -/
+theorem exists_reduced_subword (ω : List B) :
+  ∃ (ω' : List B), ω' <+ ω ∧ cs.IsReduced ω' ∧ cs.wordProd ω = cs.wordProd ω' := by
+  revert ω
+  suffices h : ∀ k, ∀ ω : List B, ω.length < k →
+    ∃ (ω' : List B), ω' <+ ω ∧ cs.IsReduced ω' ∧ cs.wordProd ω = cs.wordProd ω' from by
+    intro ω
+    apply h (ω.length + 1)
+    simp
+  intro k
+  induction k with
+  | zero => simp
+  | succ k ih =>
+      intro ω h
+      cases em (cs.IsReduced ω) with
+      | inl h2 => exists ω
+      | inr h2 =>
+          let ⟨i, j, h3⟩ := cs.deletion_property' h2
+          have ⟨ω', h4⟩ := ih ((ω.eraseIdx j).eraseIdx i) (by grind)
+          exists ω'
+          apply And.intro
+          · trans
+            · exact h4.1
+            · trans
+              · apply eraseIdx_sublist
+              · apply eraseIdx_sublist
+          · apply And.intro
+            · exact h4.2.1
+            · grind
 
 end CoxeterSystem
