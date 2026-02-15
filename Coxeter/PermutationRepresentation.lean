@@ -15,14 +15,16 @@ variable {B : Type*}
 variable {W : Type*} [Group W]
 variable {M : CoxeterMatrix B} (cs : CoxeterSystem M W)
 
-def T := setOf cs.IsReflection
+def ReflectionSet := setOf cs.IsReflection
+
+def RootSet := cs.ReflectionSet × ZMod 2
 
 /-- Induction principle for reflections -/
-theorem T.ind {P : cs.T → Prop}
+theorem ReflectionSet.induction {P : cs.ReflectionSet → Prop}
   (sh : ∀ (i : B), P (⟨cs.simple i, cs.isReflection_simple i⟩))
-  (ih : ∀ (t : cs.T) (i : B),
+  (ih : ∀ (t : cs.ReflectionSet) (i : B),
     P t → P (⟨(cs.simple i) * t.val * (cs.simple i)⁻¹, t.prop.conj (cs.simple i)⟩)) :
-  ∀ (t : cs.T), P t := by
+  ∀ (t : cs.ReflectionSet), P t := by
   intro t
   let ⟨w, ⟨i, hi⟩⟩ := t.prop
   let ⟨ω, hω⟩ := cs.wordProd_surjective w
@@ -44,59 +46,43 @@ theorem T.ind {P : cs.T → Prop}
       · simp only [inv_simple, Subtype.mk.injEq]
         group
 
-def R := cs.T × ZMod 2
-
 noncomputable section
 
-open Classical in
-def η (i : B) (t : cs.T) : ZMod 2 := if cs.simple i = t.val then 1 else 0
-
-def π (i : B) : cs.R → cs.R
-  | (t, ε) => (⟨cs.simple i * t.val * cs.simple i,
-                  by nth_rw 2 [←cs.inv_simple i]; apply t.prop.conj⟩
-                , ε + cs.η i t)
+section lemmas
 
 open Classical in
-theorem pi_involution (i : B) : (cs.π i) ∘ (cs.π i) = id := by
-  ext ⟨t, ε⟩
-  simp only [comp_apply, π, mul_assoc, simple_mul_simple_cancel_left,
-    simple_mul_simple_self, mul_one, Subtype.coe_eta, id_eq]
-  rw [←Prod.snd_eq_iff]
-  cases decEq (cs.simple i) t.val with
-  | isTrue h =>
-      simp only [η, h, t.prop.mul_self, mul_one]
-      grind
-  | isFalse h =>
-      simp only [η, h, ↓reduceIte, add_zero, left_eq_mul, add_eq_left, ite_eq_right_iff,
-        one_ne_zero, imp_false]
-      rw [mul_eq_one_iff_eq_inv, cs.inv_simple, Eq.comm]
-      exact h
+def etaAux (i : B) (t : W) : ZMod 2 := if cs.simple i = t then 1 else 0
 
-/- Unused lemma -/
-open Classical in
-theorem foldr_pi (ω : List B) (r : cs.R) :
-  foldr cs.π r ω
-    = ⟨⟨MulAut.conj (cs.wordProd ω) r.1, r.1.property.conj _⟩,
-        r.2 + count r.1.val (cs.rightInvSeq ω)⟩ := by
-  revert r
-  induction ω with
-  | nil => simp
-  | cons a as ih =>
-      intro r
-      rw [cs.wordProd_cons, foldr_cons, ih]
-      apply Prod.ext
-      · simp [π]
-      · simp only [π, MulAut.conj_apply, rightInvSeq]
-        rw [add_assoc, add_right_inj r.2, count_cons]
-        simp only [η, beq_iff_eq, Nat.cast_add, Nat.cast_ite, Nat.cast_one, Nat.cast_zero,
-          add_right_inj]
-        congr 1
-        nth_rw 2 [Eq.comm]
-        rw [mul_inv_eq_iff_eq_mul, mul_assoc, inv_mul_eq_iff_eq_mul, eq_iff_iff, Eq.comm]
+@[simp]
+private theorem etaAux_conj (i : B) (t : W) :
+  cs.etaAux i ((cs.simple i) * t * (cs.simple i)⁻¹) = cs.etaAux i t := by
+  unfold etaAux
+  congr 1
+  rw [inv_simple, right_eq_mul, eq_iff_iff, mul_eq_one_iff_eq_inv', inv_simple]
+  tauto
+
+private theorem etaAux_conj' (i : B) (t : W) :
+  cs.etaAux i (MulAut.conj (cs.simple i) t) = cs.etaAux i t := by
+  rw [MulAut.conj_apply]
+  apply etaAux_conj
+
+private def permRepAux (i : B) : cs.RootSet → cs.RootSet
+  | (⟨t, h⟩, ε) => (⟨MulAut.conj (cs.simple i) t, h.conj _⟩ , ε + cs.etaAux i t)
 
 open Classical in
-theorem foldl_pi (ω : List B) (r : cs.R) :
-  foldl (fun x i => cs.π i x) r ω
+private theorem permRepAux_involutive (i : B) : Function.Involutive (cs.permRepAux i) := by
+  intro ⟨t, ε⟩
+  rw [permRepAux, permRepAux]
+  apply Prod.ext
+  · ext
+    simp [mul_assoc]
+  · dsimp only
+    rw [etaAux_conj']
+    grind
+
+open Classical in
+private theorem foldl_permRepAux (ω : List B) (r : cs.RootSet) :
+  foldl (fun x i => cs.permRepAux i x) r ω
     = ⟨⟨MulAut.conj ((cs.wordProd ω)⁻¹) r.1, r.1.property.conj _⟩,
         r.2 + count r.1.val (cs.leftInvSeq ω)⟩ := by
   revert r
@@ -105,35 +91,34 @@ theorem foldl_pi (ω : List B) (r : cs.R) :
   | cons a as ih =>
       intro ⟨t, ε⟩
       rw [cs.wordProd_cons, foldl_cons, ih]
-      simp only [map_inv, π, MulAut.inv_apply, MulAut.conj_symm_apply, mul_inv_rev, inv_simple,
-        map_mul, MulAut.mul_apply, MulAut.conj_apply]
-      rw [←Prod.snd_eq_iff, leftInvSeq, count_cons, η, add_assoc, add_right_inj ε]
-      nth_rw 2 [add_comm]
-      simp only [beq_iff_eq, Nat.cast_add, Nat.cast_ite, Nat.cast_one, Nat.cast_zero,
-        add_right_inj]
-      congr 1
-      unfold count
-      rw [countP_map]
-      apply countP_congr
-      intro w _
-      simp only [beq_iff_eq, comp_apply, MulAut.conj_apply, inv_simple]
-      rw [←mul_inv_eq_iff_eq_mul, ←inv_mul_eq_iff_eq_mul, mul_assoc, inv_simple]
+      apply Prod.ext
+      · unfold permRepAux
+        simp
+      · rw [leftInvSeq, permRepAux, etaAux, add_assoc, add_right_inj ε, count_cons, add_comm]
+        simp only [MulAut.conj_apply, inv_simple, beq_iff_eq, Nat.cast_add, Nat.cast_ite,
+          Nat.cast_one, Nat.cast_zero, add_left_inj]
+        unfold count
+        rw [countP_map]
+        congr
+        ext x
+        rw [comp_apply, MulAut.conj_apply, inv_simple, beq_eq_beq, ←mul_inv_eq_iff_eq_mul,
+          ←inv_mul_eq_iff_eq_mul, mul_assoc, inv_simple]
 
-def π_equiv (i : B) : Equiv.Perm cs.R := {
-  toFun := cs.π i
-  invFun := cs.π i
-  left_inv := congr_fun (cs.pi_involution i)
-  right_inv := congr_fun (cs.pi_involution i)
+private def permRepAux_equiv (i : B) : Equiv.Perm cs.RootSet := {
+  toFun := cs.permRepAux i
+  invFun := cs.permRepAux i
+  left_inv := cs.permRepAux_involutive i
+  right_inv := cs.permRepAux_involutive i
 }
 
 private theorem odd_div_2 (n : ℕ) : (2 * n + 1) / 2 = n := by grind
 
 open Classical in
-private theorem pi_liftable : M.IsLiftable cs.π_equiv := by
+private theorem permRepAux_liftable : M.IsLiftable cs.permRepAux_equiv := by
   intros i i'
   ext r
-  have h (k : ℕ) : ((cs.π_equiv i * cs.π_equiv i') ^ k) r
-    = foldl (fun x i => cs.π i x) r (alternatingWord i' i (2 * k)) := by
+  have h (k : ℕ) : ((cs.permRepAux_equiv i * cs.permRepAux_equiv i') ^ k) r
+    = foldl (fun x i => cs.permRepAux i x) r (alternatingWord i' i (2 * k)) := by
     induction k with
     | zero =>
         unfold alternatingWord
@@ -144,7 +129,7 @@ private theorem pi_liftable : M.IsLiftable cs.π_equiv := by
           · rw [add_comm, pow_add, pow_one, Equiv.Perm.coe_mul, Function.comp, ih]
           · simp only [mul_add, alternatingWord_succ, concat_eq_append, foldl_append]
         rfl
-  rw [h, foldl_pi, prod_alternatingWord_eq_mul_pow]
+  rw [h, foldl_permRepAux, prod_alternatingWord_eq_mul_pow]
   simp only [even_two, Even.mul_right, ↓reduceIte, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
     mul_div_cancel_left₀, simple_mul_simple_pow', mul_one, inv_one, map_one, MulAut.one_apply,
     Subtype.coe_eta, Equiv.Perm.coe_one, id_eq]
@@ -171,31 +156,61 @@ private theorem pi_liftable : M.IsLiftable cs.π_equiv := by
     · grind
     · grind
 
+end lemmas
+
 /-- Bjorner--Brenti Theorem 1.3.2(i): extension -/
-def π_lift : W →* Equiv.Perm cs.R := cs.lift ⟨cs.π_equiv, cs.pi_liftable⟩
+def permRep : W →* Equiv.Perm cs.RootSet := cs.lift ⟨cs.permRepAux_equiv, cs.permRepAux_liftable⟩
 
 @[simp]
-theorem pi_lift_simple (i : B) : cs.π_lift (cs.simple i) = cs.π i := by
-  ext
-  simp [π_lift, π_equiv]
+theorem permRep_simple (i : B) (r : cs.RootSet) : cs.permRep (cs.simple i) r
+  = (⟨MulAut.conj (cs.simple i) r.1, r.1.prop.conj _⟩ , r.2 + cs.etaAux i r.1) := by
+  unfold permRep
+  rw [lift_apply_simple]
+  rfl
+
+theorem permRep_inv_simple (i : B) (r : cs.RootSet) : cs.permRep ((cs.simple i)⁻¹) r
+  = (⟨MulAut.conj ((cs.simple i)⁻¹) r.1, r.1.prop.conj _⟩ , r.2 + cs.etaAux i r.1) := by simp
 
 /-- Bjorner--Brenti Theorem 1.3.2(i): uniqueness -/
-theorem pi_lift_ext {φ : W →* Equiv.Perm cs.R}
-  (h : ∀ (i : B), φ (cs.simple i) = cs.π_lift (cs.simple i)) : φ = cs.π_lift := cs.ext_simple h
+theorem permRep_ext {φ : W →* Equiv.Perm cs.RootSet}
+  (h : ∀ (i : B), φ (cs.simple i) = cs.permRep (cs.simple i)) : φ = cs.permRep := cs.ext_simple h
 
-theorem pi_lift_wordProd (ω : List B) (r : cs.R) :
-  cs.π_lift ((cs.wordProd ω)⁻¹) r = foldl (fun x i => cs.π i x) r ω := by
+open Classical in
+theorem permRep_inv_wordProd (ω : List B) (r : cs.RootSet) :
+  cs.permRep ((cs.wordProd ω)⁻¹) r
+  = ⟨⟨MulAut.conj ((cs.wordProd ω)⁻¹) r.1, r.1.property.conj _⟩,
+    r.2 + count r.1.val (cs.leftInvSeq ω)⟩ := by
   revert r
   induction ω with
   | nil => simp
   | cons i is ih =>
-      intro r
-      rw [wordProd_cons, foldl, ←ih, mul_inv_rev, map_mul, Equiv.Perm.coe_mul, inv_simple,
-        comp_apply, pi_lift_simple]
+      intro ⟨⟨t, h⟩, ε⟩
+      dsimp
+      rw [wordProd_cons, mul_inv_rev, map_mul, Equiv.Perm.mul_apply, permRep_inv_simple, ih]
+      apply Prod.ext
+      · simp [mul_assoc]
+      · rw [add_assoc, add_right_inj ε, leftInvSeq, count_cons, etaAux, add_comm]
+        simp only [inv_simple, MulAut.conj_apply, beq_iff_eq, Nat.cast_add, Nat.cast_ite,
+          Nat.cast_one, Nat.cast_zero, add_left_inj]
+        unfold count
+        rw [countP_map]
+        congr
+        ext x
+        rw [comp_apply, MulAut.conj_apply, inv_simple, beq_eq_beq, ←mul_inv_eq_iff_eq_mul,
+          ←inv_mul_eq_iff_eq_mul, mul_assoc, inv_simple]
+
+open Classical in
+theorem permRep_wordProd (ω : List B) (r : cs.RootSet) :
+  cs.permRep (cs.wordProd ω) r
+  = ⟨⟨MulAut.conj (cs.wordProd ω) r.1, r.1.property.conj _⟩,
+    r.2 + count r.1.val (cs.rightInvSeq ω)⟩ := by
+  have h := cs.permRep_inv_wordProd (ω.reverse) r
+  rw [wordProd_reverse, inv_inv, leftInvSeq_reverse, count_reverse] at h
+  exact h
 
 open Classical in
 /-- Bjorner--Brenti Theorem 1.3.2(i): injectivity -/
-theorem pi_lift_inj : Function.Injective cs.π_lift := by
+theorem permRep_inj : Function.Injective cs.permRep := by
   rw [injective_iff_map_eq_one]
   intro w hw
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word (w⁻¹)
@@ -206,8 +221,8 @@ theorem pi_lift_inj : Function.Injective cs.π_lift := by
   cases ω with
   | nil => rfl
   | cons i is =>
-      have h2 := cs.pi_lift_wordProd (i :: is) (⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩)
-      rw [hw, foldl_pi] at h2
+      have h2 := cs.permRep_inv_wordProd (i :: is) (⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩)
+      rw [hw] at h2
       simp only [Equiv.Perm.coe_one, id_eq, map_inv, MulAut.inv_apply, MulAut.conj_symm_apply,
         zero_add] at h2
       have h3 : count (cs.simple i) (cs.leftInvSeq (i :: is)) = 1 := by
@@ -220,55 +235,69 @@ theorem pi_lift_inj : Function.Injective cs.π_lift := by
       contradiction
 
 /-- Bjorner--Brenti Theorem 1.3.2(ii) -/
-theorem pi_lift_reflection (t : cs.T) (ε : ZMod 2) : cs.π_lift t ⟨t, ε⟩ = ⟨t, ε + 1⟩ := by
+theorem permRep_reflection (t : cs.ReflectionSet) (ε : ZMod 2) :
+  cs.permRep t.val ⟨t, ε⟩ = ⟨t, ε + 1⟩ := by
   revert t ε
-  apply T.ind
-  · simp [pi_lift_simple, π, η]
+  apply ReflectionSet.induction
+  · simp [permRep_simple, etaAux]
   · intro t i ih ε
-    simp only [inv_simple, map_mul, Equiv.Perm.coe_mul, pi_lift_simple, comp_apply]
-    conv in cs.π i (⟨cs.simple i * ↑t * cs.simple i, _⟩, ε) =>
-      unfold π
-      simp [mul_assoc]
-    rw [ih]
-    simp only [π]
-    congr 1
-    conv in cs.η i ⟨cs.simple i * (↑t * cs.simple i), _⟩ =>
-      unfold η
-      rw [left_eq_mul, mul_eq_one_iff_eq_inv, inv_simple, Eq.comm]
-      change cs.η i t
-    grind
+    rw [map_mul, Equiv.Perm.mul_apply, permRep_inv_simple]
+    dsimp
+    group
+    rw [map_mul, Equiv.Perm.mul_apply, ih, permRep_simple]
+    apply Prod.ext
+    · simp
+    · simp [-inv_simple]
+      grind
 
 open Classical in
-def η2 (w : W) (t : cs.T) : ZMod 2 :=
-  count t.val (cs.leftInvSeq (choose (cs.wordProd_surjective w)))
+def η (w t : W) : ZMod 2 :=
+  count t (cs.leftInvSeq (choose (cs.wordProd_surjective w)))
 
-theorem pi_lift_eq' (w : W) (r : cs.R) : cs.π_lift w⁻¹ r
-  = ⟨⟨MulAut.conj w⁻¹ r.1, r.1.prop.conj _⟩, r.2 + cs.η2 w r.1⟩ := by
-  unfold η2
+theorem permRep_inv_eq (w : W) (r : cs.RootSet) : cs.permRep w⁻¹ r
+  = ⟨⟨MulAut.conj w⁻¹ r.1, r.1.prop.conj _⟩, r.2 + cs.η w r.1⟩ := by
+  unfold η
   have h := Exists.choose_spec (cs.wordProd_surjective w)
-  rw [←h, pi_lift_wordProd, foldl_pi]
+  rw [←h, permRep_inv_wordProd]
   grind
 
-theorem pi_lift_eq (w : W) (r : cs.R) : cs.π_lift w r
-  = ⟨⟨MulAut.conj w r.1, r.1.prop.conj _⟩, r.2 + cs.η2 w⁻¹ r.1⟩ := by
-  have h := cs.pi_lift_eq' w⁻¹ r
+theorem permRep_eq (w : W) (r : cs.RootSet) : cs.permRep w r
+  = ⟨⟨MulAut.conj w r.1, r.1.prop.conj _⟩, r.2 + cs.η w⁻¹ r.1⟩ := by
+  have h := cs.permRep_inv_eq w⁻¹ r
   rw [inv_inv] at h
   exact h
 
 open Classical in
-theorem eta2_spec (ω : List B) (t : cs.T) :
-  cs.η2 (cs.wordProd ω) t = count t.val (cs.leftInvSeq ω) := by
-  have h := cs.pi_lift_eq' (cs.wordProd ω) ⟨t, 0⟩
-  rw [pi_lift_wordProd, foldl_pi] at h
-  simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add] at h
-  exact (congr_arg Prod.snd h).symm
+theorem eta_spec (ω : List B) (t : W) :
+  cs.η (cs.wordProd ω) t = count t (cs.leftInvSeq ω) := by
+  cases Classical.em (cs.IsReflection t) with
+  | inl ht =>
+      have h := cs.permRep_inv_eq (cs.wordProd ω) ⟨⟨t, ht⟩, 0⟩
+      rw [permRep_inv_wordProd] at h
+      simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add] at h
+      exact (congr_arg Prod.snd h).symm
+  | inr ht =>
+      trans 0
+      · unfold η
+        congr
+        rw [count_eq_zero]
+        intro h
+        apply ht
+        exact cs.isReflection_of_mem_leftInvSeq _ h
+      · symm
+        congr
+        rw [count_eq_zero]
+        intro h
+        apply ht
+        exact cs.isReflection_of_mem_leftInvSeq _ h
 
 open Classical in
-theorem eta2_eq_one (w : W) (t : cs.T) (h : cs.η2 w t = 1) : cs.length (t * w) < cs.length w := by
+theorem eta_eq_one (w t : W) (h : cs.η w t = 1) :
+  cs.length (t * w) < cs.length w := by
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word w
   subst hω2
-  rw [eta2_spec] at h
-  have h2 : 0 < count t.val (cs.leftInvSeq ω) := by
+  rw [eta_spec] at h
+  have h2 : 0 < count t (cs.leftInvSeq ω) := by
     rw [pos_iff_ne_zero]
     intro heq
     rw [heq] at h
@@ -291,29 +320,43 @@ theorem eta2_eq_one (w : W) (t : cs.T) (h : cs.η2 w t = 1) : cs.length (t * w) 
     subst h3
     simp at h
 
-theorem eta2_eq_zero (w : W) (t : cs.T) (h : cs.η2 w t = 0) : cs.length (t * w) > cs.length w := by
+theorem eta_eq_zero (w t : W) (ht : cs.IsReflection t) (h : cs.η w t = 0) :
+  cs.length (t * w) > cs.length w := by
   suffices h2 : cs.length (t * (t * w)) < cs.length (t * w) by
-    rw [←mul_assoc, t.prop.mul_self, one_mul] at h2
+    rw [←mul_assoc, ht.mul_self, one_mul] at h2
     exact h2
-  apply eta2_eq_one
-  have h2 := cs.pi_lift_eq' (t * w) ⟨t, 0⟩
-  rw [mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, t.prop.inv,
-    pi_lift_eq', pi_lift_reflection, h] at h2
+  apply eta_eq_one
+  have h2 := cs.permRep_inv_eq (t * w) ⟨⟨t, ht⟩, 0⟩
+  have h3 := cs.permRep_reflection ⟨t, ht⟩ 0
+  rw [mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, ht.inv,
+    permRep_inv_eq, h3, h] at h2
   simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add, add_zero, map_mul,
     MulAut.mul_apply, MulAut.conj_apply, mul_inv_cancel_right] at h2
   exact (congr_arg Prod.snd h2).symm
 
-private theorem zmod2_eq_one_iff (n : ZMod 2) : n = 1 ↔ ¬ n = 0 := by
-  rw [Fin.ext_iff, Fin.ext_iff]
-  grind
-
-theorem eta2_eq_one_iff (w : W) (t : cs.T) : cs.η2 w t = 1 ↔ cs.length (t * w) < cs.length w := by
+theorem eta_eq_one_iff (w t : W) (ht : cs.IsReflection t) :
+  cs.η w t = 1 ↔ cs.length (t * w) < cs.length w := by
   constructor
-  · apply eta2_eq_one
+  · apply eta_eq_one
   · intro h
-    rw [zmod2_eq_one_iff]
-    intro h2
-    have := cs.eta2_eq_zero w t h2
+    by_contra h2
+    replace h2 : cs.η w t = 0 := by
+      rw [Fin.ext_iff] at *
+      grind
+    have := cs.eta_eq_zero w t ht h2
+    grind
+
+theorem eta_eq_zero_iff (w t : W) (ht : cs.IsReflection t) :
+  cs.η w t = 0 ↔ cs.length (t * w) > cs.length w := by
+  constructor
+  · apply eta_eq_zero
+    exact ht
+  · intro h
+    by_contra h2
+    replace h2 : cs.η w t = 1 := by
+      rw [Fin.ext_iff] at *
+      grind
+    have := cs.eta_eq_one w t h2
     grind
 
 end

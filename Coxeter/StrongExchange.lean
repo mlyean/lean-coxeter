@@ -19,9 +19,8 @@ open Classical in
 theorem mem_leftInvSeq_of_isLeftInversion
   {ω : List B} {t : W} (ht : cs.IsReflection t) (h : cs.IsLeftInversion (cs.wordProd ω) t) :
   t ∈ cs.leftInvSeq ω := by
-  have hrw := cs.eta2_eq_one_iff (cs.wordProd ω) ⟨t, ht⟩
-  dsimp at hrw
-  rw [IsLeftInversion, ←hrw, eta2_spec] at h
+  have hrw := cs.eta_eq_one_iff (cs.wordProd ω) t ht
+  rw [IsLeftInversion, ←hrw, eta_spec] at h
   have h2 : 0 < count t (cs.leftInvSeq ω) := by
     rw [pos_iff_ne_zero]
     intro heq
