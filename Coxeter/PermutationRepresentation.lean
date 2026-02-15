@@ -48,23 +48,23 @@ theorem ReflectionSet.induction {P : cs.ReflectionSet → Prop}
 
 noncomputable section
 
-section lemmas
-
 open Classical in
 def etaAux (i : B) (t : W) : ZMod 2 := if cs.simple i = t then 1 else 0
 
 @[simp]
-private theorem etaAux_conj (i : B) (t : W) :
+theorem etaAux_conj (i : B) (t : W) :
   cs.etaAux i ((cs.simple i) * t * (cs.simple i)⁻¹) = cs.etaAux i t := by
   unfold etaAux
   congr 1
   rw [inv_simple, right_eq_mul, eq_iff_iff, mul_eq_one_iff_eq_inv', inv_simple]
   tauto
 
-private theorem etaAux_conj' (i : B) (t : W) :
+theorem etaAux_conj' (i : B) (t : W) :
   cs.etaAux i (MulAut.conj (cs.simple i) t) = cs.etaAux i t := by
   rw [MulAut.conj_apply]
   apply etaAux_conj
+
+section lemmas
 
 private def permRepAux (i : B) : cs.RootSet → cs.RootSet
   | (⟨t, h⟩, ε) => (⟨MulAut.conj (cs.simple i) t, h.conj _⟩ , ε + cs.etaAux i t)
