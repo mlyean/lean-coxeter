@@ -6,20 +6,18 @@ import Coxeter.PermutationRepresentation
 This file proves the strong exchange property of Coxeter groups and friends.
 -/
 
-namespace CoxeterSystem
+namespace Coxeter
 
-open Function List
+open List CoxeterSystem CoxeterGroup
 
-variable {B : Type*}
-variable {W : Type*} [Group W]
-variable {M : CoxeterMatrix B} (cs : CoxeterSystem M W)
+variable {W : Type*} [CoxeterGroup W]
 
 open Classical in
 /-- Bjorner--Brenti Corollary 1.4.4 (a) implies (c) -/
 theorem mem_leftInvSeq_of_isLeftInversion
-  {ω : List B} {t : W} (ht : cs.IsReflection t) (h : cs.IsLeftInversion (cs.wordProd ω) t) :
+  {ω : List (B W)} {t : W} (ht : cs.IsReflection t) (h : cs.IsLeftInversion (cs.wordProd ω) t) :
   t ∈ cs.leftInvSeq ω := by
-  have hrw := cs.eta_eq_one_iff (cs.wordProd ω) t ht
+  have hrw := eta_eq_one_iff (cs.wordProd ω) t ht
   rw [IsLeftInversion, ←hrw, eta_spec] at h
   have h2 : 0 < count t (cs.leftInvSeq ω) := by
     rw [pos_iff_ne_zero]
@@ -32,19 +30,19 @@ theorem mem_leftInvSeq_of_isLeftInversion
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
 theorem isLeftInversion_iff_mem_leftInvSeq
-  {ω : List B} (t : W) (hω : cs.IsReduced ω) :
+  {ω : List (B W)} (t : W) (hω : cs.IsReduced ω) :
   cs.IsLeftInversion (cs.wordProd ω) t ↔ t ∈ cs.leftInvSeq ω := by
   constructor
   · intro h
-    exact cs.mem_leftInvSeq_of_isLeftInversion h.1 h
+    exact mem_leftInvSeq_of_isLeftInversion h.1 h
   · exact cs.isLeftInversion_of_mem_leftInvSeq hω
 
 open Classical in
 /-- Bjorner--Brenti Theorem 1.4.3 -/
 theorem strong_exchange
-  {ω : List B} {t : W} (ht : cs.IsReflection t) (h : cs.IsLeftInversion (cs.wordProd ω) t) :
+  {ω : List (B W)} {t : W} (ht : cs.IsReflection t) (h : cs.IsLeftInversion (cs.wordProd ω) t) :
   ∃ i < ω.length, t * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
-  have h2 := cs.mem_leftInvSeq_of_isLeftInversion ht h
+  have h2 := mem_leftInvSeq_of_isLeftInversion ht h
   rw [mem_iff_get] at h2
   let ⟨i, hi⟩ := h2
   exists i
@@ -54,11 +52,11 @@ theorem strong_exchange
   · rw [←hi, ←getD_leftInvSeq_mul_wordProd, getD_eq_get]
 
 open Classical in
-theorem leftInversionSet_eq {ω : List B} (hω : cs.IsReduced ω) :
+theorem leftInversionSet_eq {ω : List (B W)} (hω : cs.IsReduced ω) :
   setOf (cs.IsLeftInversion (cs.wordProd ω)) = (cs.leftInvSeq ω).toFinset := by
   ext t
   simp only [Set.mem_setOf_eq, coe_toFinset]
-  exact cs.isLeftInversion_iff_mem_leftInvSeq _ hω
+  exact isLeftInversion_iff_mem_leftInvSeq _ hω
 
 theorem finite_of_isLeftInversion (w : W) : Set.Finite (cs.IsLeftInversion w) := by
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word w
@@ -66,7 +64,7 @@ theorem finite_of_isLeftInversion (w : W) : Set.Finite (cs.IsLeftInversion w) :=
   rw [Eq.comm] at hω1
   change cs.IsReduced ω at hω1
   change Finite (setOf (cs.IsLeftInversion (cs.wordProd ω)))
-  rw [cs.leftInversionSet_eq hω1]
+  rw [leftInversionSet_eq hω1]
   apply finite_toSet
 
 open Classical in
@@ -84,9 +82,9 @@ theorem card_of_leftInversionSet (w : W) :
     · exact hω1.nodup_leftInvSeq
   · simp only [mem_toFinset, Set.mem_setOf_eq]
     intro x
-    exact (cs.isLeftInversion_iff_mem_leftInvSeq x hω1).symm
+    exact (isLeftInversion_iff_mem_leftInvSeq x hω1).symm
 
-private theorem drop_eraseIdx (l : List B) (i j : ℕ) :
+private theorem drop_eraseIdx (l : List (B W)) (i j : ℕ) :
   (drop i l).eraseIdx j = drop i (l.eraseIdx (i + j)) := by
   revert l
   induction i with
@@ -101,11 +99,11 @@ private theorem drop_eraseIdx (l : List B) (i j : ℕ) :
 
 open Classical in
 /-- Bjorner--Brenti Proposition 1.4.7 -/
-theorem deletion_property {ω : List B} (hω : cs.length (cs.wordProd ω) < ω.length) :
+theorem deletion_property {ω : List (B W)} (hω : cs.length (cs.wordProd ω) < ω.length) :
   ∃ i j, i < j ∧ j < ω.length ∧ cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
   have h1 : cs.IsReduced (drop ((ω.length - 1) + 1) ω) := by
     rw [Nat.sub_one_add_one]
-    · simp [IsReduced]
+    · simp [CoxeterSystem.IsReduced]
     · grind
   have h2 : ∃ i, cs.IsReduced (drop (i + 1) ω) := by
     exists ω.length - 1
@@ -115,7 +113,7 @@ theorem deletion_property {ω : List B} (hω : cs.length (cs.wordProd ω) < ω.l
     cases Nat.eq_zero_or_pos i with
     | inl h =>
         rw [h]
-        unfold IsReduced
+        unfold CoxeterSystem.IsReduced
         grind
     | inr h =>
         replace h : i ≠ 0 := by grind
@@ -132,13 +130,13 @@ theorem deletion_property {ω : List B} (hω : cs.length (cs.wordProd ω) < ω.l
     by_contra h
     rw [not_isLeftDescent_iff, ←wordProd_cons] at h
     simp only [getElem_cons_drop] at h
-    unfold IsReduced at *
+    unfold CoxeterSystem.IsReduced at *
     grind
   have h7 : cs.IsLeftInversion (cs.wordProd (drop (i + 1) ω)) (cs.simple ω[i]) := by
     constructor
     · exact cs.isReflection_simple _
     · grind
-  let ⟨k, ⟨hk1, hk2⟩⟩ := cs.strong_exchange (cs.isReflection_simple ω[i]) h7
+  let ⟨k, ⟨hk1, hk2⟩⟩ := strong_exchange (cs.isReflection_simple ω[i]) h7
   exists i
   exists i + k + 1
   dsimp at *
@@ -150,19 +148,19 @@ theorem deletion_property {ω : List B} (hω : cs.length (cs.wordProd ω) < ω.l
   congr
   apply drop_eraseIdx
 
-theorem deletion_property' {ω : List B} (hω : ¬ cs.IsReduced ω) :
+theorem deletion_property' {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
   ∃ i j, i < j ∧ j < ω.length ∧ cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
   apply deletion_property
-  unfold IsReduced at hω
+  unfold CoxeterSystem.IsReduced at hω
   have := cs.length_wordProd_le ω
   grind
 
 /-- Bjorner--Brenti Corollary 1.4.8 (i) -/
-theorem exists_reduced_subword (ω : List B) :
-  ∃ (ω' : List B), ω' <+ ω ∧ cs.IsReduced ω' ∧ cs.wordProd ω = cs.wordProd ω' := by
+theorem exists_reduced_subword (ω : List (B W)) :
+  ∃ (ω' : List (B W)), ω' <+ ω ∧ cs.IsReduced ω' ∧ cs.wordProd ω = cs.wordProd ω' := by
   revert ω
-  suffices h : ∀ k, ∀ ω : List B, ω.length < k →
-    ∃ (ω' : List B), ω' <+ ω ∧ cs.IsReduced ω' ∧ cs.wordProd ω = cs.wordProd ω' from by
+  suffices h : ∀ k, ∀ ω : List (B W), ω.length < k →
+    ∃ (ω' : List (B W)), ω' <+ ω ∧ cs.IsReduced ω' ∧ cs.wordProd ω = cs.wordProd ω' from by
     intro ω
     apply h (ω.length + 1)
     simp
@@ -174,7 +172,7 @@ theorem exists_reduced_subword (ω : List B) :
       cases em (cs.IsReduced ω) with
       | inl h2 => exists ω
       | inr h2 =>
-          let ⟨i, j, h3⟩ := cs.deletion_property' h2
+          let ⟨i, j, h3⟩ := deletion_property' h2
           have ⟨ω', h4⟩ := ih ((ω.eraseIdx j).eraseIdx i) (by grind)
           exists ω'
           apply And.intro
@@ -187,4 +185,4 @@ theorem exists_reduced_subword (ω : List B) :
             · exact h4.2.1
             · grind
 
-end CoxeterSystem
+end Coxeter

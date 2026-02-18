@@ -1,5 +1,17 @@
 import Mathlib.GroupTheory.Coxeter.Inversion
 
+namespace Coxeter
+
+/-- Experimental wrapper for the Coxeter group datum -/
+class CoxeterGroup (W : Type*) extends Group W where
+  B : Type*
+  M : CoxeterMatrix B
+  cs : CoxeterSystem M W
+
+end Coxeter
+
+/- Misc. theorems -/
+
 namespace CoxeterSystem
 
 open Function List
