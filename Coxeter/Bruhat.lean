@@ -1,8 +1,14 @@
 import Coxeter.StrongExchange
 
+/-!
+# Bruhat Order
+
+This defines the Bruhat order.
+-/
+
 namespace Coxeter
 
-open CoxeterSystem CoxeterGroup
+open List CoxeterSystem CoxeterGroup
 
 variable {W : Type*} [CoxeterGroup W]
 
@@ -11,13 +17,13 @@ inductive le : W → W → Prop
   | step (u v w : W) (h1 : le u v) (h2 : cs.IsReflection (v⁻¹ * w))
       (h3 : cs.length v < cs.length w) : le u w
 
-def lt (u w : W) : Prop := le u w ∧ u ≠ w
+instance : LE W where
+  le := le
+
+def lt (u w : W) : Prop := u ≤ w ∧ u ≠ w
 
 instance : LT W where
   lt := lt
-
-instance : LE W where
-  le := le
 
 theorem length_le_of_bruhat_le {u w : W} (h : u ≤ w) : cs.length u ≤ cs.length w := by
   induction h with
@@ -67,5 +73,13 @@ instance : PartialOrder W where
         have := length_le_of_bruhat_le h2
         have := length_le_of_bruhat_le h3
         grind
+
+-- Bjorner--Brenti Corollary 2.2.1 -/
+-- theorem reduced_subword_extend {μ ω : List (B W)}
+--   (h1 : μ <+ ω) (h2 : cs.IsReduced μ) (h3 : cs.IsReduced ω)
+--   (h4 : cs.wordProd μ ≠ cs.wordProd ω) :
+--   ∃ (ν : List (B W)), ν <+ ω ∧ cs.IsReduced ν
+--     ∧ cs.wordProd ν > cs.wordProd μ ∧ ν.length = μ.length + 1 := by
+--   sorry
 
 end Coxeter
