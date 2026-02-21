@@ -42,26 +42,14 @@ theorem ReflectionSet.induction {P : ReflectionSet W → Prop}
   (ih : ∀ (t : ReflectionSet W) (i : B W),
     P t → P (⟨(cs.simple i) * t.val * (cs.simple i)⁻¹, t.prop.conj (cs.simple i)⟩)) :
   ∀ (t : ReflectionSet W), P t := by
-  intro t
-  let ⟨w, ⟨i, hi⟩⟩ := t.prop
-  let ⟨ω, hω⟩ := cs.wordProd_surjective w
-  replace hi : t = ⟨w * cs.simple i * w⁻¹, (cs.isReflection_simple i).conj _⟩ := by
-    ext
-    exact hi
-  subst hi hω
-  induction ω with
-  | nil =>
-      rw [congr_arg P]
-      · apply sh i
-      · congr
-        rw [wordProd_nil, one_mul, inv_one, mul_one]
-  | cons j js ih2 =>
-      simp only [wordProd_cons, mul_inv_rev, inv_simple]
-      rw [congr_arg P]
-      · exact ih ⟨cs.wordProd js * cs.simple i * (cs.wordProd js)⁻¹,
-          (cs.isReflection_simple i).conj _⟩ j ih2
-      · simp only [inv_simple, Subtype.mk.injEq]
-        group
+  intro ⟨t, w, i, hi⟩
+  subst hi
+  apply cs.simple_induction_left w
+  · simp only [one_mul, inv_one, mul_one]
+    exact sh i
+  · intro w j h
+    apply Eq.subst _ (ih _ j h)
+    group
 
 noncomputable section
 
@@ -91,10 +79,8 @@ private theorem permRepAux_involutive (i : B W) : Function.Involutive (permRepAu
   intro ⟨t, ε⟩
   rw [permRepAux, permRepAux]
   apply Prod.ext
-  · ext
-    simp [mul_assoc]
-  · dsimp only
-    rw [etaAux_conj']
+  · simp [mul_assoc]
+  · rw [etaAux_conj']
     grind
 
 open Classical in
@@ -107,19 +93,18 @@ private theorem foldl_permRepAux (ω : List (B W)) (r : RootSet W) :
   | nil => simp
   | cons a as ih =>
       intro ⟨t, ε⟩
-      rw [cs.wordProd_cons, foldl_cons, ih]
+      rw [cs.wordProd_cons, foldl_cons, ih, permRepAux, leftInvSeq, count_cons]
       apply Prod.ext
-      · unfold permRepAux
-        simp
-      · rw [leftInvSeq, permRepAux, etaAux, add_assoc, add_right_inj ε, count_cons, add_comm]
-        simp only [MulAut.conj_apply, inv_simple, beq_iff_eq, Nat.cast_add, Nat.cast_ite,
-          Nat.cast_one, Nat.cast_zero, add_left_inj]
-        unfold count
-        rw [countP_map]
+      · simp
+      · dsimp only [beq_iff_eq]
+        rw [add_assoc]
+        nth_rw 4 [add_comm]
+        simp only [Nat.cast_add, Nat.cast_ite, Nat.cast_one, Nat.cast_zero,
+          beq_iff_eq, etaAux, count, countP_map]
         congr
-        ext x
-        rw [comp_apply, MulAut.conj_apply, inv_simple, beq_eq_beq, ←mul_inv_eq_iff_eq_mul,
-          ←inv_mul_eq_iff_eq_mul, mul_assoc, inv_simple]
+        ext
+        nth_rw 2 [←inv_simple]
+        rw [comp_apply, beq_eq_beq, map_inv, MulAut.inv_apply, MulEquiv.symm_apply_eq]
 
 private def permRepAux_equiv (i : B W) : Equiv.Perm (RootSet W) := {
   toFun := permRepAux i
@@ -150,28 +135,28 @@ private theorem permRepAux_liftable : (@M W).IsLiftable permRepAux_equiv := by
   simp only [even_two, Even.mul_right, ↓reduceIte, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true,
     mul_div_cancel_left₀, simple_mul_simple_pow', mul_one, inv_one, map_one, MulAut.one_apply,
     Subtype.coe_eta, Equiv.Perm.coe_one, id_eq]
-  rw [Eq.comm, ←Prod.snd_eq_iff, Eq.comm]
+  symm
+  apply Prod.snd_eq_iff.mp
   let p := M.M i i'
-  rw [add_eq_left, ZMod.natCast_eq_zero_iff,
+  rw [left_eq_add, ZMod.natCast_eq_zero_iff,
     ←take_append_drop p (cs.leftInvSeq (alternatingWord i' i (2 * p))), count_append]
   suffices h2 : take p (cs.leftInvSeq (alternatingWord i' i (2 * p)))
     = drop p (cs.leftInvSeq (alternatingWord i' i (2 * p))) by
     rw [h2, ←two_mul]
     apply dvd_mul_right
   rw [ext_get_iff]
+  simp only [length_take, length_drop, length_leftInvSeq, length_alternatingWord]
   constructor
-  · simp only [length_take, length_leftInvSeq, length_alternatingWord, length_drop,
-      two_mul]
-    grind
+  · grind
   · intro n h3 _
-    simp only [length_take, length_leftInvSeq, length_alternatingWord, lt_inf_iff] at h3
+    rw [lt_inf_iff] at h3
     simp only [get_eq_getElem, getElem_take, getElem_drop]
     rw [getElem_leftInvSeq_alternatingWord, getElem_leftInvSeq_alternatingWord,
       prod_alternatingWord_eq_mul_pow, prod_alternatingWord_eq_mul_pow]
-    · simp only [Nat.not_even_bit1, ↓reduceIte, odd_div_2, pow_add,
+    · simp only [Nat.not_even_bit1, reduceIte, odd_div_2, pow_add,
         simple_mul_simple_pow, one_mul, p]
     · grind
-    · grind
+    · exact h3.2
 
 end lemmas
 
@@ -231,7 +216,7 @@ open Classical in
 theorem permRep_inj : Function.Injective (@permRep W _) := by
   rw [injective_iff_map_eq_one]
   intro w hw
-  let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word (w⁻¹)
+  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word (w⁻¹)
   rw [inv_eq_iff_eq_inv] at hω2
   subst hω2
   rw [inv_inv] at hω1
@@ -240,15 +225,12 @@ theorem permRep_inj : Function.Injective (@permRep W _) := by
   | nil => rfl
   | cons i is =>
       have h2 := permRep_inv_wordProd (i :: is) (⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩)
-      rw [hw] at h2
-      simp only [Equiv.Perm.coe_one, id_eq, map_inv, MulAut.inv_apply, MulAut.conj_symm_apply,
-        zero_add] at h2
       have h3 : count (cs.simple i) (cs.leftInvSeq (i :: is)) = 1 := by
         apply count_eq_one_of_mem
         · apply IsReduced.nodup_leftInvSeq
           exact hω1.symm
         · apply Mem.head
-      rw [h3] at h2
+      rw [hw, h3] at h2
       have : (0 : ZMod 2) = 1 := congr_arg Prod.snd h2
       contradiction
 
@@ -295,15 +277,14 @@ theorem eta_spec (ω : List (B W)) (t : W) :
       simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add] at h
       exact (congr_arg Prod.snd h).symm
   | inr ht =>
+      unfold η
+      congr 1
       trans 0
-      · unfold η
-        congr
-        rw [count_eq_zero]
+      · rw [count_eq_zero]
         intro h
         apply ht
         exact cs.isReflection_of_mem_leftInvSeq _ h
       · symm
-        congr
         rw [count_eq_zero]
         intro h
         apply ht
@@ -325,7 +306,7 @@ theorem eta_eq_one (w t : W) (h : η w t = 1) :
   rw [←hi, ←getD_eq_get _ 1, getD_leftInvSeq_mul_wordProd]
   calc
     cs.length (cs.wordProd (ω.eraseIdx i.val))
-      ≤ (ω.eraseIdx i.val).length := by apply length_wordProd_le
+      ≤ (ω.eraseIdx i.val).length := cs.length_wordProd_le _
     _ = ω.length - 1 := ?_
     _ < ω.length := ?_
     _ = cs.length (cs.wordProd ω) := hω1
@@ -333,8 +314,8 @@ theorem eta_eq_one (w t : W) (h : η w t = 1) :
     rw [←cs.length_leftInvSeq]
     exact i.prop
   · apply Nat.sub_one_lt
-    simp only [ne_eq, List.length_eq_zero_iff]
     intro h3
+    rw [length_eq_zero_iff] at h3
     subst h3
     simp at h
 
@@ -346,11 +327,10 @@ theorem eta_eq_zero (w t : W) (ht : cs.IsReflection t) (h : η w t = 0) :
   apply eta_eq_one
   have h2 := permRep_inv_eq (t * w) ⟨⟨t, ht⟩, 0⟩
   have h3 := permRep_reflection ⟨t, ht⟩ 0
-  rw [mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, ht.inv,
-    permRep_inv_eq, h3, h] at h2
-  simp only [map_inv, MulAut.inv_apply, MulAut.conj_symm_apply, zero_add, add_zero, map_mul,
-    MulAut.mul_apply, MulAut.conj_apply, mul_inv_cancel_right] at h2
-  exact (congr_arg Prod.snd h2).symm
+  replace h2 : (((permRep W) (t * w)⁻¹) (⟨t, ht⟩, 0)).2 = 0 + η (t * w) t := congr_arg Prod.snd h2
+  rw [zero_add, mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, ht.inv,
+    permRep_inv_eq, h3, h, zero_add] at h2
+  exact h2.symm
 
 theorem eta_eq_one_iff (w t : W) (ht : cs.IsReflection t) :
   η w t = 1 ↔ cs.length (t * w) < cs.length w := by

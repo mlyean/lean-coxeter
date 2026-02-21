@@ -51,16 +51,11 @@ open Classical in
 theorem mem_leftInvSeq_of_isLeftInversion
   {ω : List (B W)} {t : W} (h : cs.IsLeftInversion (cs.wordProd ω) t) :
   t ∈ cs.leftInvSeq ω := by
+  rw [←count_pos_iff, pos_iff_ne_zero]
+  intro heq
   have hrw := eta_eq_one_iff (cs.wordProd ω) t h.1
-  rw [IsLeftInversion, ←hrw, eta_spec] at h
-  have h2 : 0 < count t (cs.leftInvSeq ω) := by
-    rw [pos_iff_ne_zero]
-    intro heq
-    rw [heq] at h
-    have := h.2
-    contradiction
-  rw [←count_pos_iff]
-  exact h2
+  rw [IsLeftInversion, ←hrw, eta_spec, heq] at h
+  tauto
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
 theorem isLeftInversion_iff_mem_leftInvSeq
