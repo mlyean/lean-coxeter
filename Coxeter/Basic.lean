@@ -1,8 +1,18 @@
 import Mathlib.GroupTheory.Coxeter.Inversion
 
+/-!
+# Coxeter groups
+
+We build upon the the theory of Coxeter systems currently available in `mathlib`.
+
+## Main definitions
+
+* `Coxeter.CoxeterGroup`
+
+-/
+
 namespace Coxeter
 
-/-- Experimental wrapper for the Coxeter group datum -/
 class CoxeterGroup (W : Type*) extends Group W where
   B : Type*
   M : CoxeterMatrix B

@@ -3,9 +3,27 @@ import Mathlib.GroupTheory.Coxeter.Inversion
 import Coxeter.Basic
 
 /-!
-# Permutation Representation of Coxeter Groups
+# Permutation representation of Coxeter groups
 
 This file defines the permutation representation of a Coxeter group.
+
+## Main definitions
+
+* `Coxeter.ReflectionSet`
+* `Coxeter.RootSet`
+* `Coxeter.permRep`
+* `Coxeter.η`
+
+## Main statements
+
+* `Coxeter.permRep_simple`
+* `Coxeter.permRep_wordProd`
+* `Coxeter.permRep_inj`
+
+## References
+
+* [bjorner2005] A. Björner and F. Brenti, *Combinatorics of Coxeter Groups*
+
 -/
 
 namespace Coxeter

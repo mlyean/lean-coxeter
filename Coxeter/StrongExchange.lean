@@ -1,9 +1,26 @@
 import Coxeter.PermutationRepresentation
 
 /-!
-# Strong Exchange
+# Strong exchange
 
-This file proves the strong exchange property and friends of Coxeter groups.
+This file proves the strong exchange and related properties of Coxeter groups.
+
+## Main statements
+
+* `Coxeter.strong_exchange`
+* `Coxeter.exchange_property`
+* `Coxeter.deletion_property`
+* `Coxeter.exists_reduced_subword`
+* `Coxeter.card_of_leftInversionSet`
+
+## To do
+
+Add right variants of the statements.
+
+## References
+
+* [bjorner2005] A. Björner and F. Brenti, *Combinatorics of Coxeter Groups*
+
 -/
 
 namespace List

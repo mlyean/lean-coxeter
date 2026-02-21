@@ -1,9 +1,18 @@
 import Coxeter.StrongExchange
 
 /-!
-# Bruhat Order
+# Bruhat order
 
-This defines the Bruhat order.
+This file defines the Bruhat order.
+
+## Main definitions
+
+* `Coxeter.le` : The Bruhat order
+
+## References
+
+* [bjorner2005] A. Björner and F. Brenti, *Combinatorics of Coxeter Groups*
+
 -/
 
 namespace Coxeter
