@@ -15,7 +15,7 @@ This file proves the strong exchange and related properties of Coxeter groups.
 
 ## To do
 
-Add right variants of the statements.
+* Add right variants of the statements.
 
 ## References
 
@@ -87,9 +87,8 @@ theorem exchange_property
 
 open Classical in
 def equivIsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
-  {t : W // cs.IsLeftInversion (cs.wordProd ω) t} ≃ (cs.leftInvSeq ω).toFinset :=
-    Equiv.subtypeEquivRight
-      (fun t => by rw [mem_toFinset]; exact isLeftInversion_iff_mem_leftInvSeq t hω)
+  {t : W // cs.IsLeftInversion (cs.wordProd ω) t} ≃ {t : W // t ∈ cs.leftInvSeq ω} :=
+    Equiv.subtypeEquivRight (fun t => isLeftInversion_iff_mem_leftInvSeq t hω)
 
 open Classical in
 noncomputable instance {w : W} : Fintype {t : W // cs.IsLeftInversion w t} := by
@@ -104,14 +103,9 @@ theorem card_of_leftInversionSet (w : W) :
   Fintype.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word' w
   subst hω2
-  rw [hω1]
-  trans (cs.leftInvSeq ω).toFinset.card
-  · rw [Fintype.card_congr (equivIsLeftInversion ω hω1)]
-    have h : Fintype.card (cs.leftInvSeq ω).toFinset = (cs.leftInvSeq ω).toFinset.card := by
-      apply Fintype.card_ofFinset ((cs.leftInvSeq ω).toFinset)
-      tauto
-    exact h
-  · rw [toFinset_card_of_nodup (hω1.nodup_leftInvSeq), length_leftInvSeq]
+  rw [hω1, Fintype.card_congr (equivIsLeftInversion ω hω1),
+    Fintype.card_of_subtype (cs.leftInvSeq ω).toFinset (by simp),
+    toFinset_card_of_nodup (hω1.nodup_leftInvSeq), length_leftInvSeq]
 
 theorem IsReduced_nil (W : Type*) [CoxeterGroup W] : (@cs W).IsReduced [] := by
   unfold CoxeterSystem.IsReduced

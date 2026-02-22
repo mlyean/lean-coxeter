@@ -19,6 +19,7 @@ This file defines the permutation representation of a Coxeter group.
 * `Coxeter.permRep_simple`
 * `Coxeter.permRep_wordProd`
 * `Coxeter.permRep_inj`
+* `Coxeter.permRep_eq`
 
 ## References
 
@@ -339,6 +340,7 @@ theorem eta_eq_one_iff (w t : W) (ht : cs.IsReflection t) :
   · intro h
     by_contra h2
     replace h2 : η w t = 0 := by
+      unfold ZMod at *
       rw [Fin.ext_iff] at *
       grind
     have := eta_eq_zero w t ht h2
@@ -352,6 +354,7 @@ theorem eta_eq_zero_iff (w t : W) (ht : cs.IsReflection t) :
   · intro h
     by_contra h2
     replace h2 : η w t = 1 := by
+      unfold ZMod at *
       rw [Fin.ext_iff] at *
       grind
     have := eta_eq_one w t h2
