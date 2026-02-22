@@ -11,34 +11,13 @@ This file proves the strong exchange and related properties of Coxeter groups.
 * `Coxeter.exchange_property`
 * `Coxeter.deletion_property`
 * `Coxeter.exists_reduced_subword`
-* `Coxeter.card_of_leftInversionSet`
-
-## To do
-
-* Add right variants of the statements.
+* `Coxeter.card_of_IsLeftInversion`
 
 ## References
 
 * [bjorner2005] A. Björner and F. Brenti, *Combinatorics of Coxeter Groups*
 
 -/
-
-namespace List
-
-theorem drop_eraseIdx {α : Type*} (l : List α) (i j : ℕ) :
-  (drop i l).eraseIdx j = drop i (l.eraseIdx (i + j)) := by
-  revert l
-  induction i with
-  | zero => simp
-  | succ i ih =>
-      intro l
-      cases l with
-      | nil => simp
-      | cons a as =>
-          rw [add_right_comm]
-          apply ih
-
-end List
 
 namespace Coxeter
 
@@ -80,43 +59,63 @@ theorem strong_exchange
     exact i.prop
   · rw [←hi, ←getD_leftInvSeq_mul_wordProd, getD_eq_get]
 
+theorem strong_exchange'
+  {ω : List (B W)} {t : W} (h : cs.IsRightInversion (cs.wordProd ω) t) :
+  ∃ i < ω.length, cs.wordProd ω * t = cs.wordProd (ω.eraseIdx i) := by
+  rw [←isLeftInversion_inv_iff, ←wordProd_reverse] at h
+  have ⟨i, hi, h2⟩ := strong_exchange h
+  rw [length_reverse] at hi
+  rw [←inv_inj, mul_inv_rev, wordProd_reverse, inv_inv, h.1.inv] at h2
+  rw [←wordProd_reverse, reverse_eraseIdx hi, reverse_reverse] at h2
+  exists ω.length - i - 1
+  constructor
+  · grind
+  · exact h2
+
 theorem exchange_property
   {ω : List (B W)} {i : B W} (h : cs.IsLeftDescent (cs.wordProd ω) i) :
   ∃ j < ω.length, cs.simple i * cs.wordProd ω = cs.wordProd (ω.eraseIdx j) :=
   strong_exchange ⟨cs.isReflection_simple i, h⟩
 
+theorem exchange_property'
+  {ω : List (B W)} {i : B W} (h : cs.IsRightDescent (cs.wordProd ω) i) :
+  ∃ j < ω.length, cs.wordProd ω * cs.simple i = cs.wordProd (ω.eraseIdx j) :=
+  strong_exchange' ⟨cs.isReflection_simple i, h⟩
+
 open Classical in
-def equivIsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
+def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
   {t : W // cs.IsLeftInversion (cs.wordProd ω) t} ≃ {t : W // t ∈ cs.leftInvSeq ω} :=
     Equiv.subtypeEquivRight (fun t => isLeftInversion_iff_mem_leftInvSeq t hω)
 
 open Classical in
 noncomputable instance {w : W} : Fintype {t : W // cs.IsLeftInversion w t} := by
   have ⟨h1, h2⟩ := choose_spec (cs.exists_reduced_word' w)
-  have h := equivIsLeftInversion (choose (cs.exists_reduced_word' w)) h1
+  have h := equiv_IsLeftInversion (choose (cs.exists_reduced_word' w)) h1
   rw [←h2] at h
   exact Fintype.ofEquiv _ h.symm
 
+def equiv_IsLeftInversion_inv {w : W} :
+  {t : W // cs.IsLeftInversion w⁻¹ t} ≃ {t : W // cs.IsRightInversion w t} := by
+  apply Equiv.subtypeEquivRight
+  apply isLeftInversion_inv_iff
+
+open Classical in
+noncomputable instance {w : W} : Fintype {t : W // cs.IsRightInversion w t} :=
+  Fintype.ofEquiv _ equiv_IsLeftInversion_inv
+
 open Classical in
 /-- Bjorner--Brenti Corollary 1.4.5 -/
-theorem card_of_leftInversionSet (w : W) :
+theorem card_of_IsLeftInversion (w : W) :
   Fintype.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word' w
   subst hω2
-  rw [hω1, Fintype.card_congr (equivIsLeftInversion ω hω1),
+  rw [hω1, Fintype.card_congr (equiv_IsLeftInversion ω hω1),
     Fintype.card_of_subtype (cs.leftInvSeq ω).toFinset (by simp),
     toFinset_card_of_nodup (hω1.nodup_leftInvSeq), length_leftInvSeq]
 
-theorem IsReduced_nil (W : Type*) [CoxeterGroup W] : (@cs W).IsReduced [] := by
-  unfold CoxeterSystem.IsReduced
-  rw [wordProd_nil, length_one, length_nil]
-
-theorem not_IsReduced_cons {ω : List (B W)} (i : B W) (hω : cs.IsReduced ω) :
-  ¬ cs.IsReduced (i :: ω) ↔ cs.IsLeftDescent (cs.wordProd ω) i := by
-  unfold CoxeterSystem.IsReduced IsLeftDescent at *
-  rw [hω, wordProd_cons, length_cons]
-  have := cs.length_simple_mul (cs.wordProd ω) i
-  grind
+theorem card_of_IsRightInversion (w : W) :
+  Fintype.card {t : W // cs.IsRightInversion w t} = cs.length w := by
+  rw [Fintype.ofEquiv_card equiv_IsLeftInversion_inv, card_of_IsLeftInversion, length_inv]
 
 open Classical in
 /-- Bjorner--Brenti Proposition 1.4.7 -/
