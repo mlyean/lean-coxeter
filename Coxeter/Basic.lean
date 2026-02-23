@@ -51,6 +51,23 @@ theorem reverse_eraseIdx {l : List α} {i : ℕ} (hi : i < l.length) :
     congr
     grind
 
+theorem sublist_tail_of_head_neq {l₁ l₂ : List α} (hl₁ : l₁ ≠ [])
+  (hsub : l₁ <+ l₂) (h : head l₁ hl₁ ≠ head l₂ (by grind)) :
+  l₁ <+ tail l₂ := by
+  cases l₁ with
+  | nil => simp
+  | cons x xs =>
+      cases l₂ with
+      | nil => grind
+      | cons y ys => grind
+
+theorem sublist_take_drop {l₁ l₂ : List α} {i : ℕ}
+  (h1 : take i l₁ <+ take i l₂) (h2 : drop i l₁ <+ drop i l₂) : l₁ <+ l₂ := by
+  calc
+    l₁ = take i l₁ ++ drop i l₁ := by rw [take_append_drop]
+    _ <+ take i l₂ ++ drop i l₂ := List.Sublist.append h1 h2
+    _ <+ l₂ := by rw [take_append_drop]
+
 end List
 
 namespace Coxeter
@@ -101,5 +118,56 @@ theorem drop_alternatingWord (i j : (B W)) (p q : ℕ) :
       nth_rw 2 [add_comm]
       rw [ih (q + 1)]
       apply tail_alternatingWord
+
+theorem getD_leftInvSeq_mul_wordProd₂ {i j : ℕ} (ω : List (B W)) (hij : i < j) :
+  (cs.leftInvSeq ω).getD i 1 * (cs.leftInvSeq ω).getD j 1 * cs.wordProd ω
+  = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
+  rw [←cs.getD_leftInvSeq_mul_wordProd (ω.eraseIdx j) i, ←cs.getD_leftInvSeq_mul_wordProd ω j,
+    mul_assoc]
+  congr 1
+  cases (Nat.lt_or_ge i ω.length) with
+  | inl h =>
+      rw [getD_eq_getElem, getD_eq_getElem]
+      · rw [getElem_leftInvSeq, getElem_leftInvSeq]
+        · grind
+        · grind
+        · exact h
+      · rw [length_leftInvSeq, length_eraseIdx]
+        grind
+      · rw [length_leftInvSeq]
+        exact h
+  | inr h =>
+      rw [getD_eq_default, getD_eq_default]
+      · rw [length_leftInvSeq, length_eraseIdx]
+        grind
+      · rw [length_leftInvSeq]
+        exact h
+
+theorem getElem_leftInvSeq_mul_wordProd₂ {i j : ℕ}
+  (ω : List (B W)) (h1 : i < j) (h2 : j < ω.length) :
+  (cs.leftInvSeq ω)[i]'(by rw [length_leftInvSeq]; grind)
+  * (cs.leftInvSeq ω)[j]'(by rw [length_leftInvSeq]; exact h2)
+  * cs.wordProd ω
+  = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
+  rw [←getD_leftInvSeq_mul_wordProd₂ ω h1]
+  grind
+
+theorem neq_of_adjacent {i : ℕ} {ω : List (B W)}
+  (hi : i + 1 < ω.length) (hω : cs.IsReduced ω) : ω[i] ≠ ω[i + 1] := by
+  intro h
+  have hlt : ω.length < ω.length := by
+    calc
+      ω.length = cs.length (cs.wordProd ω) := hω.symm
+      _ = cs.length (cs.wordProd (take i ω ++ [ω[i], ω[i + 1]] ++ drop (i + 2) ω)) := by simp
+      _ = cs.length (cs.wordProd (take i ω) * cs.wordProd [ω[i], ω[i + 1]]
+            * cs.wordProd (drop (i + 2) ω)) := by rw [wordProd_append, wordProd_append]
+      _ = cs.length (cs.wordProd (take i ω) * cs.wordProd (drop (i + 2) ω)) := ?_
+      _ = cs.length (cs.wordProd (take i ω ++ drop (i + 2) ω)) := by rw [wordProd_append]
+      _ ≤ (take i ω ++ drop (i + 2) ω).length := length_wordProd_le _ _
+      _ < ω.length := by grind
+    · rw [h]
+      simp [wordProd]
+  rw [lt_self_iff_false] at hlt
+  exact hlt
 
 end Coxeter
