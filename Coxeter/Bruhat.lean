@@ -9,6 +9,10 @@ This file defines the Bruhat order.
 
 * `Coxeter.le` : The Bruhat order
 
+## Main Statements
+
+* `Coxeter.subword_property`
+
 ## References
 
 * [bjorner2005] A. Björner and F. Brenti, *Combinatorics of Coxeter Groups*
@@ -157,7 +161,7 @@ theorem sublist_tail_of_head_neq {α : Type*}
       | nil => grind
       | cons y ys => grind
 
-theorem thm {i j : ℕ} (ω : List (B W)) (hij : i < j) :
+private theorem thm {i j : ℕ} (ω : List (B W)) (hij : i < j) :
   (cs.leftInvSeq ω).getD i 1 * (cs.leftInvSeq ω).getD j 1 * cs.wordProd ω
   = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
   rw [←cs.getD_leftInvSeq_mul_wordProd (ω.eraseIdx j) i, ←cs.getD_leftInvSeq_mul_wordProd ω j,
@@ -181,7 +185,7 @@ theorem thm {i j : ℕ} (ω : List (B W)) (hij : i < j) :
       · rw [length_leftInvSeq]
         exact h
 
-theorem thm' {i j : ℕ} (ω : List (B W)) (h1 : i < j) (h2 : j < ω.length) :
+private theorem thm' {i j : ℕ} (ω : List (B W)) (h1 : i < j) (h2 : j < ω.length) :
   (cs.leftInvSeq ω)[i]'(by rw [length_leftInvSeq]; grind)
   * (cs.leftInvSeq ω)[j]'(by rw [length_leftInvSeq]; exact h2)
   * cs.wordProd ω
@@ -189,7 +193,7 @@ theorem thm' {i j : ℕ} (ω : List (B W)) (h1 : i < j) (h2 : j < ω.length) :
   rw [←thm ω h1]
   grind
 
-theorem thm'' {i : ℕ} {ω : List (B W)} (hi : i + 1 < ω.length) (hω : cs.IsReduced ω) :
+private theorem thm'' {i : ℕ} {ω : List (B W)} (hi : i + 1 < ω.length) (hω : cs.IsReduced ω) :
   ω[i] ≠ ω[i + 1] := by
   intro h
   have h1 : ω = take i ω ++ [ω[i], ω[i + 1]] ++ drop (i + 2) ω := by
@@ -361,7 +365,8 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
           have h'' : u = cs.wordProd μ' := by
             calc
               u = t * t * u := by rw [(cs.isReflection_of_mem_leftInvSeq _ ht).mul_self, one_mul]
-              _ = t * ((cs.leftInvSeq ↑μ)[j] * cs.wordProd μ) := by grind
+              _ = t * ((cs.leftInvSeq ↑μ)[j] * cs.wordProd μ) := by
+                nth_rw 1 [←hj2, μ.2.1, mul_assoc]
               _ = t * cs.wordProd (μ.val.eraseIdx j) := ?_
               _ = cs.wordProd (take (i + 1) ω.val) * ((cs.wordProd (take i ω.val))⁻¹
                   * cs.wordProd (μ.val.eraseIdx j)) := ?_
@@ -371,7 +376,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
               _ = cs.wordProd (take (i + 1) ω.val) * cs.wordProd (drop i (μ.val.eraseIdx j)) := ?_
               _ = cs.wordProd (take (i + 1) ω.val ++ drop i (μ.val.eraseIdx j)) := by
                 rw [wordProd_append]
-            · have := cs.getD_leftInvSeq_mul_wordProd (μ.val) j
+            · rw [←cs.getD_leftInvSeq_mul_wordProd (μ.val) j]
               grind
             · unfold t
               rw [←wordProd_concat, concat_eq_append, take_append_getElem, mul_assoc]
@@ -441,7 +446,8 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
       · exact h
       · constructor
         · rw [lt_reflection_mul_iff ht u] at h
-          grind
+          rw [h11, hν, μ.2.1, μ.2.2]
+          exact h13
         · exists ⟨ν, ⟨h11, hν⟩⟩
           calc
             take (i + 1) ω.val ++ drop i μ.val <+ take (i + 1) ω.val ++ drop (i + 1) ω.val := ?_
@@ -449,5 +455,39 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
           · apply Sublist.append
             · rfl
             · exact h6'
+
+theorem le_of_reduced_subword {u w : W} (μ : ReducedWord u) (ω : ReducedWord w)
+  (h : μ.val <+ ω.val) : u ≤ w := by
+  revert u
+  suffices h : ∀ (k : ℕ), k ≤ ω.val.length →
+    ∀ (u : W) (μ : ReducedWord u), μ.val <+ ω.val → μ.val.length = k → u ≤ w by
+    intro u μ h2
+    apply h (μ.val.length) _ u μ h2
+    · rfl
+    · exact h2.length_le
+  apply Nat.decreasingInduction
+  · intro k hk ih u μ h1 h2
+    have hneq : u ≠ w := by
+      intro h
+      have h3 : cs.length u = cs.length w := by rw [h]
+      rw [μ.2.1, μ.2.2, ω.2.1, ω.2.2] at h3
+      grind
+    have ⟨v, hv1, hv2, ν, hν⟩ := reduced_subword_extend ω hneq ⟨μ, h1⟩
+    rw [ν.2.1, ν.2.2, μ.2.1, μ.2.2, h2] at hv2
+    have := ih v ν hν hv2
+    grind
+  · intro u μ h1 h2
+    have : μ.val = ω.val := by grind
+    have : u = w := by grind
+    rw [this]
+
+theorem subword_property (u : W) {w : W} (ω : ReducedWord w) :
+  u ≤ w ↔ ∃ (μ : ReducedWord u), μ.val <+ ω.val := by
+  constructor
+  · intro h
+    apply exists_reduced_subword_of_le
+    exact h
+  · intro ⟨μ, h⟩
+    apply le_of_reduced_subword _ _ h
 
 end Coxeter
