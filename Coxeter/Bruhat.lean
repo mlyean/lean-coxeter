@@ -21,7 +21,7 @@ This file defines the Bruhat order.
 
 namespace Coxeter
 
-open List CoxeterSystem CoxeterGroup
+open List Function CoxeterSystem CoxeterGroup
 
 variable {W : Type*} [CoxeterGroup W]
 
@@ -86,6 +86,27 @@ instance : PartialOrder W where
         have := length_le_of_bruhat_le h2
         have := length_le_of_bruhat_le h3
         grind
+
+instance : OrderBot W where
+  bot := 1
+  bot_le := by
+    intro w
+    let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w
+    subst hω2
+    revert hω1
+    induction ω with
+    | nil => simp
+    | cons a as ih =>
+        intro h
+        have h' := h.drop 1
+        simp only [drop_succ_cons, drop_zero] at h'
+        specialize ih h'
+        apply le.step 1 (cs.wordProd as) _ _
+        · simp only [wordProd, map_cons, prod_cons, mul_inv_cancel_right]
+          exact cs.isReflection_simple a
+        · rw [h, h']
+          simp
+        · exact ih
 
 theorem lt_reflection_mul_iff {t : W} (ht : cs.IsReflection t) (w : W)
   : w < t * w ↔ cs.length w < cs.length (t * w) := by
@@ -433,6 +454,25 @@ theorem subword_property' {u w : W} :
   · intro ⟨μ, ω, h⟩
     rw [subword_property u ω]
     exists μ
+
+/-- Bjorner--Brenti Corollary 2.2.4 (finiteness) -/
+instance {u w : W} : Finite (Set.Icc u w) := by
+  let ω : ReducedWord w := default
+  let f : Set.Icc u w → {μ : List (B W) | μ <+ ω} :=
+    fun x => ⟨(Classical.choose (exists_reduced_subword_of_le x.prop.2 ω)).val,
+                Classical.choose_spec (exists_reduced_subword_of_le x.prop.2 ω)⟩
+  have h_prod : ∀ x : Set.Icc u w, cs.wordProd ((f x).val) = x := by
+    intro x
+    symm
+    exact (Classical.choose (exists_reduced_subword_of_le x.prop.2 ω)).prop.2
+  have h_inj : Injective f := by
+    intro x y h
+    grind
+  haveI : Finite {x | x <+ ω.val} := by
+    have h := List.finite_toSet ω.val.sublists
+    simp only [mem_sublists] at h
+    exact h
+  exact Finite.of_injective f h_inj
 
 theorem inv_le_inv_of_le {u w : W} (h : u ≤ w) : u⁻¹ ≤ w⁻¹ := by
   rw [subword_property'] at h
