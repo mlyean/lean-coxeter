@@ -247,8 +247,8 @@ theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :
     group
     rw [map_mul, Equiv.Perm.mul_apply, ih, permRep_simple]
     apply Prod.ext
-    · simp
-    · simp [-inv_simple]
+    · simp only [MulAut.conj_apply, inv_simple, Int.reduceNeg, zpow_neg, zpow_one]
+    · simp only [Int.reduceNeg, zpow_neg, zpow_one, etaAux_conj]
       grind
 
 open Classical in
@@ -259,14 +259,12 @@ theorem permRep_inv_eq (w : W) (r : RootSet W) : permRep W w⁻¹ r
   = ⟨⟨MulAut.conj w⁻¹ r.1, r.1.prop.conj _⟩, r.2 + η w r.1⟩ := by
   unfold η
   have h := Exists.choose_spec (cs.wordProd_surjective w)
-  rw [←h, permRep_inv_wordProd]
-  grind
+  rw [←h, permRep_inv_wordProd, h]
 
 theorem permRep_eq (w : W) (r : RootSet W) : permRep W w r
   = ⟨⟨MulAut.conj w r.1, r.1.prop.conj _⟩, r.2 + η w⁻¹ r.1⟩ := by
   have h := permRep_inv_eq w⁻¹ r
-  rw [inv_inv] at h
-  exact h
+  rwa [inv_inv] at h
 
 open Classical in
 theorem eta_spec (ω : List (B W)) (t : W) :
@@ -339,11 +337,10 @@ theorem eta_eq_one_iff (w t : W) (ht : cs.IsReflection t) :
   · apply eta_eq_one
   · intro h
     by_contra h2
-    replace h2 : η w t = 0 := by
-      unfold ZMod at *
-      rw [Fin.ext_iff] at *
-      grind
-    have := eta_eq_zero w t ht h2
+    apply not_lt_of_gt h
+    apply eta_eq_zero w t ht
+    unfold ZMod at *
+    rw [Fin.ext_iff] at *
     grind
 
 theorem eta_eq_zero_iff (w t : W) (ht : cs.IsReflection t) :
@@ -353,11 +350,10 @@ theorem eta_eq_zero_iff (w t : W) (ht : cs.IsReflection t) :
     exact ht
   · intro h
     by_contra h2
-    replace h2 : η w t = 1 := by
-      unfold ZMod at *
-      rw [Fin.ext_iff] at *
-      grind
-    have := eta_eq_one w t h2
+    apply not_lt_of_gt h
+    apply eta_eq_one w t
+    unfold ZMod at *
+    rw [Fin.ext_iff] at *
     grind
 
 end

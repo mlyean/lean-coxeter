@@ -65,11 +65,13 @@ theorem strong_exchange'
   rw [←isLeftInversion_inv_iff, ←wordProd_reverse] at h
   have ⟨i, hi, h2⟩ := strong_exchange h
   rw [length_reverse] at hi
-  rw [←inv_inj, mul_inv_rev, wordProd_reverse, inv_inv, h.1.inv] at h2
-  rw [←wordProd_reverse, reverse_eraseIdx hi, reverse_reverse] at h2
+  rw [←inv_inj, mul_inv_rev, wordProd_reverse, inv_inv, h.1.inv, ←wordProd_reverse,
+    reverse_eraseIdx hi, reverse_reverse] at h2
   exists ω.length - i - 1
   constructor
-  · grind
+  · calc
+      ω.length - i - 1 < ω.length - i := Nat.sub_one_lt (Nat.sub_ne_zero_of_lt hi)
+      _ ≤ ω.length := Nat.sub_le _ _
   · exact h2
 
 theorem exchange_property
@@ -121,49 +123,53 @@ open Classical in
 /-- Bjorner--Brenti Proposition 1.4.7 -/
 theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
   ∃ i j, i < j ∧ j < ω.length ∧ cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
-  have h0 : ω ≠ [] := by
+  have h1 : ¬ ω = [] := by
     intro h
     subst h
-    have := IsReduced_nil W
-    contradiction
-  have h1 : cs.IsReduced (drop ((ω.length - 1) + 1) ω) := by
-    rw [Nat.sub_one_add_one]
-    · rw [drop_length]
-      apply IsReduced_nil
-    · rw [ne_eq, length_eq_zero_iff]
-      exact h0
-  have h2 : ∃ i, cs.IsReduced (drop (i + 1) ω) := by
-    exists ω.length - 1
-  let i := Nat.find h2
-  have h3 : cs.IsReduced (drop (i + 1) ω) := Nat.find_spec h2
-  have h4 : ¬ cs.IsReduced (drop i ω) := by
-    cases Nat.eq_zero_or_pos i with
-    | inl h =>
-        rw [h]
-        exact hω
-    | inr h =>
-        replace h : i ≠ 0 := Nat.ne_of_gt h
-        rw [←Nat.sub_one_add_one h]
-        apply Nat.find_min h2
-        exact Nat.sub_one_lt h
-  have h5 : i < ω.length := by
-    rw [Nat.find_lt_iff]
+    apply hω
+    apply IsReduced_nil
+  have h2 : ∃ i < ω.length, cs.IsReduced (drop (i + 1) ω) := by
     exists ω.length - 1
     constructor
     · apply Nat.sub_one_lt
       rw [ne_eq, List.length_eq_zero_iff]
-      exact h0
-    · exact h1
-  have h6 : cs.IsLeftDescent (cs.wordProd (drop (i + 1) ω)) ω[i] := by
-    rw [←not_IsReduced_cons ω[i] h3, getElem_cons_drop]
-    exact h4
-  let ⟨k, hk1, hk2⟩ := exchange_property h6
+      exact h1
+    · rw [Nat.sub_one_add_one]
+      · rw [drop_length]
+        apply IsReduced_nil
+      · rw [ne_eq, length_eq_zero_iff]
+        exact h1
+  let i := Nat.find h2
+  have ⟨h3, h4⟩ := Nat.find_spec h2
+  have h5 : cs.IsLeftDescent (cs.wordProd (drop (i + 1) ω)) ω[i] := by
+    rw [←not_IsReduced_cons ω[i] h4, getElem_cons_drop]
+    cases Nat.eq_zero_or_pos i with
+    | inl h => rwa [h]
+    | inr h =>
+        intro h'
+        apply Nat.find_min h2 (Nat.sub_one_lt_of_lt h)
+        constructor
+        · exact lt_of_le_of_lt (Nat.sub_le _ _) h3
+        · rw [Nat.sub_one_add_one_eq_of_pos h]
+          exact h'
+  let ⟨k, h6, h7⟩ := exchange_property h5
   exists i, i + k + 1
-  apply And.intro (by grind) (And.intro (by grind) _)
-  rw [eraseIdx_eq_take_drop_succ, take_eraseIdx_eq_take_of_le _ i (i + k + 1) (by grind)]
+  have h8 : i < i + k + 1 := by
+    rw [Nat.lt_succ_iff]
+    apply Nat.le_add_right
+  have h9 : i + k + 1 < ω.length := by
+    rw [length_drop] at h6
+    calc
+      i + k + 1 = k + (i + 1) := by ring
+      _ < ω.length - (i + 1) + (i + 1) := Nat.add_lt_add_right h6 _
+      _ ≤ ω.length := ?_
+    · rw [Nat.sub_add_cancel]
+      exact h3
+  apply And.intro h8 (And.intro h9 _)
+  rw [eraseIdx_eq_take_drop_succ, take_eraseIdx_eq_take_of_le _ i (i + k + 1) (le_of_lt h8)]
   nth_rw 1 [←take_append_drop i ω]
-  rw [←wordProd_cons, getElem_cons_drop] at hk2
-  rw [wordProd_append, wordProd_append, mul_right_inj, hk2, add_right_comm]
+  rw [←wordProd_cons, getElem_cons_drop] at h7
+  rw [wordProd_append, wordProd_append, mul_right_inj, h7, add_right_comm]
   congr
   apply drop_eraseIdx
 

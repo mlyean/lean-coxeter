@@ -45,21 +45,21 @@ theorem reverse_eraseIdx {l : List α} {i : ℕ} (hi : i < l.length) :
     _ = (drop (l.length - i) l).reverse ++ (take (l.length - i - 1) l).reverse := ?_
     _ = (take (l.length - i - 1) l ++ drop (l.length - i) l).reverse := reverse_append.symm
     _ = (l.eraseIdx (l.length - i - 1)).reverse := ?_
-  · rw [take_reverse, drop_reverse]
-    grind
-  · rw [eraseIdx_eq_take_drop_succ ]
-    congr
-    grind
+  · rw [take_reverse, drop_reverse, Nat.sub_add_eq]
+  · rw [eraseIdx_eq_take_drop_succ, Nat.sub_add_cancel]
+    apply Nat.le_sub_of_add_le
+    rw [add_comm]
+    exact hi
 
 theorem sublist_tail_of_head_neq {l₁ l₂ : List α} (hl₁ : l₁ ≠ [])
   (hsub : l₁ <+ l₂) (h : head l₁ hl₁ ≠ head l₂ (by grind)) :
   l₁ <+ tail l₂ := by
-  cases l₁ with
-  | nil => simp
-  | cons x xs =>
-      cases l₂ with
-      | nil => grind
-      | cons y ys => grind
+  induction hsub with
+  | slnil => rfl
+  | cons =>
+      simp_all only [ne_eq, not_false_eq_true, forall_true_left, head_cons, tail_cons]
+  | cons₂ =>
+      simp_all only [ne_eq, head_cons, not_true_eq_false]
 
 theorem sublist_take_drop {l₁ l₂ : List α} {i : ℕ}
   (h1 : take i l₁ <+ take i l₂) (h2 : drop i l₁ <+ drop i l₂) : l₁ <+ l₂ := by
@@ -145,7 +145,7 @@ theorem getD_leftInvSeq_mul_wordProd₂ {i j : ℕ} (ω : List (B W)) (hij : i <
 
 theorem getElem_leftInvSeq_mul_wordProd₂ {i j : ℕ}
   (ω : List (B W)) (h1 : i < j) (h2 : j < ω.length) :
-  (cs.leftInvSeq ω)[i]'(by rw [length_leftInvSeq]; grind)
+  (cs.leftInvSeq ω)[i]'(by rw [length_leftInvSeq]; exact lt_trans h1 h2)
   * (cs.leftInvSeq ω)[j]'(by rw [length_leftInvSeq]; exact h2)
   * cs.wordProd ω
   = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by

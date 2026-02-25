@@ -40,19 +40,16 @@ instance : LT W where
 
 theorem length_le_of_bruhat_le {u w : W} (h : u ≤ w) : cs.length u ≤ cs.length w := by
   induction h with
-  | rfl => apply le_refl
-  | step => grind
+  | rfl => rfl
+  | step _ _ _ _ h3 ih => exact le_of_lt (lt_of_le_of_lt ih h3)
 
 theorem length_lt_of_bruhat_lt {u w : W} (h : u < w) : cs.length u < cs.length w := by
-  have := length_le_of_bruhat_le h.1
-  suffices cs.length u ≠ cs.length w by grind
   cases h.1 with
   | rfl =>
       have := h.2
       contradiction
-  | step _ _ h4 =>
-      have := length_le_of_bruhat_le h4
-      grind
+  | step _ _ h1 _ h3 =>
+      exact lt_of_le_of_lt (length_le_of_bruhat_le h1) h3
 
 instance : PartialOrder W where
   le_refl := le.rfl
@@ -68,24 +65,27 @@ instance : PartialOrder W where
       constructor
       · exact h.1
       · intro h2
-        have := length_lt_of_bruhat_lt h
-        have := length_le_of_bruhat_le h2
-        grind
+        have h3 := lt_of_lt_of_le (length_lt_of_bruhat_lt h) (length_le_of_bruhat_le h2)
+        rw [lt_self_iff_false] at h3
+        contradiction
     · intro h
       constructor
       · exact h.1
       · intro h2
         subst h2
-        have := h.2
-        grind
+        exact h.2 (le.rfl u)
   le_antisymm := by
     intro u w h1 h2
     cases h1 with
     | rfl => rfl
-    | step _ _ h3 =>
-        have := length_le_of_bruhat_le h2
-        have := length_le_of_bruhat_le h3
-        grind
+    | step v w h3 h4 h5 =>
+        suffices cs.length v < cs.length v by
+          rw [lt_self_iff_false] at this
+          contradiction
+        calc
+          cs.length v < cs.length w := h5
+          _ ≤ cs.length u := length_le_of_bruhat_le h2
+          _ ≤ cs.length v := length_le_of_bruhat_le h3
 
 instance : OrderBot W where
   bot := 1
@@ -116,19 +116,15 @@ theorem lt_reflection_mul_iff {t : W} (ht : cs.IsReflection t) (w : W)
     exact h
   · intro h
     constructor
-    · apply le.step w w (t * w) (le.rfl _)
-      · rw [mul_inv_cancel_right]
-        exact ht
-      · exact h
+    · apply le.step w w (t * w) (le.rfl _) _ h
+      rwa [mul_inv_cancel_right]
     · intro h2
-      rw [←h2] at h
-      grind
+      rwa [←h2, lt_self_iff_false] at h
 
 theorem reflection_mul_lt_iff {t : W} (ht : cs.IsReflection t) (w : W)
   : t * w < w ↔ cs.length (t * w) < cs.length w := by
   have h := lt_reflection_mul_iff ht (t * w)
-  rw [←mul_assoc, ht.mul_self, one_mul] at h
-  exact h
+  rwa [←mul_assoc, ht.mul_self, one_mul] at h
 
 theorem mul_reflection_lt_or_gt (w : W) {t : W} (ht : cs.IsReflection t) :
   t * w < w ∨ t * w > w := by
@@ -173,8 +169,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
   have h8 : i ≤ μ.val.length := by
     by_contra! h
     rw [take_of_length_le (le_of_lt h)] at h5
-    rw [h5, length_take_of_le (Nat.findGreatest_le _), lt_self_iff_false] at h
-    exact h
+    rwa [h5, length_take_of_le (Nat.findGreatest_le _), lt_self_iff_false] at h
   have h7 : μ.val <+ ω.val := by
     apply sublist_take_drop _ h6
     rw [h5]
@@ -186,27 +181,22 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
     apply lt_of_le_of_ne h7.length_le
     intro h
     apply h1'
-    rw [h7.length_eq] at h
-    exact h
+    rwa [h7.length_eq] at h
   have h9 : i < ω.val.length := calc
       i < μ.val.length + 1 := add_le_add_left h8 1
       _ ≤ ω.val.length := h89
   have h4 : ¬ P (i + 1) := Nat.findGreatest_is_greatest (Nat.lt_succ_self i) h9
   have h4' : (hi : i < μ.val.length) → μ.val[i] ≠ ω.val[i] := by
     intro h h'
-    have h5' : take (i + 1) μ.val = take (i + 1) ω.val := by
-      calc
+    apply h4
+    exists μ
+    constructor
+    · calc
         take (i + 1) μ.val = (take i μ.val).concat μ.val[i] := by rw [take_concat_get]
         _ = (take i ω.val).concat ω.val[i] := by rw [h', h5]
         _ = take (i + 1) ω.val := by rw [take_concat_get]
-    apply h4
-    unfold P
-    exists μ
-    constructor
-    · exact h5'
     · have h'' := h6.drop 1
-      rw [drop_drop, drop_drop] at h''
-      exact h''
+      rwa [drop_drop, drop_drop] at h''
   let t := cs.wordProd (take i ω) * cs.simple ω.val[i] * (cs.wordProd (take i ω))⁻¹
   have ht : cs.IsReflection t := by exists cs.wordProd (take i ω.val), ω.val[i]
   have h11 : t * u = cs.wordProd (take (i + 1) ω ++ drop i μ) := by
@@ -234,13 +224,11 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
       cases Nat.lt_or_ge j i with
       | inl h' =>
           have : i < (cs.leftInvSeq ω.val).length := by
-            rw [length_leftInvSeq]
-            exact h9
+            rwa [length_leftInvSeq]
           have ht' : t = (cs.leftInvSeq ω)[i] := by
             rw [getElem_leftInvSeq]
           have ht'' : t = (cs.leftInvSeq ω)[j] := by
-            rw [hj2]
-            rw [getElem_leftInvSeq, getElem_leftInvSeq]
+            rw [hj2, getElem_leftInvSeq, getElem_leftInvSeq]
             · have : take j μ.val = take j ω.val := calc
                 take j μ.val = take j (take i μ.val) := by rw [take_take, min_eq_left (le_of_lt h')]
                 _ = take j (take i ω.val) := by rw [h5]
@@ -302,7 +290,6 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
             unfold CoxeterSystem.IsReduced at h
             grind
           apply h4
-          unfold P
           exists ⟨μ', ⟨hμ', h''⟩⟩
           unfold μ'
           have : (take (i + 1) ω.val).length = i + 1 := by grind
@@ -336,13 +323,12 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
                     apply neq_of_adjacent (by grind : i + 1 < μ'.length) hμ'
                     rw [h13, h14]
   | inr h =>
-      have h12 : cs.length (t * u) ≤ cs.length u + 1 := by
-        calc
-          cs.length (t * u)
-            = cs.length (cs.wordProd (take (i + 1) ω.val ++ drop i μ.val)) := by rw [h11]
-          _ ≤ (take (i + 1) ω.val ++ drop i μ.val).length := cs.length_wordProd_le _
-          _ = μ.val.length + 1 := by grind
-          _ = cs.length u + 1 := by rw [←μ.2.1, ←μ.2.2]
+      have h12 : cs.length (t * u) ≤ cs.length u + 1 := calc
+        cs.length (t * u)
+          = cs.length (cs.wordProd (take (i + 1) ω.val ++ drop i μ.val)) := by rw [h11]
+        _ ≤ (take (i + 1) ω.val ++ drop i μ.val).length := cs.length_wordProd_le _
+        _ = μ.val.length + 1 := by grind
+        _ = cs.length u + 1 := by rw [←μ.2.1, ←μ.2.2]
       let v := t * u
       let ν := take (i + 1) ω.val ++ drop i μ.val
       change v = cs.wordProd ν at h11
@@ -390,21 +376,22 @@ theorem exists_reduced_subword_of_le {u w : W} (h : u ≤ w) (ω : ReducedWord w
       intro ω
       let t := w * v⁻¹
       change cs.IsReflection t at h1
-      have h3 : w = t * v := by simp only [inv_mul_cancel_right, t]
+      have h3 : w = t * v := by
+        unfold t
+        rw [inv_mul_cancel_right]
       have h4 : cs.IsLeftInversion (cs.wordProd ω) t := by
         constructor
         · exact h1
         · rw [←ω.prop.2]
           nth_rw 1 [h3]
-          rw [←mul_assoc, h1.mul_self, one_mul]
-          exact h2
+          rwa [←mul_assoc, h1.mul_self, one_mul]
       have ⟨i, _, h5⟩ := strong_exchange h4
       nth_rw 1 [←ω.prop.2, h3, ←mul_assoc, h1.mul_self, one_mul] at h5
-      have ⟨ω', h6, _, _⟩ := exists_reduced_subword (ω.val.eraseIdx i)
-      have ⟨μ, h7⟩ := ih ⟨ω', by grind⟩
+      have ⟨ω', h6, h7, h8⟩ := exists_reduced_subword (ω.val.eraseIdx i)
+      have ⟨μ, h9⟩ := ih ⟨ω', h7, Eq.trans h5 h8⟩
       exists μ
       calc
-        μ <+ ω' := h7
+        μ <+ ω' := h9
         _ <+ ω.val.eraseIdx i := h6
         _ <+ ω := eraseIdx_sublist _ _
 
@@ -423,15 +410,17 @@ theorem le_of_reduced_subword {u w : W} (μ : ReducedWord u) (ω : ReducedWord w
       intro h
       have h3 : cs.length u = cs.length w := by rw [h]
       rw [μ.2.2, μ.2.1, ω.2.2, ω.2.1] at h3
-      grind
+      rw [←h2] at hk
+      exact ne_of_lt hk h3
     have ⟨v, hv1, hv2, ν, hν⟩ := reduced_subword_extend ω hneq ⟨μ, h1⟩
     rw [ν.2.2, ν.2.1, μ.2.2, μ.2.1, h2] at hv2
-    have := ih v ν hν hv2
-    grind
+    exact le_of_lt (lt_of_lt_of_le hv1 (ih v ν hν hv2))
   · intro u μ h1 h2
-    have : μ.val = ω.val := by grind
-    have : u = w := by grind
-    rw [this]
+    apply le_of_eq
+    rw [μ.2.2, ω.2.2]
+    congr 1
+    rw [←h1.length_eq]
+    exact h2
 
 /-- Bjorner--Brenti Theorem 2.2.2 -/
 theorem subword_property (u : W) {w : W} (ω : ReducedWord w) :
@@ -441,7 +430,7 @@ theorem subword_property (u : W) {w : W} (ω : ReducedWord w) :
     apply exists_reduced_subword_of_le
     exact h
   · intro ⟨μ, h⟩
-    apply le_of_reduced_subword _ _ h
+    exact le_of_reduced_subword _ _ h
 
 theorem subword_property' {u w : W} :
   u ≤ w ↔ ∃ (μ : ReducedWord u) (ω : ReducedWord w), μ.val <+ ω.val := by
@@ -467,7 +456,8 @@ instance {u w : W} : Finite (Set.Icc u w) := by
     exact (Classical.choose (exists_reduced_subword_of_le x.prop.2 ω)).prop.2
   have h_inj : Injective f := by
     intro x y h
-    grind
+    ext
+    rw [←h_prod x, ←h_prod y, h]
   haveI : Finite {x | x <+ ω.val} := by
     have h := List.finite_toSet ω.val.sublists
     simp only [mem_sublists] at h
