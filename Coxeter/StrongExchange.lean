@@ -150,8 +150,7 @@ theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
         apply Nat.find_min h2 (Nat.sub_one_lt_of_lt h)
         constructor
         · exact lt_of_le_of_lt (Nat.sub_le _ _) h3
-        · rw [Nat.sub_one_add_one_eq_of_pos h]
-          exact h'
+        · rwa [Nat.sub_one_add_one_eq_of_pos h]
   let ⟨k, h6, h7⟩ := exchange_property h5
   exists i, i + k + 1
   have h8 : i < i + k + 1 := by
@@ -192,5 +191,11 @@ theorem exists_reduced_subword (ω : List (B W)) :
           · constructor
             · exact h4
             · rw [h2, h5]
+
+theorem exists_reduced_subword' {w : W} {ω : List (B W)} (h : w = cs.wordProd ω) :
+  ∃ (ω' : ReducedWord w), ω'.val <+ ω := by
+  rw [h]
+  have ⟨ω', h1, h2, h3⟩ := exists_reduced_subword ω
+  exists ⟨ω', h2, h3⟩
 
 end Coxeter

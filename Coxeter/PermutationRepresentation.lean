@@ -31,11 +31,11 @@ namespace Coxeter
 
 open Function List CoxeterSystem CoxeterGroup
 
-def ReflectionSet (W : Type*) [CoxeterGroup W] := setOf (CoxeterSystem.IsReflection (@cs W _))
-
-def RootSet (W : Type*) [CoxeterGroup W] := @ReflectionSet W _ × ZMod 2
-
 variable {W : Type*} [CoxeterGroup W]
+
+def ReflectionSet (W : Type*) [CoxeterGroup W] := setOf (@cs W).IsReflection
+
+def RootSet (W : Type*) [CoxeterGroup W] := ReflectionSet W × ZMod 2
 
 /-- Induction principle for reflections -/
 theorem ReflectionSet.induction {P : ReflectionSet W → Prop}
@@ -87,7 +87,7 @@ private theorem permRepAux_involutive (i : B W) : Function.Involutive (permRepAu
 open Classical in
 private theorem foldl_permRepAux (ω : List (B W)) (r : RootSet W) :
   foldl (fun x i => permRepAux i x) r ω
-    = ⟨⟨MulAut.conj ((cs.wordProd ω)⁻¹) r.1, r.1.property.conj _⟩,
+    = ⟨⟨MulAut.conj (cs.wordProd ω)⁻¹ r.1, r.1.property.conj _⟩,
         r.2 + count r.1.val (cs.leftInvSeq ω)⟩ := by
   revert r
   induction ω with
@@ -167,13 +167,13 @@ def permRep (W : Type*) [CoxeterGroup W] : W →* Equiv.Perm (RootSet W) :=
 
 @[simp]
 theorem permRep_simple (i : B W) (r : RootSet W) : permRep W (cs.simple i) r
-  = (⟨MulAut.conj (cs.simple i) r.1, r.1.prop.conj _⟩ , r.2 + etaAux i r.1) := by
+  = ⟨⟨MulAut.conj (cs.simple i) r.1, r.1.prop.conj _⟩, r.2 + etaAux i r.1⟩ := by
   unfold permRep
   rw [lift_apply_simple]
   rfl
 
 theorem permRep_inv_simple (i : B W) (r : RootSet W) : permRep W ((cs.simple i)⁻¹) r
-  = (⟨MulAut.conj ((cs.simple i)⁻¹) r.1, r.1.prop.conj _⟩ , r.2 + etaAux i r.1) := by simp
+  = (⟨MulAut.conj (cs.simple i)⁻¹ r.1, r.1.prop.conj _⟩ , r.2 + etaAux i r.1) := by simp
 
 /-- Bjorner--Brenti Theorem 1.3.2(i): uniqueness -/
 theorem permRep_ext {φ : W →* Equiv.Perm (RootSet W)}
@@ -182,7 +182,7 @@ theorem permRep_ext {φ : W →* Equiv.Perm (RootSet W)}
 open Classical in
 theorem permRep_inv_wordProd (ω : List (B W)) (r : RootSet W) :
   permRep W ((cs.wordProd ω)⁻¹) r
-  = ⟨⟨MulAut.conj ((cs.wordProd ω)⁻¹) r.1, r.1.property.conj _⟩,
+  = ⟨⟨MulAut.conj (cs.wordProd ω)⁻¹ r.1, r.1.property.conj _⟩,
     r.2 + count r.1.val (cs.leftInvSeq ω)⟩ := by
   revert r
   induction ω with
@@ -214,7 +214,7 @@ theorem permRep_wordProd (ω : List (B W)) (r : RootSet W) :
 
 open Classical in
 /-- Bjorner--Brenti Theorem 1.3.2(i): injectivity -/
-theorem permRep_inj : Function.Injective (@permRep W _) := by
+theorem permRep_inj : Function.Injective (permRep W) := by
   rw [injective_iff_map_eq_one]
   intro w hw
   let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word (w⁻¹)

@@ -8,6 +8,7 @@ We build upon the the theory of Coxeter systems currently available in `mathlib`
 ## Main definitions
 
 * `Coxeter.CoxeterGroup`
+* `Coxeter.ReducedWord`
 
 -/
 
@@ -75,6 +76,33 @@ namespace Coxeter
 open List CoxeterSystem CoxeterGroup
 
 variable {W : Type*} [CoxeterGroup W]
+
+def ReducedWord (w : W) := {ω : List (B W) // cs.IsReduced ω ∧ w = cs.wordProd ω}
+
+instance {w : W} : CoeOut (ReducedWord w) (List (B W)) where
+  coe := fun ω => ω.val
+
+open Classical in
+noncomputable instance {w : W} : Inhabited (ReducedWord w) where
+  default := ⟨Classical.choose (cs.exists_reduced_word' w),
+              Classical.choose_spec (cs.exists_reduced_word' w)⟩
+
+namespace ReducedWord
+
+@[simp]
+def reverse {w : W} (ω : ReducedWord w) : ReducedWord w⁻¹ :=
+  ⟨ω.1.reverse, ω.prop.1.reverse,
+    Eq.trans (congr_arg Inv.inv ω.prop.2) (cs.wordProd_reverse _).symm⟩
+
+abbrev length {w : W} (ω : ReducedWord w) : ℕ := ω.val.length
+
+theorem length_eq {w : W} (ω : ReducedWord w) : ω.length = cs.length w := by
+  unfold length
+  rw [←ω.2.1, ←ω.2.2]
+
+theorem wordProd_eq {w : W} (ω : ReducedWord w) : cs.wordProd ω = w := ω.2.2.symm
+
+end ReducedWord
 
 theorem IsReduced_nil (W : Type*) [CoxeterGroup W] : (@cs W).IsReduced [] := by
   unfold CoxeterSystem.IsReduced
