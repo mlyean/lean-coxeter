@@ -340,7 +340,6 @@ theorem eta_eq_one_iff (w t : W) (ht : cs.IsReflection t) :
     apply not_lt_of_gt h
     apply eta_eq_zero w t ht
     unfold ZMod at *
-    rw [Fin.ext_iff] at *
     grind
 
 theorem eta_eq_zero_iff (w t : W) (ht : cs.IsReflection t) :
@@ -353,7 +352,6 @@ theorem eta_eq_zero_iff (w t : W) (ht : cs.IsReflection t) :
     apply not_lt_of_gt h
     apply eta_eq_one w t
     unfold ZMod at *
-    rw [Fin.ext_iff] at *
     grind
 
 end

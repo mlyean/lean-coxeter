@@ -306,7 +306,9 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
                         rw [length_take_of_le h_i_lt]
                       conv in i + 1 - i.succ =>
                         rw [Nat.sub_self]
-                      rw [getElem_drop, getElem_eraseIdx_of_ge _ (le_refl _)]
+                      rw [getElem_drop]
+                      conv in i + 0 => change i
+                      rw [getElem_eraseIdx_of_ge _ (le_refl _)]
                       exact h
                     have h7 : μ'[i] = ω.val[i] := by
                       unfold μ'
