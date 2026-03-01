@@ -79,9 +79,8 @@ instance : PartialOrder W where
     cases h1 with
     | rfl => rfl
     | step v w h3 h4 h5 =>
-        suffices cs.length v < cs.length v by
-          rw [lt_self_iff_false] at this
-          contradiction
+        exfalso
+        apply lt_irrefl (cs.length v)
         calc
           cs.length v < cs.length w := h5
           _ ≤ cs.length u := length_le_of_bruhat_le h2
@@ -95,18 +94,19 @@ instance : OrderBot W where
     subst hω2
     revert hω1
     induction ω with
-    | nil => simp
+    | nil =>
+        intro
+        rw [wordProd_nil]
     | cons a as ih =>
         intro h
         have h' := h.drop 1
-        simp only [drop_succ_cons, drop_zero] at h'
+        dsimp at h'
         specialize ih h'
-        apply le.step 1 (cs.wordProd as) _ _
-        · simp only [wordProd, map_cons, prod_cons, mul_inv_cancel_right]
+        apply le.step 1 (cs.wordProd as) _ ih
+        · rw [wordProd_cons, mul_inv_cancel_right]
           exact cs.isReflection_simple a
-        · rw [h, h']
-          simp
-        · exact ih
+        · rw [h, h', length_cons]
+          apply Nat.le_refl
 
 theorem lt_reflection_mul_iff {t : W} (ht : cs.IsReflection t) (w : W)
   : w < t * w ↔ cs.length w < cs.length (t * w) := by
@@ -150,10 +150,10 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
     rw [take_of_length_le (le_of_lt h)] at h_take_eq
     unfold ReducedWord.length at h
     rwa [h_take_eq, length_take_of_le (Nat.findGreatest_le _), lt_self_iff_false] at h
+  have hsub : μ.val <+ ω.val := by
+    apply sublist_take_drop _ h_drop_sublist
+    rw [h_take_eq]
   have h_i_lt : i < ω.length := by
-    have hsub : μ.val <+ ω.val := by
-      apply sublist_take_drop _ h_drop_sublist
-      rw [h_take_eq]
     apply lt_of_lt_of_le (add_le_add_left h_i_le 1)
     apply lt_of_le_of_ne hsub.length_le
     intro h
@@ -183,8 +183,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
         * cs.wordProd (take i μ ++ drop i μ) := by rw [take_append_drop]
       _ = cs.wordProd (take (i + 1) ↑ω ++ drop i ↑μ) := ?_
     · unfold t
-      nth_rw 1 [μ.wordProd_eq]
-      rw [←wordProd_concat, concat_eq_append, take_append_getElem]
+      rw [μ.wordProd_eq, ←wordProd_concat, concat_eq_append, take_append_getElem]
     · rw [wordProd_append, wordProd_append, h_take_eq]
       group
   cases mul_reflection_lt_or_gt u ht with
@@ -198,39 +197,30 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
       replace hj2 : t = (cs.leftInvSeq μ.val)[j] := hj2.symm
       cases Nat.lt_or_ge j i with
       | inl h' =>
-          have : i < (cs.leftInvSeq ω.val).length := by
-            rwa [length_leftInvSeq]
+          apply lt_irrefl (cs.length w)
+          have : i < (cs.leftInvSeq ω.val).length := by rwa [length_leftInvSeq]
           have : j < ω.length := by grind
-          have ht' : t = (cs.leftInvSeq ω)[i] := by
-            rw [getElem_leftInvSeq]
+          have ht' : t = (cs.leftInvSeq ω)[i] := by rw [getElem_leftInvSeq]
           have ht'' : t = (cs.leftInvSeq ω)[j] := by
-            rw [hj2, getElem_leftInvSeq, getElem_leftInvSeq]
-            · have : take j μ.val = take j ω.val := calc
-                take j μ.val = take j (take i μ.val) := by rw [take_take, min_eq_left (le_of_lt h')]
-                _ = take j (take i ω.val) := by rw [h_take_eq]
-                _ = take j ω.val := by rw [take_take, min_eq_left (le_of_lt h')]
-              rw [this]
-              have : μ.val[j] = ω.val[j] := calc
-                μ.val[j] = (take i μ.val)[j]'(by rw [length_take_of_le h_i_le]; exact h') := by
-                  rw [getElem_take]
-                _ = (take i ω.val)[j]'(by rw [length_take_of_le (le_of_lt h_i_lt)]; exact h') := by
-                  simp only [h_take_eq, getElem_take]
-                _ = ω.val[j] := by rw [getElem_take]
-              rw [this]
-            · exact lt_of_lt_of_le h' h_i_le
+            rw [hj2]
+            conv =>
+              lhs
+              rw [←@getElem_take _ _ i _ (by grind)]
+              congr
+              rw [←leftInvSeq_take, h_take_eq, leftInvSeq_take]
+            rw [getElem_take]
           have hweq : w = cs.wordProd ((ω.val.eraseIdx i).eraseIdx j) := calc
             w = t * t * w := by rw [(cs.isReflection_of_mem_leftInvSeq _ ht).mul_self, one_mul]
             _ = (cs.leftInvSeq ↑ω)[j] * (cs.leftInvSeq ↑ω)[i] * cs.wordProd ω.val := by
               rw [←ht', ←ht'', ω.wordProd_eq]
             _ = cs.wordProd ((ω.val.eraseIdx i).eraseIdx j) :=
               getElem_leftInvSeq_mul_wordProd₂ ω.val h' h_i_lt
-          have hlt : cs.length w < cs.length w := calc
+          calc
             cs.length w = cs.length (cs.wordProd ((ω.val.eraseIdx i).eraseIdx j)) := by
               nth_rw 1 [hweq]
             _ ≤ ((ω.val.eraseIdx i).eraseIdx j).length := cs.length_wordProd_le _
             _ < ω.length := by grind
             _ = cs.length w := ω.length_eq
-          rwa [lt_self_iff_false] at hlt
       | inr h' =>
           have h_i_lt2 : i < μ.length := lt_of_le_of_lt h' hj1
           specialize h_get_i_neq h_i_lt2
@@ -273,50 +263,22 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
           apply h_not_P_succ_i
           exists ⟨μ', hμ', h''⟩
           unfold μ'
-          have : (take (i + 1) ω.val).length = i + 1 := length_take_of_le h_i_lt
-          simp only [this, take_left', drop_left', true_and]
+          simp only [length_take_of_le h_i_lt, take_left', drop_left', true_and]
           rw [←tail_drop]
-          cases Classical.em (drop i (μ.val.eraseIdx j) = []) with
-          | inl heqnil =>
-              rw [heqnil]
-              exact nil_sublist _
-          | inr hneqnil =>
-              have h4 : drop i (μ.val.eraseIdx j) <+ (drop i ω.val) := calc
-                drop i (μ.val.eraseIdx j) <+ drop i μ.val := (eraseIdx_sublist _ j).drop i
-                _ <+ drop i ω.val := h_drop_sublist
-              apply sublist_tail_of_head_neq hneqnil h4
-              · rw [head_drop, head_drop]
-                cases lt_or_eq_of_le h' with
-                | inl hijlt => rwa [getElem_eraseIdx_of_lt _ hijlt]
-                | inr hijeq =>
-                    subst hijeq
-                    rw [getElem_eraseIdx_of_ge _ le_rfl]
-                    intro h
-                    have h5 : i + 1 < μ'.length := by
-                      rw [drop_eq_nil_iff, length_eraseIdx_of_lt, Nat.not_le] at hneqnil
-                      · rw [←hμ_len]
-                        apply Nat.add_lt_of_lt_sub
-                        exact hneqnil
-                      · exact hj1
-                    apply neq_of_adjacent h5 hμ'
-                    have h6 : μ'[i + 1] = ω.val[i] := by
-                      unfold μ'
-                      rw [getElem_append_right (length_take_le _ _)]
-                      conv in (take (i + 1) ω.val).length =>
-                        rw [length_take_of_le h_i_lt]
-                      conv in i + 1 - i.succ =>
-                        rw [Nat.sub_self]
-                      rw [getElem_drop]
-                      conv in i + 0 => change i
-                      rw [getElem_eraseIdx_of_ge _ (le_refl _)]
-                      exact h
-                    have h7 : μ'[i] = ω.val[i] := by
-                      unfold μ'
-                      rw [getElem_append_left]
-                      · rw [getElem_take]
-                      · rw [length_take_of_le h_i_lt]
-                        apply Nat.lt_add_one
-                    rw [h6, h7]
+          cases lt_or_eq_of_le h' with
+          | inl hlt =>
+              have h4 : i < (μ.val.eraseIdx j).length := by grind
+              have h5 : drop i (μ.val.eraseIdx j) ≠ [] := by
+                rwa [ne_eq, drop_eq_nil_iff, not_le]
+              apply sublist_tail_of_head_neq h5
+              · simp only [head_drop, ne_eq]
+                rw [getElem_eraseIdx_of_lt h4 hlt]
+                exact h_get_i_neq
+              · apply List.Sublist.drop
+                exact Sublist.trans (eraseIdx_sublist _ _) hsub
+          | inr heq =>
+              rw [←add_zero j, ←heq, ←drop_eraseIdx μ.val i 0, eraseIdx_zero, ←drop_one, ←drop_one]
+              exact h_drop_sublist.drop 1
   | inr h =>
       change u < v at h
       exists v
