@@ -81,8 +81,9 @@ private theorem permRepAux_involutive (i : B W) : Function.Involutive (permRepAu
   rw [permRepAux, permRepAux]
   apply Prod.ext
   · simp [mul_assoc]
-  · rw [etaAux_conj']
-    grind
+  · have htwo_eq_zero : (2 : ZMod 2) = 0 := ZMod.natCast_self 2
+    rw [etaAux_conj', add_assoc, ←two_mul, htwo_eq_zero, zero_mul, add_zero]
+
 
 open Classical in
 private theorem foldl_permRepAux (ω : List (B W)) (r : RootSet W) :
@@ -123,9 +124,7 @@ private theorem permRepAux_liftable : (@M W).IsLiftable permRepAux_equiv := by
   have h (k : ℕ) : ((permRepAux_equiv i * permRepAux_equiv i') ^ k) r
     = foldl (fun x i => permRepAux i x) r (alternatingWord i' i (2 * k)) := by
     induction k with
-    | zero =>
-        unfold alternatingWord
-        rfl
+    | zero => rfl
     | succ k ih =>
         conv =>
           congr

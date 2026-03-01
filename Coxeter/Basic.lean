@@ -41,7 +41,7 @@ theorem drop_eraseIdx (l : List α) (i j : ℕ) :
 theorem reverse_eraseIdx {l : List α} {i : ℕ} (hi : i < l.length) :
   l.reverse.eraseIdx i = (l.eraseIdx (l.length - i - 1)).reverse := by
   calc
-    l.reverse.eraseIdx i = take i (l.reverse) ++ drop (i + 1) (l.reverse) :=
+    l.reverse.eraseIdx i = take i (l.reverse) ++ drop (i + 1) l.reverse :=
       eraseIdx_eq_take_drop_succ _ _
     _ = (drop (l.length - i) l).reverse ++ (take (l.length - i - 1) l).reverse := ?_
     _ = (take (l.length - i - 1) l ++ drop (l.length - i) l).reverse := reverse_append.symm
@@ -49,8 +49,7 @@ theorem reverse_eraseIdx {l : List α} {i : ℕ} (hi : i < l.length) :
   · rw [take_reverse, drop_reverse, Nat.sub_add_eq]
   · rw [eraseIdx_eq_take_drop_succ, Nat.sub_add_cancel]
     apply Nat.le_sub_of_add_le
-    rw [add_comm]
-    exact hi
+    rwa [add_comm]
 
 theorem sublist_tail_of_head_neq {l₁ l₂ : List α} (hl₁ : l₁ ≠ [])
   (hsub : l₁ <+ l₂) (h : head l₁ hl₁ ≠ head l₂ (by grind)) :
@@ -155,19 +154,19 @@ theorem getD_leftInvSeq_mul_wordProd₂ {i j : ℕ} (ω : List (B W)) (hij : i <
   congr 1
   cases (Nat.lt_or_ge i ω.length) with
   | inl h =>
-      rw [getD_eq_getElem, getD_eq_getElem]
-      · rw [getElem_leftInvSeq, getElem_leftInvSeq]
-        · grind
-        · grind
-        · exact h
+      rw [getD_eq_getElem, getD_eq_getElem, getElem_leftInvSeq, getElem_leftInvSeq]
+      · grind
+      · grind
+      · exact h
       · rw [length_leftInvSeq, length_eraseIdx]
         grind
       · rw [length_leftInvSeq]
         exact h
   | inr h =>
       rw [getD_eq_default, getD_eq_default]
-      · rw [length_leftInvSeq, length_eraseIdx]
-        grind
+      · rw [length_leftInvSeq]
+        apply le_trans _ h
+        apply length_eraseIdx_le
       · rw [length_leftInvSeq]
         exact h
 
@@ -177,25 +176,22 @@ theorem getElem_leftInvSeq_mul_wordProd₂ {i j : ℕ}
   * (cs.leftInvSeq ω)[j]'(by rw [length_leftInvSeq]; exact h2)
   * cs.wordProd ω
   = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
-  rw [←getD_leftInvSeq_mul_wordProd₂ ω h1]
-  grind
+    rw [←getD_leftInvSeq_mul_wordProd₂ ω h1, getD_eq_getElem, getD_eq_getElem]
 
 theorem neq_of_adjacent {i : ℕ} {ω : List (B W)}
   (hi : i + 1 < ω.length) (hω : cs.IsReduced ω) : ω[i] ≠ ω[i + 1] := by
   intro h
-  have hlt : ω.length < ω.length := by
-    calc
-      ω.length = cs.length (cs.wordProd ω) := hω.symm
-      _ = cs.length (cs.wordProd (take i ω ++ [ω[i], ω[i + 1]] ++ drop (i + 2) ω)) := by simp
-      _ = cs.length (cs.wordProd (take i ω) * cs.wordProd [ω[i], ω[i + 1]]
-            * cs.wordProd (drop (i + 2) ω)) := by rw [wordProd_append, wordProd_append]
-      _ = cs.length (cs.wordProd (take i ω) * cs.wordProd (drop (i + 2) ω)) := ?_
-      _ = cs.length (cs.wordProd (take i ω ++ drop (i + 2) ω)) := by rw [wordProd_append]
-      _ ≤ (take i ω ++ drop (i + 2) ω).length := length_wordProd_le _ _
-      _ < ω.length := by grind
-    · rw [h]
-      simp [wordProd]
-  rw [lt_self_iff_false] at hlt
-  exact hlt
+  apply lt_irrefl (ω.length)
+  calc
+    ω.length = cs.length (cs.wordProd ω) := hω.symm
+    _ = cs.length (cs.wordProd (take i ω ++ [ω[i], ω[i + 1]] ++ drop (i + 2) ω)) := by simp
+    _ = cs.length (cs.wordProd (take i ω) * cs.wordProd [ω[i], ω[i + 1]]
+          * cs.wordProd (drop (i + 2) ω)) := by rw [wordProd_append, wordProd_append]
+    _ = cs.length (cs.wordProd (take i ω) * cs.wordProd (drop (i + 2) ω)) := ?_
+    _ = cs.length (cs.wordProd (take i ω ++ drop (i + 2) ω)) := by rw [wordProd_append]
+    _ ≤ (take i ω ++ drop (i + 2) ω).length := length_wordProd_le _ _
+    _ < ω.length := by grind
+  · rw [h]
+    simp [wordProd]
 
 end Coxeter

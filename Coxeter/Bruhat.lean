@@ -46,8 +46,9 @@ theorem length_le_of_bruhat_le {u w : W} (h : u ≤ w) : cs.length u ≤ cs.leng
 theorem length_lt_of_bruhat_lt {u w : W} (h : u < w) : cs.length u < cs.length w := by
   cases h.1 with
   | rfl =>
-      have := h.2
-      contradiction
+      exfalso
+      apply h.2
+      rfl
   | step _ _ h1 _ h3 =>
       exact lt_of_le_of_lt (length_le_of_bruhat_le h1) h3
 
@@ -65,9 +66,8 @@ instance : PartialOrder W where
       constructor
       · exact h.1
       · intro h2
-        have h3 := lt_of_lt_of_le (length_lt_of_bruhat_lt h) (length_le_of_bruhat_le h2)
-        rw [lt_self_iff_false] at h3
-        contradiction
+        apply lt_irrefl (cs.length u)
+        exact lt_of_lt_of_le (length_lt_of_bruhat_lt h) (length_le_of_bruhat_le h2)
     · intro h
       constructor
       · exact h.1
@@ -147,9 +147,10 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
   have ⟨μ, h_take_eq, h_drop_sublist⟩ := h_P_i
   have h_i_le : i ≤ μ.length := by
     by_contra! h
+    apply lt_irrefl i
     rw [take_of_length_le (le_of_lt h)] at h_take_eq
     unfold ReducedWord.length at h
-    rwa [h_take_eq, length_take_of_le (Nat.findGreatest_le _), lt_self_iff_false] at h
+    rwa [h_take_eq, length_take_of_le (Nat.findGreatest_le _)] at h
   have hsub : μ.val <+ ω.val := by
     apply sublist_take_drop _ h_drop_sublist
     rw [h_take_eq]
@@ -199,13 +200,14 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
       | inl h' =>
           apply lt_irrefl (cs.length w)
           have : i < (cs.leftInvSeq ω.val).length := by rwa [length_leftInvSeq]
-          have : j < ω.length := by grind
+          have : j < ω.length := Nat.lt_of_lt_of_le hj1 hsub.length_le
           have ht' : t = (cs.leftInvSeq ω)[i] := by rw [getElem_leftInvSeq]
           have ht'' : t = (cs.leftInvSeq ω)[j] := by
             rw [hj2]
+            rw [ReducedWord.length, ←cs.length_leftInvSeq μ.val] at h_i_le
             conv =>
               lhs
-              rw [←@getElem_take _ _ i _ (by grind)]
+              rw [←@getElem_take _ _ i _ (by rwa [length_take_of_le h_i_le])]
               congr
               rw [←leftInvSeq_take, h_take_eq, leftInvSeq_take]
             rw [getElem_take]
@@ -267,7 +269,9 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
           rw [←tail_drop]
           cases lt_or_eq_of_le h' with
           | inl hlt =>
-              have h4 : i < (μ.val.eraseIdx j).length := by grind
+              have h4 : i < (μ.val.eraseIdx j).length := by
+                rw [length_eraseIdx_of_lt hj1, Nat.lt_sub_iff_add_lt]
+                exact lt_of_le_of_lt hlt hj1
               have h5 : drop i (μ.val.eraseIdx j) ≠ [] := by
                 rwa [ne_eq, drop_eq_nil_iff, not_le]
               apply sublist_tail_of_head_neq h5
@@ -283,9 +287,8 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
       change u < v at h
       exists v
       have h4 : ν.length = μ.length + 1 := by
-        unfold ν
-        rw [length_append, length_take_of_le h_i_lt, length_drop]
-        grind
+        rw [length_append, length_take_of_le h_i_lt, length_drop,
+          add_comm, Nat.succ_eq_add_one, ←add_assoc, Nat.sub_add_cancel h_i_le]
       have hν : cs.IsReduced ν := by
         unfold CoxeterSystem.IsReduced
         apply eq_of_le_of_ge (cs.length_wordProd_le _)
@@ -296,22 +299,21 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
       · constructor
         · rwa [h3, hν, ←μ.length_eq]
         · exists ⟨ν, hν, h3⟩
-          calc
-            take (i + 1) ω.val ++ drop i μ.val <+ take (i + 1) ω.val ++ drop (i + 1) ω.val := ?_
-            _ = ω.val := by rw [take_append_drop]
-          · apply Sublist.append (Sublist.refl _)
-            cases Nat.lt_or_eq_of_le h_i_le with
-            | inl h' =>
-                rw [←tail_drop]
-                have h'' : drop i μ.val ≠ [] := by
-                  rw [ne_eq, drop_eq_nil_iff, not_le]
-                  exact h'
-                apply sublist_tail_of_head_neq h'' h_drop_sublist
-                rw [head_drop, head_drop]
-                exact h_get_i_neq h'
-            | inr h =>
-                rw [h, drop_length]
-                apply nil_sublist
+          dsimp [ν]
+          nth_rw 2 [←take_append_drop (i + 1) ω.val]
+          apply Sublist.append (Sublist.refl _)
+          cases Nat.lt_or_eq_of_le h_i_le with
+          | inl h' =>
+              rw [←tail_drop]
+              have h'' : drop i μ.val ≠ [] := by
+                rw [ne_eq, drop_eq_nil_iff, not_le]
+                exact h'
+              apply sublist_tail_of_head_neq h'' h_drop_sublist
+              rw [head_drop, head_drop]
+              exact h_get_i_neq h'
+          | inr h' =>
+              rw [h', drop_length]
+              apply nil_sublist
 
 theorem exists_reduced_subword_of_le {u w : W} (h : u ≤ w) (ω : ReducedWord w) :
   ∃ (μ : ReducedWord u), μ.val <+ ω.val := by
@@ -395,19 +397,18 @@ theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
   let f : Set.Icc u w → {μ : List (B W) | μ <+ ω} :=
     fun x => ⟨(Classical.choose (exists_reduced_subword_of_le x.prop.2 ω)).val,
                 Classical.choose_spec (exists_reduced_subword_of_le x.prop.2 ω)⟩
-  have h_prod : ∀ x : Set.Icc u w, cs.wordProd ((f x).val) = x := by
-    intro x
-    symm
-    exact (Classical.choose (exists_reduced_subword_of_le x.prop.2 ω)).prop.2
-  have h_inj : Injective f := by
-    intro x y h
-    ext
-    rw [←h_prod x, ←h_prod y, h]
   haveI : Finite {x | x <+ ω.val} := by
     have h := List.finite_toSet ω.val.sublists
     simp only [mem_sublists] at h
     exact h
-  exact Finite.of_injective f h_inj
+  apply Finite.of_injective f
+  have h_prod : ∀ x : Set.Icc u w, cs.wordProd ((f x).val) = x := by
+    intro x
+    symm
+    exact (Classical.choose (exists_reduced_subword_of_le x.prop.2 ω)).prop.2
+  intro x y h
+  ext
+  rw [←h_prod x, ←h_prod y, h]
 
 noncomputable instance : LocallyFiniteOrder W := LocallyFiniteOrder.ofFiniteIcc finite_Icc
 
