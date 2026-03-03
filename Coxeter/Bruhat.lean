@@ -13,6 +13,8 @@ This file defines the Bruhat order.
 ## Main Statements
 
 * `Coxeter.subword_property`
+* `Coxeter.lifting_property`
+* `Coxeter.length_cover`
 
 ## References
 
