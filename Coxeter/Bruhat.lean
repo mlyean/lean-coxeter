@@ -1,3 +1,4 @@
+import Mathlib.Order.Grade
 import Coxeter.StrongExchange
 
 /-!
@@ -38,19 +39,19 @@ def lt (u w : W) : Prop := u ≤ w ∧ u ≠ w
 instance : LT W where
   lt := lt
 
-theorem length_le_of_bruhat_le {u w : W} (h : u ≤ w) : cs.length u ≤ cs.length w := by
+private theorem length_le_of_le {u w : W} (h : u ≤ w) : cs.length u ≤ cs.length w := by
   induction h with
   | rfl => rfl
   | step _ _ _ _ h3 ih => exact le_of_lt (lt_of_le_of_lt ih h3)
 
-theorem length_lt_of_bruhat_lt {u w : W} (h : u < w) : cs.length u < cs.length w := by
+private theorem length_lt_of_lt {u w : W} (h : u < w) : cs.length u < cs.length w := by
   cases h.1 with
   | rfl =>
       exfalso
       apply h.2
       rfl
   | step _ _ h1 _ h3 =>
-      exact lt_of_le_of_lt (length_le_of_bruhat_le h1) h3
+      exact lt_of_le_of_lt (length_le_of_le h1) h3
 
 instance : PartialOrder W where
   le_refl := le.rfl
@@ -67,7 +68,7 @@ instance : PartialOrder W where
       · exact h.1
       · intro h2
         apply lt_irrefl (cs.length u)
-        exact lt_of_lt_of_le (length_lt_of_bruhat_lt h) (length_le_of_bruhat_le h2)
+        exact lt_of_lt_of_le (length_lt_of_lt h) (length_le_of_le h2)
     · intro h
       constructor
       · exact h.1
@@ -83,8 +84,12 @@ instance : PartialOrder W where
         apply lt_irrefl (cs.length v)
         calc
           cs.length v < cs.length w := h5
-          _ ≤ cs.length u := length_le_of_bruhat_le h2
-          _ ≤ cs.length v := length_le_of_bruhat_le h3
+          _ ≤ cs.length u := length_le_of_le h2
+          _ ≤ cs.length v := length_le_of_le h3
+
+theorem monotone_length : Monotone (@cs W).length := by apply length_le_of_le
+
+theorem strictMono_length : StrictMono (@cs W).length := by apply length_lt_of_lt
 
 instance : OrderBot W where
   bot := 1
@@ -112,7 +117,7 @@ theorem lt_reflection_mul_iff {t : W} (ht : cs.IsReflection t) (w : W)
   : w < t * w ↔ cs.length w < cs.length (t * w) := by
   constructor
   · intro h
-    apply length_lt_of_bruhat_lt
+    apply strictMono_length
     exact h
   · intro h
     constructor
@@ -293,7 +298,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
         unfold CoxeterSystem.IsReduced
         apply eq_of_le_of_ge (cs.length_wordProd_le _)
         rw [h4, μ.length_eq, ←h3]
-        exact length_lt_of_bruhat_lt h
+        exact strictMono_length h
       constructor
       · exact h
       · constructor
@@ -391,26 +396,63 @@ theorem subword_property' {u w : W} :
     rw [subword_property u ω]
     exists μ
 
-/-- Bjorner--Brenti Corollary 2.2.4 (finiteness) -/
+private noncomputable def chooseReducedSubword {w : W} (ω : ReducedWord w) :
+  Set.Iic w → {μ : List (B W) | μ <+ ω} :=
+  fun ⟨_, hx⟩ =>
+    ⟨(Classical.choose (exists_reduced_subword_of_le hx ω)).val,
+      Classical.choose_spec (exists_reduced_subword_of_le hx ω)⟩
+
+private theorem wordProd_chooseReducedSubword {w : W} (ω : ReducedWord w) (x : Set.Iic w) :
+  cs.wordProd ((chooseReducedSubword ω x).val) = x :=
+  (Classical.choose (exists_reduced_subword_of_le x.prop ω)).prop.2.symm
+
+private theorem chooseReducedSubword_inj {w : W} (ω : ReducedWord w) :
+  Injective (chooseReducedSubword ω) := by
+  intro x y h
+  ext
+  rw [←wordProd_chooseReducedSubword ω, h, wordProd_chooseReducedSubword ω]
+
 theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
   let ω : ReducedWord w := default
+  have hsubs : Set.Icc u w ⊆ Set.Iic w := by grind
   let f : Set.Icc u w → {μ : List (B W) | μ <+ ω} :=
-    fun x => ⟨(Classical.choose (exists_reduced_subword_of_le x.prop.2 ω)).val,
-                Classical.choose_spec (exists_reduced_subword_of_le x.prop.2 ω)⟩
+    @Set.restrict₂ _ (fun _ => {μ : List (B W) | μ <+ ω}) _ _ hsubs (chooseReducedSubword ω)
   haveI : Finite {x | x <+ ω.val} := by
     have h := List.finite_toSet ω.val.sublists
     simp only [mem_sublists] at h
     exact h
   apply Finite.of_injective f
-  have h_prod : ∀ x : Set.Icc u w, cs.wordProd ((f x).val) = x := by
-    intro x
-    symm
-    exact (Classical.choose (exists_reduced_subword_of_le x.prop.2 ω)).prop.2
   intro x y h
   ext
-  rw [←h_prod x, ←h_prod y, h]
+  replace h := chooseReducedSubword_inj ω h
+  rwa [Subtype.mk.injEq] at h
 
 noncomputable instance : LocallyFiniteOrder W := LocallyFiniteOrder.ofFiniteIcc finite_Icc
+
+open Classical in
+/-- Bjorner--Brenti Corollary 2.2.4 -/
+theorem card_Icc_le (u w : W) : Finset.card (Finset.Icc u w) ≤ 2 ^ cs.length w := by
+  let ω : ReducedWord w := default
+  let f : Finset.Icc u w → ω.val.sublists.toFinset :=
+    fun x => ⟨chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩, ?_⟩
+  swap
+  · change (chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩).val
+      ∈ ω.val.sublists.toFinset
+    rw [@List.mem_toFinset _ _ (ω.val.sublists)]
+    rw [mem_sublists]
+    exact (chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩).prop
+  have hf_inj : Injective f := by
+    intro x y h
+    unfold f at h
+    rw [Subtype.mk.injEq, Subtype.val_inj] at h
+    replace h := chooseReducedSubword_inj ω h
+    rw [Subtype.mk.injEq, Subtype.val_inj] at h
+    exact h
+  rw [←ω.length_eq]
+  have hle := le_trans (Finset.card_le_card_of_injective hf_inj) (List.toFinset_card_le _)
+  rw [length_sublists] at hle
+  unfold ReducedWord.length
+  exact hle
 
 /-- Bjorner--Brenti Corollary 2.2.5 -/
 theorem monotone_inv : Monotone (@Inv.inv W _) := by
@@ -427,5 +469,33 @@ theorem strictMono_inv : StrictMono (@Inv.inv W _) := by
   · intro h2
     rw [inv_inj] at h2
     exact h.2 h2
+
+/-- Bjorner--Brenti Theorem 2.2.6 -/
+theorem length_cover {u w : W} (h : u ⋖ w) : cs.length w = cs.length u + 1 := by
+  apply eq_of_le_of_ge
+  · by_contra! h2
+    let ω : ReducedWord w := default
+    have hneq : u ≠ w := by grind
+    let ⟨v, h3, h4, ν, hν⟩ := reduced_subword_extend ω hneq (exists_reduced_subword_of_le h.1.1 ω)
+    apply h.2 h3
+    constructor
+    · exact le_of_reduced_subword ν ω hν
+    · intro heq
+      rw [←h4, heq, lt_self_iff_false] at h2
+      contradiction
+  · exact strictMono_length h.1
+
+noncomputable instance : GradeMinOrder ℕ W where
+  grade := cs.length
+  grade_strictMono := strictMono_length
+  covBy_grade := by
+    intro u w h
+    rw [Nat.covBy_iff_add_one_eq]
+    exact (length_cover h).symm
+  isMin_grade := by
+    intro x hx
+    rw [isMin_iff_eq_bot] at *
+    rw [hx, Nat.bot_eq_zero, CoxeterSystem.length_eq_zero_iff]
+    rfl
 
 end Coxeter
