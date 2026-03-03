@@ -133,6 +133,14 @@ theorem reflection_mul_lt_iff {t : W} (ht : cs.IsReflection t) (w : W)
   have h := lt_reflection_mul_iff ht (t * w)
   rwa [←mul_assoc, ht.mul_self, one_mul] at h
 
+theorem simple_mul_gt_iff (i : B W) (w : W) : cs.simple i * w > w ↔ ¬ cs.IsLeftDescent w i := by
+  rw [gt_iff_lt, cs.not_isLeftDescent_iff, lt_reflection_mul_iff (cs.isReflection_simple i) w]
+  have := cs.length_simple_mul w i
+  grind
+
+theorem simple_mul_lt_iff (i : B W) (w : W) : cs.simple i * w < w ↔ cs.IsLeftDescent w i := by
+  apply reflection_mul_lt_iff (cs.isReflection_simple i)
+
 theorem mul_reflection_lt_or_gt (w : W) {t : W} (ht : cs.IsReflection t) :
   t * w < w ∨ t * w > w := by
   conv in t * w > w => change w < t * w
@@ -500,6 +508,8 @@ noncomputable instance : GradeMinOrder ℕ W where
     rw [hx, Nat.bot_eq_zero, CoxeterSystem.length_eq_zero_iff]
     rfl
 
+instance : WellFoundedLT W := inferInstance
+
 /-- Bjorner--Brenti Proposition 2.2.7 -/
 theorem lifting_property {u w : W} {i : B W}
   (h1 : u ≤ w) (h2 : cs.IsLeftDescent w i) (h3 : ¬ cs.IsLeftDescent u i) :
@@ -564,7 +574,7 @@ theorem lifting_property {u w : W} {i : B W}
 instance : IsDirectedOrder W where
   directed := by
     intro u
-    induction u using Nat.strongRecMeasure (@cs W).length with
+    induction u using WellFoundedLT.induction with
     | ind u ih =>
         intro w
         cases em (u = 1) with
@@ -575,7 +585,10 @@ instance : IsDirectedOrder W where
             exact bot_le
         | inr h =>
             let ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
-            let ⟨x, hx1, hx2⟩ := ih (cs.simple i * u) (by rw [isLeftDescent_iff] at hi; grind) w
+            have hlt : cs.simple i * u < u := by
+              rw [reflection_mul_lt_iff (cs.isReflection_simple i)]
+              exact hi
+            let ⟨x, hx1, hx2⟩ := ih (cs.simple i * u) hlt w
             cases em (cs.IsLeftDescent x i) with
             | inl h2 =>
                 exists x
@@ -599,5 +612,85 @@ instance : IsDirectedOrder W where
                 constructor
                 · exact h5
                 · apply le_trans hx2 h3
+
+section finite
+
+theorem maximal_of_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeftDescent x i) : IsTop x := by
+  intro u
+  induction u using WellFoundedLT.induction with
+  | ind u ih =>
+      cases em (u = 1) with
+      | inl h2 =>
+          rw [h2]
+          exact bot_le
+      | inr h2 =>
+          let ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h2
+          rw [←simple_mul_lt_iff] at hi
+          have h3 := ih _ hi
+          rw [simple_mul_lt_iff, isLeftDescent_iff_not_isLeftDescent_mul] at hi
+          have h4 := (lifting_property h3 (h i) hi).2
+          rwa [simple_mul_simple_cancel_left] at h4
+
+/-- Bjorner--Brenti Proposition 2.3.1 (ii) -/
+theorem finite_of_exists_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeftDescent x i) :
+  Finite W := by
+  have h2 : (Set.univ : Set W) = Finset.Icc 1 x := by
+    ext u
+    constructor
+    · intro h'
+      simp only [Finset.coe_Icc, Set.mem_Icc]
+      constructor
+      · exact bot_le
+      · exact maximal_of_all_isLeftDescent h u
+    · intro h'
+      apply Set.mem_univ
+  rw [←Set.finite_univ_iff, h2, Finset.coe_Icc]
+  apply Set.finite_Icc
+
+variable [Finite W]
+
+noncomputable irreducible_def ω₀ : W :=
+  Classical.choose (@Finite.exists_le_maximal W _ _ (fun _ => PUnit) 1 PUnit.unit)
+
+/-- Bjorner--Brenti Proposition 2.3.1 (i) -/
+noncomputable instance : OrderTop W where
+  top := ω₀
+  le_top := by
+    apply IsMax.isTop
+    intro w hw
+    rw [ω₀_def] at *
+    exact (Classical.choose_spec
+      (@Finite.exists_le_maximal W _ _ (fun _ => PUnit) 1 PUnit.unit)).2.2 PUnit.unit hw
+
+/-- Bjorner--Brenti Proposition 2.3.1 (ii) continued -/
+theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) ↔ x = ω₀ := by
+  constructor
+  · intro h
+    apply top_unique
+    apply maximal_of_all_isLeftDescent h
+  · intro h i
+    subst h
+    rw [←simple_mul_lt_iff]
+    apply lt_of_le_of_ne
+    · exact le_top
+    · simp
+
+theorem eq_ω₀_of_length_eq {x : W} (h : cs.length x = cs.length (ω₀ : W)) : x = ω₀ := by
+  have h2 : x ≤ ω₀ := le_top
+  apply eq_of_le_of_not_lt h2
+  intro h3
+  have := strictMono_length h3
+  grind
+
+theorem inv_ω₀ : (ω₀⁻¹ : W) = ω₀ := by
+  apply eq_ω₀_of_length_eq
+  rw [length_inv]
+
+/-- Bjorner--Brenti Proposition 2.3.2 (i) -/
+theorem ω₀_sq : (ω₀ : W) ^ 2 = 1 := by
+  nth_rw 1 [sq, ←inv_ω₀]
+  rw [inv_mul_cancel]
+
+end finite
 
 end Coxeter
