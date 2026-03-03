@@ -615,6 +615,8 @@ instance : IsDirectedOrder W where
 
 section finite
 
+/-! ### Bruhat order on finite Coxeter groups -/
+
 theorem maximal_of_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeftDescent x i) : IsTop x := by
   intro u
   induction u using WellFoundedLT.induction with
@@ -649,21 +651,21 @@ theorem finite_of_exists_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeft
 
 variable [Finite W]
 
-noncomputable irreducible_def ω₀ : W :=
+noncomputable irreducible_def w₀ : W :=
   Classical.choose (@Finite.exists_le_maximal W _ _ (fun _ => PUnit) 1 PUnit.unit)
 
 /-- Bjorner--Brenti Proposition 2.3.1 (i) -/
 noncomputable instance : OrderTop W where
-  top := ω₀
+  top := w₀
   le_top := by
     apply IsMax.isTop
     intro w hw
-    rw [ω₀_def] at *
+    rw [w₀_def] at *
     exact (Classical.choose_spec
       (@Finite.exists_le_maximal W _ _ (fun _ => PUnit) 1 PUnit.unit)).2.2 PUnit.unit hw
 
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) continued -/
-theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) ↔ x = ω₀ := by
+theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) ↔ x = w₀ := by
   constructor
   · intro h
     apply top_unique
@@ -675,21 +677,79 @@ theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) �
     · exact le_top
     · simp
 
-theorem eq_ω₀_of_length_eq {x : W} (h : cs.length x = cs.length (ω₀ : W)) : x = ω₀ := by
-  have h2 : x ≤ ω₀ := le_top
-  apply eq_of_le_of_not_lt h2
-  intro h3
-  have := strictMono_length h3
-  grind
+theorem exists_left_ascent_of_neq_w₀ {x : W} (h : x ≠ w₀) : ∃ (i : B W), cs.simple i * x > x := by
+  by_contra! h2
+  apply h
+  rw [←all_isLeftDescent_iff]
+  conv at h2 =>
+    intro i
+    rw [simple_mul_gt_iff, not_not]
+  exact h2
 
-theorem inv_ω₀ : (ω₀⁻¹ : W) = ω₀ := by
-  apply eq_ω₀_of_length_eq
+theorem length_le_length_w₀ (w : W) : cs.length w ≤ cs.length (w₀ : W) :=
+  monotone_length le_top
+
+theorem eq_w₀_of_length_ge {x : W} (h : cs.length x ≥ cs.length (w₀ : W)) : x = w₀ := by
+  apply eq_of_le_of_not_lt le_top
+  intro h2
+  exact not_le_of_gt (strictMono_length h2) h
+
+@[simp]
+theorem inv_w₀ : (w₀⁻¹ : W) = w₀ := by
+  apply eq_w₀_of_length_ge
   rw [length_inv]
 
+@[simp]
+theorem w₀_mul_self : (w₀ : W) * w₀ = 1 := by
+  nth_rw 1 [←inv_w₀, inv_mul_cancel]
+
 /-- Bjorner--Brenti Proposition 2.3.2 (i) -/
-theorem ω₀_sq : (ω₀ : W) ^ 2 = 1 := by
-  nth_rw 1 [sq, ←inv_ω₀]
-  rw [inv_mul_cancel]
+@[simp]
+theorem w₀_sq : (w₀ : W) ^ 2 = 1 := by
+  rw [sq, w₀_mul_self]
+
+/-- Bjorner--Brenti Proposition 2.3.2 (ii) -/
+theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - cs.length w := by
+  apply le_antisymm
+  · revert w
+    suffices h : ∀ (k : ℕ), k ≤ cs.length w₀ → ∀ (w : W), cs.length w = k →
+      cs.length (w * w₀) ≤ cs.length (w₀ : W) - cs.length w by
+      intro w
+      exact h (cs.length w) (length_le_length_w₀ w) w rfl
+    apply Nat.decreasingInduction
+    · intro k hk ih w hw
+      rw [←hw] at hk
+      have h : w ≠ w₀ := by grind
+      let ⟨i, hi⟩ := exists_left_ascent_of_neq_w₀ h
+      rw [simple_mul_gt_iff, not_isLeftDescent_iff] at hi
+      have h2 : cs.length (cs.simple i * w * w₀) ≤
+        cs.length (w₀ : W) - cs.length (cs.simple i * w) := by
+        rw [hw] at hi
+        exact ih (cs.simple i * w) hi
+      calc
+        cs.length (w * w₀) ≤ cs.length (cs.simple i * w * w₀) + 1 := ?_
+        _ ≤ cs.length (w₀ : W) - cs.length (cs.simple i * w) + 1 := add_le_add_left h2 1
+        _ = cs.length (w₀ : W) - (cs.length w + 1) + 1 := by rw [hi]
+        _ = cs.length w₀ - cs.length w := by grind
+      · have h3 := cs.length_mul_le (cs.simple i) (cs.simple i * w * w₀)
+        rw [mul_assoc] at h3
+        simp at h3
+        grind
+    · intro w hw
+      replace hw := eq_w₀_of_length_ge (ge_of_eq hw)
+      subst hw
+      simp
+  · apply length_mul_ge_length_sub_length'
+
+/-- Bjorner--Brenti Proposition 2.3.2 (iii) -/
+theorem isLeftInversion_mul_w₀_iff {w t : W} (ht : cs.IsReflection t) :
+  cs.IsLeftInversion (w * w₀) t ↔ ¬ cs.IsLeftInversion w t := by
+  unfold IsLeftInversion
+  rw [←mul_assoc, length_mul_w₀, length_mul_w₀]
+  have := ht.length_mul_right_ne w
+  have := length_le_length_w₀ w
+  have := length_le_length_w₀ (t * w)
+  grind
 
 end finite
 
