@@ -751,6 +751,67 @@ theorem isLeftInversion_mul_w₀_iff {w t : W} (ht : cs.IsReflection t) :
   have := length_le_length_w₀ (t * w)
   grind
 
+theorem isLeftInversion_w₀_iff (t : W) : cs.IsLeftInversion w₀ t ↔ cs.IsReflection t := by
+  constructor
+  · intro ht
+    exact ht.1
+  · intro ht
+    rw [←one_mul w₀, isLeftInversion_mul_w₀_iff ht]
+    unfold IsLeftInversion
+    simp
+
+private def isLeftInversion_equiv_isReflection :
+  {t : W // cs.IsLeftInversion w₀ t} ≃ {t : W // cs.IsReflection t} :=
+  Equiv.subtypeEquivRight (@isLeftInversion_w₀_iff W _ _)
+
+noncomputable instance : Fintype {t : W // cs.IsReflection t} :=
+  Fintype.ofEquiv _ isLeftInversion_equiv_isReflection
+
+/-- Bjorner--Brenti Proposition 2.3.2 (iv) -/
+theorem length_w₀_eq_card_reflectionSet :
+  cs.length (w₀ : W) = Fintype.card {t : W // cs.IsReflection t} := by
+  rw [←card_of_IsLeftInversion]
+  exact Fintype.card_congr isLeftInversion_equiv_isReflection
+
+/-- Bjorner--Brenti Corollary 2.3.3 (i) -/
+theorem length_w₀_mul (w : W) : cs.length (w₀ * w) = cs.length (w₀ : W) - cs.length w := by
+  rw [←length_inv, mul_inv_rev, inv_w₀, length_mul_w₀, length_inv]
+
+/-- Bjorner--Brenti Corollary 2.3.3 (ii) -/
+theorem length_conj_w₀ (w : W) : cs.length (MulAut.conj w₀ w) = cs.length w := by
+  dsimp
+  rw [inv_w₀, length_mul_w₀, length_w₀_mul]
+  have := length_le_length_w₀ w
+  grind
+
+/-- Bjorner--Brenti Proposition 2.3.4 (i) -/
+theorem antitone_w₀_mul {u w : W} (h : u ≤ w) : w * w₀ ≤ u * w₀ := by
+  induction h with
+  | rfl => rfl
+  | step v w h1 h2 h3 ih =>
+      apply le_trans _ ih
+      apply le.step (w * w₀) (w * w₀) (v * w₀) (le.rfl _)
+      · rw [mul_inv_rev, mul_assoc, mul_inv_cancel_left]
+        rwa [←h2.inv, mul_inv_rev, inv_inv] at h2
+      · rw [length_mul_w₀, length_mul_w₀]
+        have := length_le_length_w₀ w
+        grind
+
+theorem antitone_mul_w₀ {u w : W} (h : u ≤ w) : w₀ * w ≤ w₀ * u := by
+  rw [←inv_inv (w₀ * w), ←inv_inv (w₀ * u)]
+  apply monotone_inv
+  rw [mul_inv_rev, mul_inv_rev, inv_w₀]
+  apply antitone_w₀_mul
+  exact monotone_inv h
+
+/-- Bjorner--Brenti Proposition 2.3.4 (ii) -/
+theorem monotone_conj_w₀ {u w : W} (h : u ≤ w) : MulAut.conj w₀ u ≤ MulAut.conj w₀ w := by
+  dsimp
+  rw [inv_w₀]
+  apply antitone_w₀_mul
+  apply antitone_mul_w₀
+  exact h
+
 end finite
 
 end Coxeter
