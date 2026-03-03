@@ -194,4 +194,9 @@ theorem neq_of_adjacent {i : ℕ} {ω : List (B W)}
   · rw [h]
     simp [wordProd]
 
+@[simp]
+theorem isReduced_of_singleton (i : B W) : cs.IsReduced [i] := by
+  unfold CoxeterSystem.IsReduced
+  rw [wordProd_singleton, length_simple, length_cons, length_nil, zero_add]
+
 end Coxeter

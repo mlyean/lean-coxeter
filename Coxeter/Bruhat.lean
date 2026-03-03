@@ -498,4 +498,104 @@ noncomputable instance : GradeMinOrder ℕ W where
     rw [hx, Nat.bot_eq_zero, CoxeterSystem.length_eq_zero_iff]
     rfl
 
+/-- Bjorner--Brenti Proposition 2.2.7 -/
+theorem lifting_property {u w : W} {i : B W}
+  (h1 : u ≤ w) (h2 : cs.IsLeftDescent w i) (h3 : ¬ cs.IsLeftDescent u i) :
+  u ≤ cs.simple i * w ∧ cs.simple i * u ≤ w := by
+  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' (cs.simple i * w)
+  have h4 : cs.IsReduced (i :: ω) := by
+    unfold CoxeterSystem.IsReduced at *
+    rw [isLeftDescent_iff, hω2, hω1] at h2
+    rw [wordProd_cons, ←hω2, simple_mul_simple_cancel_left, length_cons]
+    exact h2.symm
+  rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hω2
+  have ⟨μ, hμ⟩ := exists_reduced_subword_of_le h1 ⟨i :: ω, h4, hω2⟩
+  dsimp at hμ
+  cases em (u = 1) with
+  | inl hu =>
+      subst hu
+      constructor
+      · exact bot_le
+      · rw [mul_one, hω2]
+        apply le_of_reduced_subword ⟨[i], _⟩ ⟨i :: ω, _⟩
+        · simp
+        · simp
+        · simp [h4]
+  | inr hu =>
+      have h5 : ¬ μ.val = [] := by
+        intro h
+        apply hu
+        have heq := μ.wordProd_eq
+        rw [h, wordProd_nil] at heq
+        exact heq.symm
+      have h6 : head μ.val h5 ≠ i := by
+        intro h
+        apply h3
+        unfold IsLeftDescent
+        rw [←μ.wordProd_eq]
+        nth_rw 1 [←cons_head_tail h5, h, wordProd_cons]
+        have h7 := μ.2.1.drop 1
+        rw [drop_one] at h7
+        rw [simple_mul_simple_cancel_left, h7, μ.2.1, length_tail]
+        apply Nat.sub_one_lt
+        simp only [ne_eq, List.length_eq_zero_iff]
+        exact h5
+      have h7 : μ.val <+ ω := by
+        rw [←cons_head_tail h5] at hμ
+        have h8 := List.Sublist.of_cons_of_ne h6 hμ
+        rwa [cons_head_tail h5] at h8
+      have h8 : i :: μ.val <+ i :: ω := by grind
+      constructor
+      · apply le_of_reduced_subword μ ⟨ω, hω1, _⟩
+        · exact h7
+        · rw [wordProd_cons] at hω2
+          rw [hω2]
+          simp
+      · apply le_of_reduced_subword ⟨i :: μ.val, _, _⟩ ⟨i :: ω, h4, hω2⟩
+        · exact h8
+        · unfold CoxeterSystem.IsReduced
+          rw [not_isLeftDescent_iff] at h3
+          rw [wordProd_cons, μ.wordProd_eq, h3, length_cons, ←μ.2.1, ←μ.2.2]
+        · rw [wordProd_cons, μ.wordProd_eq]
+
+/-- Bjorner--Brenti Proposition 2.2.9 -/
+instance : IsDirectedOrder W where
+  directed := by
+    intro u
+    induction u using Nat.strongRecMeasure (@cs W).length with
+    | ind u ih =>
+        intro w
+        cases em (u = 1) with
+        | inl h =>
+            exists w
+            rw [h]
+            simp only [le_refl, and_true]
+            exact bot_le
+        | inr h =>
+            let ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
+            let ⟨x, hx1, hx2⟩ := ih (cs.simple i * u) (by rw [isLeftDescent_iff] at hi; grind) w
+            cases em (cs.IsLeftDescent x i) with
+            | inl h2 =>
+                exists x
+                rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
+                have ⟨h3, h4⟩ := lifting_property hx1 h2 hi
+                rw [simple_mul_simple_cancel_left] at h4
+                constructor
+                · exact h4
+                · exact hx2
+            | inr h2 =>
+                exists cs.simple i * x
+                have h3 : cs.simple i * x ≥ x := by
+                  rw [not_isLeftDescent_iff] at h2
+                  apply le_of_lt
+                  rw [lt_reflection_mul_iff (cs.isReflection_simple i), h2]
+                  apply Nat.lt_succ_self
+                rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
+                rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
+                have ⟨h4, h5⟩ := lifting_property (le_trans hx1 h3) h2 hi
+                rw [simple_mul_simple_cancel_left] at h4 h5
+                constructor
+                · exact h5
+                · apply le_trans hx2 h3
+
 end Coxeter
