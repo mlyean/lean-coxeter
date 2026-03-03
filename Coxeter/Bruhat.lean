@@ -9,6 +9,7 @@ This file defines the Bruhat order.
 ## Main definitions
 
 * `Coxeter.le` : The Bruhat order
+* `Coxeter.w₀` : The longest element
 
 ## Main Statements
 
@@ -785,7 +786,7 @@ theorem length_conj_w₀ (w : W) : cs.length (MulAut.conj w₀ w) = cs.length w 
   grind
 
 /-- Bjorner--Brenti Proposition 2.3.4 (i) -/
-theorem antitone_w₀_mul {u w : W} (h : u ≤ w) : w * w₀ ≤ u * w₀ := by
+theorem antitone_mul_w₀ {u w : W} (h : u ≤ w) : w * w₀ ≤ u * w₀ := by
   induction h with
   | rfl => rfl
   | step v w h1 h2 h3 ih =>
@@ -797,19 +798,19 @@ theorem antitone_w₀_mul {u w : W} (h : u ≤ w) : w * w₀ ≤ u * w₀ := by
         have := length_le_length_w₀ w
         grind
 
-theorem antitone_mul_w₀ {u w : W} (h : u ≤ w) : w₀ * w ≤ w₀ * u := by
+theorem antitone_w₀_mul {u w : W} (h : u ≤ w) : w₀ * w ≤ w₀ * u := by
   rw [←inv_inv (w₀ * w), ←inv_inv (w₀ * u)]
   apply monotone_inv
   rw [mul_inv_rev, mul_inv_rev, inv_w₀]
-  apply antitone_w₀_mul
+  apply antitone_mul_w₀
   exact monotone_inv h
 
 /-- Bjorner--Brenti Proposition 2.3.4 (ii) -/
 theorem monotone_conj_w₀ {u w : W} (h : u ≤ w) : MulAut.conj w₀ u ≤ MulAut.conj w₀ w := by
   dsimp
   rw [inv_w₀]
-  apply antitone_w₀_mul
   apply antitone_mul_w₀
+  apply antitone_w₀_mul
   exact h
 
 end finite
