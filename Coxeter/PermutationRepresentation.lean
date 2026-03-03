@@ -289,7 +289,7 @@ theorem eta_spec (ω : List (B W)) (t : W) :
         exact cs.isReflection_of_mem_leftInvSeq _ h
 
 open Classical in
-theorem eta_eq_one (w t : W) (h : η w t = 1) :
+private theorem length_reflection_mul_lt_of_eta_eq_one (w t : W) (h : η w t = 1) :
   cs.length (t * w) < cs.length w := by
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word w
   subst hω2
@@ -317,12 +317,13 @@ theorem eta_eq_one (w t : W) (h : η w t = 1) :
     subst h3
     simp at h
 
-theorem eta_eq_zero (w t : W) (ht : cs.IsReflection t) (h : η w t = 0) :
+private theorem length_reflection_mul_gt_of_eta_eq_zero (w t : W)
+  (ht : cs.IsReflection t) (h : η w t = 0) :
   cs.length (t * w) > cs.length w := by
   suffices h2 : cs.length (t * (t * w)) < cs.length (t * w) by
     rw [←mul_assoc, ht.mul_self, one_mul] at h2
     exact h2
-  apply eta_eq_one
+  apply length_reflection_mul_lt_of_eta_eq_one
   have h2 := permRep_inv_eq (t * w) ⟨⟨t, ht⟩, 0⟩
   have h3 := permRep_reflection ⟨t, ht⟩ 0
   replace h2 : (((permRep W) (t * w)⁻¹) (⟨t, ht⟩, 0)).2 = 0 + η (t * w) t := congr_arg Prod.snd h2
@@ -333,23 +334,23 @@ theorem eta_eq_zero (w t : W) (ht : cs.IsReflection t) (h : η w t = 0) :
 theorem eta_eq_one_iff (w t : W) (ht : cs.IsReflection t) :
   η w t = 1 ↔ cs.length (t * w) < cs.length w := by
   constructor
-  · apply eta_eq_one
+  · apply length_reflection_mul_lt_of_eta_eq_one
   · intro h
     by_contra h2
     apply not_lt_of_gt h
-    apply eta_eq_zero w t ht
+    apply length_reflection_mul_gt_of_eta_eq_zero w t ht
     unfold ZMod at *
     grind
 
 theorem eta_eq_zero_iff (w t : W) (ht : cs.IsReflection t) :
   η w t = 0 ↔ cs.length (t * w) > cs.length w := by
   constructor
-  · apply eta_eq_zero
+  · apply length_reflection_mul_gt_of_eta_eq_zero
     exact ht
   · intro h
     by_contra h2
     apply not_lt_of_gt h
-    apply eta_eq_one w t
+    apply length_reflection_mul_lt_of_eta_eq_one w t
     unfold ZMod at *
     grind
 
