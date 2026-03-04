@@ -762,15 +762,15 @@ theorem isLeftInversion_w₀_iff (t : W) : cs.IsLeftInversion w₀ t ↔ cs.IsRe
     simp
 
 private def isLeftInversion_equiv_isReflection :
-  {t : W // cs.IsLeftInversion w₀ t} ≃ {t : W // cs.IsReflection t} :=
+  {t : W // cs.IsLeftInversion w₀ t} ≃ ReflectionSet W :=
   Equiv.subtypeEquivRight (@isLeftInversion_w₀_iff W _ _)
 
-noncomputable instance : Fintype {t : W // cs.IsReflection t} :=
+noncomputable instance : Fintype (ReflectionSet W) :=
   Fintype.ofEquiv _ isLeftInversion_equiv_isReflection
 
 /-- Bjorner--Brenti Proposition 2.3.2 (iv) -/
 theorem length_w₀_eq_card_reflectionSet :
-  cs.length (w₀ : W) = Fintype.card {t : W // cs.IsReflection t} := by
+  cs.length (w₀ : W) = Fintype.card (ReflectionSet W) := by
   rw [←card_of_IsLeftInversion]
   exact Fintype.card_congr isLeftInversion_equiv_isReflection
 

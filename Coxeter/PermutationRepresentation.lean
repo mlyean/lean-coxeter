@@ -32,9 +32,9 @@ open Function List CoxeterSystem CoxeterGroup
 
 variable {W : Type*} [CoxeterGroup W]
 
-def ReflectionSet (W : Type*) [CoxeterGroup W] := {t : W // cs.IsReflection t}
+def ReflectionSet (W : Type*) [CoxeterGroup W] : Type _ := {t : W // cs.IsReflection t}
 
-def RootSet (W : Type*) [CoxeterGroup W] := ReflectionSet W × ZMod 2
+def RootSet (W : Type*) [CoxeterGroup W] : Type _ := ReflectionSet W × ZMod 2
 
 /-- Induction principle for reflections -/
 theorem ReflectionSet.induction {P : ReflectionSet W → Prop}
@@ -188,18 +188,18 @@ theorem eta_spec (ω : List (B W)) (t : W) :
   cases Classical.em (cs.IsReflection t) with
   | inl ht =>
       have h : permRep W (cs.wordProd (Classical.choose
-        (cs.wordProd_surjective (cs.wordProd ω))).reverse) ⟨⟨t, ht⟩, 0⟩
-        = permRep W (cs.wordProd ω.reverse) ⟨⟨t, ht⟩, 0⟩ := by
+        (cs.wordProd_surjective (cs.wordProd ω))).reverse) (⟨t, ht⟩, 0)
+        = permRep W (cs.wordProd ω.reverse) (⟨t, ht⟩, 0) := by
         congr 1
         apply congr_arg (permRep W)
         simp only [wordProd_reverse, inv_inj]
         exact choose_spec (cs.wordProd_surjective (cs.wordProd ω))
       rw [permRep_wordProd_eq_permRepAux, permRep_wordProd_eq_permRepAux] at h
       unfold permRepAux at h
-      have := congr_arg Prod.snd h
-      simp only [etaAux, reverse_reverse, zero_add] at this
+      have h2 := congr_arg Prod.snd h
+      simp only [etaAux, reverse_reverse, zero_add] at h2
       unfold η
-      exact this
+      exact h2
   | inr ht =>
       unfold η
       congr 1
@@ -228,9 +228,8 @@ theorem eta_conj (i : B W) (t : W) :
   dsimp
   rw [count_singleton, count_singleton]
   congr 2
-  simp only [beq_iff_eq, eq_iff_iff]
-  rw [eq_mul_inv_iff_mul_eq, ←inv_mul_eq_iff_eq_mul]
-  group
+  rw [beq_iff_eq, beq_iff_eq, eq_iff_iff, eq_mul_inv_iff_mul_eq, ←inv_mul_eq_iff_eq_mul,
+    inv_mul_cancel_left]
 
 theorem permRep_eq (w : W) (r : RootSet W) : permRep W w r
   = ⟨⟨MulAut.conj w r.1.val, r.1.prop.conj _⟩, r.2 + η w⁻¹ r.1.val⟩ := by
@@ -293,9 +292,9 @@ theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :
       grind
 
 open Classical in
-theorem length_reflection_mul_lt_of_eta_eq_one (w t : W) (h : η w t = 1) :
-  cs.length (t * w) < cs.length w := by
-  let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word w
+theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) :
+  cs.IsLeftInversion w t := by
+  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w
   subst hω2
   rw [eta_spec] at h
   have h2 : 0 < count t (cs.leftInvSeq ω) := by
@@ -305,29 +304,14 @@ theorem length_reflection_mul_lt_of_eta_eq_one (w t : W) (h : η w t = 1) :
     contradiction
   rw [count_pos_iff, mem_iff_get] at h2
   let ⟨i, hi⟩ := h2
-  rw [←hi, ←getD_eq_get _ 1, getD_leftInvSeq_mul_wordProd]
-  calc
-    cs.length (cs.wordProd (ω.eraseIdx i.val))
-      ≤ (ω.eraseIdx i.val).length := cs.length_wordProd_le _
-    _ = ω.length - 1 := ?_
-    _ < ω.length := ?_
-    _ = cs.length (cs.wordProd ω) := hω1
-  · apply length_eraseIdx_of_lt
-    rw [←cs.length_leftInvSeq]
-    exact i.prop
-  · apply Nat.sub_one_lt
-    intro h3
-    rw [length_eq_zero_iff] at h3
-    subst h3
-    simp at h
+  apply cs.isLeftInversion_of_mem_leftInvSeq hω1
+  rw [←hi]
+  apply List.getElem_mem
 
-theorem length_reflection_mul_gt_of_eta_eq_zero (w t : W)
-  (ht : cs.IsReflection t) (h : η w t = 0) :
-  cs.length (t * w) > cs.length w := by
-  suffices h2 : cs.length (t * (t * w)) < cs.length (t * w) by
-    rw [←mul_assoc, ht.mul_self, one_mul] at h2
-    exact h2
-  apply length_reflection_mul_lt_of_eta_eq_one
+theorem not_isLeftInversion_of_eta_eq_zero {w t : W}
+  (ht : cs.IsReflection t) (h : η w t = 0) : ¬ cs.IsLeftInversion w t := by
+  rw [←ht.isLeftInversion_mul_right_iff]
+  apply isLeftInversion_of_eta_eq_one
   have h2 := permRep_inv_eq (t * w) ⟨⟨t, ht⟩, 0⟩
   have h3 := permRep_reflection ⟨t, ht⟩ 0
   replace h2 : (((permRep W) (t * w)⁻¹) (⟨t, ht⟩, 0)).2 = 0 + η (t * w) t := congr_arg Prod.snd h2
@@ -335,27 +319,23 @@ theorem length_reflection_mul_gt_of_eta_eq_zero (w t : W)
     permRep_inv_eq, h3, h, zero_add] at h2
   exact h2.symm
 
-theorem eta_eq_one_iff (w t : W) (ht : cs.IsReflection t) :
-  η w t = 1 ↔ cs.length (t * w) < cs.length w := by
+theorem eta_eq_one_iff {t : W} (ht : cs.IsReflection t) (w : W) :
+  η w t = 1 ↔ cs.IsLeftInversion w t := by
   constructor
-  · apply length_reflection_mul_lt_of_eta_eq_one
+  · apply isLeftInversion_of_eta_eq_one
   · intro h
     by_contra h2
-    apply not_lt_of_gt h
-    apply length_reflection_mul_gt_of_eta_eq_zero w t ht
-    unfold ZMod at *
-    grind
+    replace h2 : η w t = 0 := by
+      unfold ZMod at *
+      grind
+    exact not_isLeftInversion_of_eta_eq_zero ht h2 h
 
-theorem eta_eq_zero_iff (w t : W) (ht : cs.IsReflection t) :
-  η w t = 0 ↔ cs.length (t * w) > cs.length w := by
-  constructor
-  · apply length_reflection_mul_gt_of_eta_eq_zero
-    exact ht
-  · intro h
-    by_contra h2
-    apply not_lt_of_gt h
-    apply length_reflection_mul_lt_of_eta_eq_one w t
-    unfold ZMod at *
+theorem eta_eq_zero_iff {t : W} (ht : cs.IsReflection t) (w : W) :
+  η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
+  trans ¬ η w t = 1
+  · unfold ZMod
     grind
+  · rw [not_iff_not]
+    apply eta_eq_one_iff ht
 
 end Coxeter
