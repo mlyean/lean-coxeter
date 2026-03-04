@@ -292,8 +292,7 @@ theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :
       grind
 
 open Classical in
-theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) :
-  cs.IsLeftInversion w t := by
+theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInversion w t := by
   let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w
   subst hω2
   rw [eta_spec] at h
@@ -308,19 +307,24 @@ theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) :
   rw [←hi]
   apply List.getElem_mem
 
-theorem not_isLeftInversion_of_eta_eq_zero {w t : W}
-  (ht : cs.IsReflection t) (h : η w t = 0) : ¬ cs.IsLeftInversion w t := by
-  rw [←ht.isLeftInversion_mul_right_iff]
-  apply isLeftInversion_of_eta_eq_one
-  have h2 := permRep_inv_eq (t * w) ⟨⟨t, ht⟩, 0⟩
-  have h3 := permRep_reflection ⟨t, ht⟩ 0
-  replace h2 : (((permRep W) (t * w)⁻¹) (⟨t, ht⟩, 0)).2 = 0 + η (t * w) t := congr_arg Prod.snd h2
-  rw [zero_add, mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, ht.inv,
-    permRep_inv_eq, h3, h, zero_add] at h2
-  exact h2.symm
+theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
+  ¬ cs.IsLeftInversion w t := by
+  cases em (cs.IsReflection t) with
+  | inl ht =>
+      rw [←ht.isLeftInversion_mul_right_iff]
+      apply isLeftInversion_of_eta_eq_one
+      have h2 := permRep_inv_eq (t * w) ⟨⟨t, ht⟩, 0⟩
+      have h3 := permRep_reflection ⟨t, ht⟩ 0
+      replace h2 : (((permRep W) (t * w)⁻¹) (⟨t, ht⟩, 0)).2 = 0 + η (t * w) t :=
+        congr_arg Prod.snd h2
+      rw [zero_add, mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, ht.inv,
+        permRep_inv_eq, h3, h, zero_add] at h2
+      exact h2.symm
+  | inr ht =>
+      intro h2
+      exact ht h2.1
 
-theorem eta_eq_one_iff {t : W} (ht : cs.IsReflection t) (w : W) :
-  η w t = 1 ↔ cs.IsLeftInversion w t := by
+theorem eta_eq_one_iff {t w : W} : η w t = 1 ↔ cs.IsLeftInversion w t := by
   constructor
   · apply isLeftInversion_of_eta_eq_one
   · intro h
@@ -328,14 +332,12 @@ theorem eta_eq_one_iff {t : W} (ht : cs.IsReflection t) (w : W) :
     replace h2 : η w t = 0 := by
       unfold ZMod at *
       grind
-    exact not_isLeftInversion_of_eta_eq_zero ht h2 h
+    exact not_isLeftInversion_of_eta_eq_zero h2 h
 
-theorem eta_eq_zero_iff {t : W} (ht : cs.IsReflection t) (w : W) :
-  η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
+theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
   trans ¬ η w t = 1
   · unfold ZMod
     grind
-  · rw [not_iff_not]
-    apply eta_eq_one_iff ht
+  · rw [not_iff_not, eta_eq_one_iff]
 
 end Coxeter

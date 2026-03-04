@@ -32,7 +32,7 @@ theorem mem_leftInvSeq_of_isLeftInversion
   t ∈ cs.leftInvSeq ω := by
   rw [←count_pos_iff, pos_iff_ne_zero]
   intro heq
-  rw [←eta_eq_one_iff h.1 (cs.wordProd ω), eta_spec, heq] at h
+  rw [←eta_eq_one_iff, eta_spec, heq] at h
   tauto
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
