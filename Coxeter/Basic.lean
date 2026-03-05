@@ -51,7 +51,7 @@ theorem reverse_eraseIdx {l : List α} {i : ℕ} (hi : i < l.length) :
     apply Nat.le_sub_of_add_le
     rwa [add_comm]
 
-theorem sublist_tail_of_head_neq {l₁ l₂ : List α} (hl₁ : l₁ ≠ [])
+theorem sublist_tail_of_head_ne {l₁ l₂ : List α} (hl₁ : l₁ ≠ [])
   (hsub : l₁ <+ l₂) (h : head l₁ hl₁ ≠ head l₂ (by grind)) :
   l₁ <+ tail l₂ := by
   induction hsub with
@@ -216,7 +216,7 @@ theorem getElem_leftInvSeq_mul_wordProd₂ {i j : ℕ}
   = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
     rw [←getD_leftInvSeq_mul_wordProd₂ ω h1, getD_eq_getElem, getD_eq_getElem]
 
-theorem neq_of_adjacent {i : ℕ} {ω : List (B W)}
+theorem adjacent_ne_of_isReduced {i : ℕ} {ω : List (B W)}
   (hi : i + 1 < ω.length) (hω : cs.IsReduced ω) : ω[i] ≠ ω[i + 1] := by
   intro h
   apply lt_irrefl ω.length
@@ -245,7 +245,7 @@ theorem neq_of_adjacent {i : ℕ} {ω : List (B W)}
     · decide
 
 @[simp]
-theorem simple_neq_one (i : B W) : cs.simple i ≠ 1 := by
+theorem simple_ne_one (i : B W) : cs.simple i ≠ 1 := by
   intro h
   have h2 := cs.length_simple i
   rw [h, length_one] at h2

@@ -30,11 +30,11 @@ namespace Coxeter
 
 open Function List CoxeterSystem CoxeterGroup
 
-variable {W : Type*} [CoxeterGroup W]
-
 def ReflectionSet (W : Type*) [CoxeterGroup W] : Type _ := {t : W // cs.IsReflection t}
 
 def RootSet (W : Type*) [CoxeterGroup W] : Type _ := ReflectionSet W × ZMod 2
+
+variable {W : Type*} [CoxeterGroup W]
 
 /-- Induction principle for reflections -/
 theorem ReflectionSet.induction {P : ReflectionSet W → Prop}
@@ -57,7 +57,12 @@ open Classical in
 def etaAux (ω : List (B W)) (t : W) : ZMod 2 := count t (cs.leftInvSeq ω)
 
 def permRepAux (ω : List (B W)) (r : RootSet W) : RootSet W :=
-  ⟨⟨MulAut.conj (cs.wordProd ω) r.1.val, r.1.prop.conj _⟩, r.2 + etaAux (ω.reverse) r.1.val⟩
+  ⟨⟨MulAut.conj (cs.wordProd ω) r.1.val, r.1.prop.conj _⟩, r.2 + etaAux ω.reverse r.1.val⟩
+
+theorem permRepAux_nil : permRepAux ([] : List (B W)) = id := by
+  unfold permRepAux etaAux
+  simp
+  rfl
 
 open Classical in
 theorem permRepAux_cons (i : B W) (ω : List (B W)) :
@@ -75,11 +80,6 @@ theorem permRepAux_cons (i : B W) (ω : List (B W)) :
     congr 2
     simp only [wordProd_reverse, inv_inv, MulAut.conj_apply, beq_eq_beq]
     rw [mul_assoc, eq_mul_inv_iff_mul_eq, inv_mul_eq_iff_eq_mul]
-
-theorem permRepAux_nil : permRepAux ([] : List (B W)) = id := by
-  unfold permRepAux etaAux
-  simp
-  rfl
 
 theorem permRepAux_append (ω₁ ω₂ : List (B W)) :
   permRepAux (ω₁ ++ ω₂) = permRepAux ω₁ ∘ permRepAux ω₂ := by
@@ -158,12 +158,10 @@ theorem permRepAux_liftable : (@M W).IsLiftable permRepAux_equiv := by
   rw [←permRepAux_cons, permRepAux_iterate i i' (M.M i i'), permRepAux_alternatingWord]
 
 /-- Bjorner--Brenti Theorem 1.3.2(i): extension -/
-def permRep : W →* Equiv.Perm (RootSet W) :=
-  cs.lift ⟨permRepAux_equiv, permRepAux_liftable⟩
+def permRep : W →* Equiv.Perm (RootSet W) := cs.lift ⟨permRepAux_equiv, permRepAux_liftable⟩
 
 open Classical in
-def η (w t : W) : ZMod 2 :=
-  count t (cs.leftInvSeq (choose (cs.wordProd_surjective w)))
+def η (w t : W) : ZMod 2 := count t (cs.leftInvSeq (choose (cs.wordProd_surjective w)))
 
 end construction
 
