@@ -94,6 +94,13 @@ theorem monotone_length : Monotone (@cs W).length := by apply length_le_of_le
 
 theorem strictMono_length : StrictMono (@cs W).length := by apply length_lt_of_lt
 
+theorem eq_of_le_of_length_eq {u w : W} (h : u ≤ w) (h2 : cs.length u = cs.length w) : u = w := by
+  apply eq_of_le_of_not_lt h
+  intro h3
+  replace h3 := strictMono_length h3
+  rw [h2] at h3
+  exact lt_irrefl _ h3
+
 instance : OrderBot W where
   bot := 1
   bot_le := by
@@ -178,7 +185,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
     rw [←μ.wordProd_eq, h, ω.wordProd_eq] at h1
     contradiction
   have h_not_P_succ_i : ¬ P (i + 1) := Nat.findGreatest_is_greatest (Nat.lt_succ_self i) h_i_lt
-  have h_get_i_neq : (hi : i < μ.length) → μ.val[i] ≠ ω.val[i] := by
+  have h_get_i_ne : (hi : i < μ.length) → μ.val[i] ≠ ω.val[i] := by
     intro h h'
     apply h_not_P_succ_i
     exists μ
@@ -241,7 +248,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
             _ = cs.length w := ω.length_eq
       | inr h' =>
           have h_i_lt2 : i < μ.length := lt_of_le_of_lt h' hj1
-          specialize h_get_i_neq h_i_lt2
+          specialize h_get_i_ne h_i_lt2
           let μ' := take (i + 1) ω.val ++ drop i (μ.val.eraseIdx j)
           have h'' : u = cs.wordProd μ' := by
             calc
@@ -290,10 +297,10 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
                 exact lt_of_le_of_lt hlt hj1
               have h5 : drop i (μ.val.eraseIdx j) ≠ [] := by
                 rwa [ne_eq, drop_eq_nil_iff, not_le]
-              apply sublist_tail_of_head_neq h5
+              apply sublist_tail_of_head_ne h5
               · simp only [head_drop, ne_eq]
                 rw [getElem_eraseIdx_of_lt h4 hlt]
-                exact h_get_i_neq
+                exact h_get_i_ne
               · apply List.Sublist.drop
                 exact Sublist.trans (eraseIdx_sublist _ _) hsub
           | inr heq =>
@@ -324,9 +331,9 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
               have h'' : drop i μ.val ≠ [] := by
                 rw [ne_eq, drop_eq_nil_iff, not_le]
                 exact h'
-              apply sublist_tail_of_head_neq h'' h_drop_sublist
+              apply sublist_tail_of_head_ne h'' h_drop_sublist
               rw [head_drop, head_drop]
-              exact h_get_i_neq h'
+              exact h_get_i_ne h'
           | inr h' =>
               rw [h', drop_length]
               apply nil_sublist
@@ -371,14 +378,14 @@ theorem le_of_reduced_subword {u w : W} (μ : ReducedWord u) (ω : ReducedWord w
   apply Nat.decreasingInduction
   · intro k hk ih u μ h1 h2
     subst h2
-    have hneq : u ≠ w := by
+    have hne : u ≠ w := by
       intro h
       apply ne_of_lt hk
       calc
         μ.length = cs.length u := μ.length_eq
         _ = cs.length w := by rw [h]
         _ = ω.length := ω.length_eq.symm
-    have ⟨v, hv1, hv2, ν, hν⟩ := reduced_subword_extend ω hneq ⟨μ, h1⟩
+    have ⟨v, hv1, hv2, ν, hν⟩ := reduced_subword_extend ω hne ⟨μ, h1⟩
     rw [←ν.length_eq, ←μ.length_eq] at hv2
     exact le_of_lt (lt_of_lt_of_le hv1 (ih v ν hν hv2))
   · intro u μ h1 h2
@@ -481,13 +488,12 @@ theorem strictMono_inv : StrictMono (@Inv.inv W _) := by
     rw [inv_inj] at h2
     exact h.2 h2
 
-/-- Bjorner--Brenti Theorem 2.2.6 -/
 theorem length_cover {u w : W} (h : u ⋖ w) : cs.length w = cs.length u + 1 := by
   apply eq_of_le_of_ge
   · by_contra! h2
     let ω : ReducedWord w := default
-    have hneq : u ≠ w := by grind
-    let ⟨v, h3, h4, ν, hν⟩ := reduced_subword_extend ω hneq (exists_reduced_subword_of_le h.1.1 ω)
+    have hne : u ≠ w := by grind
+    let ⟨v, h3, h4, ν, hν⟩ := reduced_subword_extend ω hne (exists_reduced_subword_of_le h.1.1 ω)
     apply h.2 h3
     constructor
     · exact le_of_reduced_subword ν ω hν
@@ -495,6 +501,34 @@ theorem length_cover {u w : W} (h : u ⋖ w) : cs.length w = cs.length u + 1 := 
       rw [←h4, heq, lt_self_iff_false] at h2
       contradiction
   · exact strictMono_length h.1
+
+theorem cover_iff {u w : W} : u ⋖ w ↔ u ≤ w ∧ cs.length w = cs.length u + 1 := by
+  constructor
+  · intro h
+    constructor
+    · exact le_of_lt h.1
+    · exact length_cover h
+  · intro h
+    constructor
+    · apply lt_of_le_of_ne h.1
+      grind
+    · intro z hz1 hz2
+      apply not_le_of_gt (strictMono_length hz1)
+      have h2 := strictMono_length hz2
+      rwa [h.2, Nat.lt_succ_iff] at h2
+
+/-- Bjorner--Brenti Theorem 2.2.6 -/
+theorem exists_cover_of_lt {u w : W} (h : u < w) : ∃ (v : W), u ⋖ v ∧ v ≤ w := by
+  let ω : ReducedWord w := default
+  have ⟨v, h2, h3, ν, hν⟩ := reduced_subword_extend ω (ne_of_lt h)
+    (exists_reduced_subword_of_le (le_of_lt h) ω)
+  exists v
+  constructor
+  · rw [cover_iff]
+    constructor
+    · exact (le_of_lt h2)
+    · exact h3
+  · exact le_of_reduced_subword ν ω hν
 
 noncomputable instance : GradeMinOrder ℕ W where
   grade := cs.length
@@ -570,6 +604,43 @@ theorem lifting_property {u w : W} {i : B W}
           rw [not_isLeftDescent_iff] at h3
           rw [wordProd_cons, μ.wordProd_eq, h3, length_cons, ←μ.2.1, ←μ.2.2]
         · rw [wordProd_cons, μ.wordProd_eq]
+
+/-- Bjorner--Brenti Corollary 2.2.8 (i) -/
+theorem local_configuration {i : B W} {t w : W}
+  (h : cs.simple i ≠ t) (h2 : w ⋖ cs.simple i * w) (h3 : w ⋖ t * w) :
+  cs.simple i * w ⋖ cs.simple i * t * w ∧ t * w ⋖ cs.simple i * t * w := by
+  cases mul_reflection_lt_or_gt (t * w) (cs.isReflection_simple i) with
+  | inl h4 =>
+      exfalso
+      apply h
+      have : cs.simple i * w ≤ t * w := by
+        apply (lifting_property (le_of_lt h3.1) _ _).2
+        · rwa [←simple_mul_lt_iff]
+        · rw [←simple_mul_gt_iff]
+          exact h2.1
+      rw [cover_iff] at h2 h3
+      have := eq_of_le_of_length_eq this (by grind)
+      rwa [mul_left_inj] at this
+  | inr h4 =>
+      have h5 : cs.IsLeftDescent (cs.simple i * (t * w)) i := by
+        rwa [simple_mul_gt_iff, isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h4
+      have h6 : ¬ cs.IsLeftDescent w i := by
+        rw [←simple_mul_gt_iff]
+        exact h2.1
+      have h7 := lifting_property (le_of_lt (lt_trans h3.1 h4)) h5 h6
+      simp only [←mul_assoc, simple_mul_simple_self, one_mul] at h7
+      constructor
+      · rw [cover_iff]
+        constructor
+        · exact h7.2
+        · rw [simple_mul_gt_iff, not_isLeftDescent_iff, ←mul_assoc] at h4
+          rw [cover_iff] at h2 h3
+          rw [h4, h2.2, h3.2]
+      · rw [cover_iff]
+        constructor
+        · rw [mul_assoc]
+          exact le_of_lt h4
+        · rwa [simple_mul_gt_iff, not_isLeftDescent_iff, ←mul_assoc] at h4
 
 /-- Bjorner--Brenti Proposition 2.2.9 -/
 instance : IsDirectedOrder W where
@@ -678,7 +749,7 @@ theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) �
     · exact le_top
     · simp
 
-theorem exists_left_ascent_of_neq_w₀ {x : W} (h : x ≠ w₀) : ∃ (i : B W), cs.simple i * x > x := by
+theorem exists_left_ascent_of_ne_w₀ {x : W} (h : x ≠ w₀) : ∃ (i : B W), cs.simple i * x > x := by
   by_contra! h2
   apply h
   rw [←all_isLeftDescent_iff]
@@ -721,7 +792,7 @@ theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - 
     · intro k hk ih w hw
       rw [←hw] at hk
       have h : w ≠ w₀ := by grind
-      let ⟨i, hi⟩ := exists_left_ascent_of_neq_w₀ h
+      let ⟨i, hi⟩ := exists_left_ascent_of_ne_w₀ h
       rw [simple_mul_gt_iff, not_isLeftDescent_iff] at hi
       have h2 : cs.length (cs.simple i * w * w₀) ≤
         cs.length (w₀ : W) - cs.length (cs.simple i * w) := by
