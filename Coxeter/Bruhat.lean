@@ -673,10 +673,8 @@ instance : IsDirectedOrder W where
             | inr h2 =>
                 exists cs.simple i * x
                 have h3 : cs.simple i * x ≥ x := by
-                  rw [not_isLeftDescent_iff] at h2
                   apply le_of_lt
-                  rw [lt_reflection_mul_iff (cs.isReflection_simple i), h2]
-                  apply Nat.lt_succ_self
+                  rwa [←simple_mul_gt_iff] at h2
                 rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
                 rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
                 have ⟨h4, h5⟩ := lifting_property (le_trans hx1 h3) h2 hi
@@ -689,37 +687,42 @@ section finite
 
 /-! ### Bruhat order on finite Coxeter groups -/
 
-theorem maximal_of_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeftDescent x i) : IsTop x := by
-  intro u
-  induction u using WellFoundedLT.induction with
-  | ind u ih =>
-      cases em (u = 1) with
-      | inl h2 =>
-          rw [h2]
-          exact bot_le
-      | inr h2 =>
-          let ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h2
-          rw [←simple_mul_lt_iff] at hi
-          have h3 := ih _ hi
-          rw [simple_mul_lt_iff, isLeftDescent_iff_not_isLeftDescent_mul] at hi
-          have h4 := (lifting_property h3 (h i) hi).2
-          rwa [simple_mul_simple_cancel_left] at h4
+theorem isTop_iff_all_isLeftDescent {x : W} : (∀ (i : B W), cs.IsLeftDescent x i) ↔ IsTop x := by
+  constructor
+  · intro h u
+    induction u using WellFoundedLT.induction with
+    | ind u ih =>
+        cases em (u = 1) with
+        | inl h2 =>
+            rw [h2]
+            exact bot_le
+        | inr h2 =>
+            let ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h2
+            rw [←simple_mul_lt_iff] at hi
+            have h3 := ih _ hi
+            rw [simple_mul_lt_iff, isLeftDescent_iff_not_isLeftDescent_mul] at hi
+            have h4 := (lifting_property h3 (h i) hi).2
+            rwa [simple_mul_simple_cancel_left] at h4
+  · intro h i
+    rw [←simple_mul_lt_iff]
+    apply lt_of_le_of_ne
+    · apply h
+    · simp
+
+instance [OrderTop W] : Finite W := by
+  apply Finite.of_finite_univ
+  apply Set.Finite.ofFinset (Finset.Icc (⊥ : W) (⊤ : W))
+  intro w
+  simp
 
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) -/
 theorem finite_of_exists_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeftDescent x i) :
   Finite W := by
-  have h2 : (Set.univ : Set W) = Finset.Icc 1 x := by
-    ext u
-    constructor
-    · intro h'
-      simp only [Finset.coe_Icc, Set.mem_Icc]
-      constructor
-      · exact bot_le
-      · exact maximal_of_all_isLeftDescent h u
-    · intro h'
-      apply Set.mem_univ
-  rw [←Set.finite_univ_iff, h2, Finset.coe_Icc]
-  apply Set.finite_Icc
+  haveI : OrderTop W := {
+    top := x
+    le_top := isTop_iff_all_isLeftDescent.mp h
+  }
+  infer_instance
 
 variable [Finite W]
 
@@ -738,16 +741,14 @@ noncomputable instance : OrderTop W where
 
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) continued -/
 theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) ↔ x = w₀ := by
+  rw [isTop_iff_all_isLeftDescent]
   constructor
   · intro h
     apply top_unique
-    apply maximal_of_all_isLeftDescent h
-  · intro h i
-    subst h
-    rw [←simple_mul_lt_iff]
-    apply lt_of_le_of_ne
-    · exact le_top
-    · simp
+    apply h
+  · intro h w
+    rw [h]
+    exact le_top
 
 theorem exists_left_ascent_of_ne_w₀ {x : W} (h : x ≠ w₀) : ∃ (i : B W), cs.simple i * x > x := by
   by_contra! h2
