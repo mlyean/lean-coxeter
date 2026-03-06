@@ -124,7 +124,6 @@ theorem permRepAux_alternatingWord (i i' : B W) :
       unfold p
       simp
 
-open Classical in
 theorem permRepAux_singleton_involutive (i : B W) :
   Function.Involutive (permRepAux [i]) := by
   suffices h : permRepAux [i] ∘ permRepAux [i] = id from congr_fun h
@@ -149,7 +148,6 @@ theorem permRepAux_iterate (i i' : B W) (k : ℕ) :
         cons_append, nil_append]
       rw [permRepAux_append, ih]
 
-open Classical in
 theorem permRepAux_liftable : (@M W).IsLiftable permRepAux_equiv := by
   intro i i'
   ext r
@@ -157,7 +155,7 @@ theorem permRepAux_liftable : (@M W).IsLiftable permRepAux_equiv := by
   change ((permRepAux [i]) ∘ (permRepAux [i']))^[M.M i i'] r = id r
   rw [←permRepAux_cons, permRepAux_iterate i i' (M.M i i'), permRepAux_alternatingWord]
 
-/-- Bjorner--Brenti Theorem 1.3.2(i): extension -/
+/-- Bjorner--Brenti Theorem 1.3.2 (i): extension -/
 def permRep : W →* Equiv.Perm (RootSet W) := cs.lift ⟨permRepAux_equiv, permRepAux_liftable⟩
 
 open Classical in
@@ -239,7 +237,7 @@ theorem permRep_inv_eq (w : W) (r : RootSet W) : permRep w⁻¹ r
   rw [permRep_eq, inv_inv]
 
 open Classical in
-/-- Bjorner--Brenti Theorem 1.3.2(i): injectivity -/
+/-- Bjorner--Brenti Theorem 1.3.2 (i): injectivity -/
 theorem permRep_inj : Function.Injective (@permRep W _) := by
   rw [injective_iff_map_eq_one]
   intro w hw
@@ -262,7 +260,7 @@ theorem permRep_inj : Function.Injective (@permRep W _) := by
     dsimp at h2
     contradiction
 
-/-- Bjorner--Brenti Theorem 1.3.2(ii) -/
+/-- Bjorner--Brenti Theorem 1.3.2 (ii) -/
 theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :
   permRep t.val (t, ε) = (t, ε + 1) := by
   revert t ε

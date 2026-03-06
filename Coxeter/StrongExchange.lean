@@ -12,7 +12,7 @@ This file proves the strong exchange and related properties of Coxeter groups.
 * `Coxeter.exchange_property`
 * `Coxeter.deletion_property`
 * `Coxeter.exists_reduced_subword`
-* `Coxeter.card_of_IsLeftInversion`
+* `Coxeter.card_of_isLeftInversion`
 
 ## References
 
@@ -76,7 +76,7 @@ instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
 
 open Classical in
 /-- Bjorner--Brenti Corollary 1.4.5 -/
-theorem card_of_IsLeftInversion (w : W) :
+theorem card_of_isLeftInversion (w : W) :
   Nat.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word' w
   subst hω2
@@ -192,9 +192,9 @@ def equiv_isRightInversion {w : W} :
 instance {w : W} : Finite {t : W // cs.IsRightInversion w t} :=
   Finite.of_equiv _ equiv_isRightInversion.symm
 
-theorem card_of_IsRightInversion (w : W) :
+theorem card_of_isRightInversion (w : W) :
   Nat.card {t : W // cs.IsRightInversion w t} = cs.length w := by
-  rw [Nat.card_congr equiv_isRightInversion, card_of_IsLeftInversion, length_op]
+  rw [Nat.card_congr equiv_isRightInversion, card_of_isLeftInversion, length_op]
 
 end rightVariants
 

@@ -15,7 +15,8 @@ This file defines the Bruhat order.
 
 * `Coxeter.subword_property`
 * `Coxeter.lifting_property`
-* `Coxeter.length_cover`
+* `Coxeter.exists_cover_of_lt`
+* `Coxeter.length_mul_w₀`
 
 ## References
 
@@ -903,7 +904,7 @@ instance : Finite (ReflectionSet W) :=
 /-- Bjorner--Brenti Proposition 2.3.2 (iv) -/
 theorem length_w₀_eq_card_reflectionSet :
   cs.length (w₀ : W) = Nat.card (ReflectionSet W) := by
-  rw [←card_of_IsLeftInversion]
+  rw [←card_of_isLeftInversion]
   exact Nat.card_congr isLeftInversion_equiv_isReflection
 
 /-- Bjorner--Brenti Corollary 2.3.3 (i) -/
