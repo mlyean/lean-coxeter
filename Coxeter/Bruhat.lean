@@ -123,8 +123,8 @@ instance : OrderBot W where
         · rw [h, h', length_cons]
           apply Nat.le_refl
 
-theorem lt_reflection_mul_iff {t : W} (ht : cs.IsReflection t) (w : W)
-  : w < t * w ↔ cs.length w < cs.length (t * w) := by
+theorem lt_reflection_mul_iff {t : W} (ht : cs.IsReflection t) (w : W) :
+  w < t * w ↔ cs.length w < cs.length (t * w) := by
   constructor
   · intro h
     apply strictMono_length
@@ -136,18 +136,40 @@ theorem lt_reflection_mul_iff {t : W} (ht : cs.IsReflection t) (w : W)
     · intro h2
       rwa [←h2, lt_self_iff_false] at h
 
-theorem reflection_mul_lt_iff {t : W} (ht : cs.IsReflection t) (w : W)
-  : t * w < w ↔ cs.length (t * w) < cs.length w := by
+theorem reflection_mul_lt_iff {t : W} (ht : cs.IsReflection t) (w : W) :
+  t * w < w ↔ cs.length (t * w) < cs.length w := by
   have h := lt_reflection_mul_iff ht (t * w)
   rwa [←mul_assoc, ht.mul_self, one_mul] at h
 
-theorem simple_mul_gt_iff (i : B W) (w : W) : cs.simple i * w > w ↔ ¬ cs.IsLeftDescent w i := by
-  rw [gt_iff_lt, cs.not_isLeftDescent_iff, lt_reflection_mul_iff (cs.isReflection_simple i) w]
+theorem lt_mul_reflection_iff {t : W} (ht : cs.IsReflection t) (w : W) :
+  w < w * t ↔ cs.length w < cs.length (w * t) := by
+  have h : w * t = (w * t * w⁻¹) * w := by group
+  rw [h]
+  apply lt_reflection_mul_iff
+  rwa [isReflection_conj_iff]
+
+theorem mul_reflection_lt_iff {t : W} (ht : cs.IsReflection t) (w : W) :
+  w * t < w ↔ cs.length (w * t) < cs.length w := by
+  have h : w * t = (w * t * w⁻¹) * w := by group
+  rw [h]
+  apply reflection_mul_lt_iff
+  rwa [isReflection_conj_iff]
+
+theorem lt_simple_mul_iff (i : B W) (w : W) : w < cs.simple i * w ↔ ¬ cs.IsLeftDescent w i := by
+  rw [cs.not_isLeftDescent_iff, lt_reflection_mul_iff (cs.isReflection_simple i) w]
   have := cs.length_simple_mul w i
   grind
 
 theorem simple_mul_lt_iff (i : B W) (w : W) : cs.simple i * w < w ↔ cs.IsLeftDescent w i := by
   apply reflection_mul_lt_iff (cs.isReflection_simple i)
+
+theorem lt_mul_simple_iff (i : B W) (w : W) : w < w * cs.simple i ↔ ¬ cs.IsRightDescent w i := by
+  rw [cs.not_isRightDescent_iff, lt_mul_reflection_iff (cs.isReflection_simple i) w]
+  have := cs.length_mul_simple w i
+  grind
+
+theorem mul_simple_lt_iff (i : B W) (w : W) : w * cs.simple i < w ↔ cs.IsRightDescent w i := by
+  apply mul_reflection_lt_iff (cs.isReflection_simple i)
 
 theorem mul_reflection_lt_or_gt (w : W) {t : W} (ht : cs.IsReflection t) :
   t * w < w ∨ t * w > w := by
@@ -616,16 +638,16 @@ theorem local_configuration {i : B W} {t w : W}
       have : cs.simple i * w ≤ t * w := by
         apply (lifting_property (le_of_lt h3.1) _ _).2
         · rwa [←simple_mul_lt_iff]
-        · rw [←simple_mul_gt_iff]
+        · rw [←lt_simple_mul_iff]
           exact h2.1
       rw [cover_iff] at h2 h3
       have := eq_of_le_of_length_eq this (by grind)
       rwa [mul_left_inj] at this
   | inr h4 =>
       have h5 : cs.IsLeftDescent (cs.simple i * (t * w)) i := by
-        rwa [simple_mul_gt_iff, isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h4
+        rwa [gt_iff_lt, lt_simple_mul_iff, isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h4
       have h6 : ¬ cs.IsLeftDescent w i := by
-        rw [←simple_mul_gt_iff]
+        rw [←lt_simple_mul_iff]
         exact h2.1
       have h7 := lifting_property (le_of_lt (lt_trans h3.1 h4)) h5 h6
       simp only [←mul_assoc, simple_mul_simple_self, one_mul] at h7
@@ -633,14 +655,57 @@ theorem local_configuration {i : B W} {t w : W}
       · rw [cover_iff]
         constructor
         · exact h7.2
-        · rw [simple_mul_gt_iff, not_isLeftDescent_iff, ←mul_assoc] at h4
+        · rw [gt_iff_lt, lt_simple_mul_iff, not_isLeftDescent_iff, ←mul_assoc] at h4
           rw [cover_iff] at h2 h3
           rw [h4, h2.2, h3.2]
       · rw [cover_iff]
         constructor
         · rw [mul_assoc]
           exact le_of_lt h4
-        · rwa [simple_mul_gt_iff, not_isLeftDescent_iff, ←mul_assoc] at h4
+        · rwa [gt_iff_lt, lt_simple_mul_iff, not_isLeftDescent_iff, ←mul_assoc] at h4
+
+/-- Bjorner--Brenti Corollary 2.2.8 (ii) -/
+theorem local_configuration₂ {i i' : B W} {w : W}
+  (h : w ⋖ cs.simple i * w) (h2 : w ⋖ w * cs.simple i') :
+  (cs.simple i * w ⋖ cs.simple i * w * cs.simple i' ∧
+    w * cs.simple i' ⋖ cs.simple i * w * cs.simple i') ∨
+  w = cs.simple i * w * cs.simple i' := by
+  cases em (cs.IsLeftDescent (w * cs.simple i') i) with
+  | inl h3 =>
+      right
+      have h4 := h.1
+      rw [lt_simple_mul_iff] at h4
+      have h5 := (lifting_property (le_of_lt h2.1) h3 h4).1
+      rw [mul_assoc]
+      apply eq_of_le_of_length_eq h5
+      rw [isLeftDescent_iff] at h3
+      rw [cover_iff] at h h2
+      grind
+  | inr h3 =>
+      left
+      have h4 : w * cs.simple i' < cs.simple i * (w * cs.simple i') := by
+        rwa [←lt_simple_mul_iff] at h3
+      have h5 : cs.IsLeftDescent (cs.simple i * (w * cs.simple i')) i := by
+        rw [isLeftDescent_iff_not_isLeftDescent_mul, simple_mul_simple_cancel_left]
+        exact h3
+      have h6 : ¬ cs.IsLeftDescent w i := by
+        rw [←lt_simple_mul_iff]
+        exact h.1
+      have h7 := lifting_property (le_of_lt (lt_trans h2.1 h4)) h5 h6
+      rw [simple_mul_simple_cancel_left, ←mul_assoc] at h7
+      constructor
+      · rw [cover_iff]
+        constructor
+        · exact h7.2
+        · rw [cover_iff] at h2
+          rw [not_isLeftDescent_iff, isLeftDescent_iff, ←mul_assoc, ←mul_assoc, ←mul_assoc] at *
+          rw [h3, h6, h2.2]
+      · rw [cover_iff]
+        constructor
+        · rw [←mul_assoc] at h4
+          exact le_of_lt h4
+        · rw [not_isLeftDescent_iff, ←mul_assoc] at h3
+          rw [h3]
 
 /-- Bjorner--Brenti Proposition 2.2.9 -/
 instance : IsDirectedOrder W where
@@ -674,7 +739,7 @@ instance : IsDirectedOrder W where
                 exists cs.simple i * x
                 have h3 : cs.simple i * x ≥ x := by
                   apply le_of_lt
-                  rwa [←simple_mul_gt_iff] at h2
+                  rwa [←lt_simple_mul_iff] at h2
                 rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
                 rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
                 have ⟨h4, h5⟩ := lifting_property (le_trans hx1 h3) h2 hi
@@ -750,15 +815,6 @@ theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) �
     rw [h]
     exact le_top
 
-theorem exists_left_ascent_of_ne_w₀ {x : W} (h : x ≠ w₀) : ∃ (i : B W), cs.simple i * x > x := by
-  by_contra! h2
-  apply h
-  rw [←all_isLeftDescent_iff]
-  conv at h2 =>
-    intro i
-    rw [simple_mul_gt_iff, not_not]
-  exact h2
-
 theorem length_le_length_w₀ (w : W) : cs.length w ≤ cs.length (w₀ : W) :=
   monotone_length le_top
 
@@ -792,9 +848,13 @@ theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - 
     apply Nat.decreasingInduction
     · intro k hk ih w hw
       rw [←hw] at hk
-      have h : w ≠ w₀ := by grind
-      let ⟨i, hi⟩ := exists_left_ascent_of_ne_w₀ h
-      rw [simple_mul_gt_iff, not_isLeftDescent_iff] at hi
+      have h : ¬ w = w₀ := by
+        intro h
+        subst h
+        exact lt_irrefl _ hk
+      rw [←all_isLeftDescent_iff, not_forall] at h
+      let ⟨i, hi⟩ := h
+      rw [not_isLeftDescent_iff] at hi
       have h2 : cs.length (cs.simple i * w * w₀) ≤
         cs.length (w₀ : W) - cs.length (cs.simple i * w) := by
         rw [hw] at hi
@@ -805,13 +865,13 @@ theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - 
         _ = cs.length (w₀ : W) - (cs.length w + 1) + 1 := by rw [hi]
         _ = cs.length w₀ - cs.length w := by grind
       · have h3 := cs.length_mul_le (cs.simple i) (cs.simple i * w * w₀)
-        rw [mul_assoc] at h3
-        simp at h3
-        grind
+        nth_rw 1 [mul_assoc, simple_mul_simple_cancel_left, length_simple, add_comm] at h3
+        exact h3
     · intro w hw
       replace hw := eq_w₀_of_length_ge (ge_of_eq hw)
       subst hw
-      simp
+      rw [w₀_mul_self, length_one]
+      apply Nat.zero_le
   · apply length_mul_ge_length_sub_length'
 
 /-- Bjorner--Brenti Proposition 2.3.2 (iii) -/
