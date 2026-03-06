@@ -1,4 +1,5 @@
 import Coxeter.PermutationRepresentation
+import Coxeter.Opposite
 
 /-!
 # Strong exchange
@@ -58,30 +59,10 @@ theorem strong_exchange
     exact i.prop
   · rw [←hi, ←getD_leftInvSeq_mul_wordProd, getD_eq_get]
 
-theorem strong_exchange'
-  {ω : List (B W)} {t : W} (h : cs.IsRightInversion (cs.wordProd ω) t) :
-  ∃ i < ω.length, cs.wordProd ω * t = cs.wordProd (ω.eraseIdx i) := by
-  rw [←isLeftInversion_inv_iff, ←wordProd_reverse] at h
-  have ⟨i, hi, h2⟩ := strong_exchange h
-  rw [length_reverse] at hi
-  rw [←inv_inj, mul_inv_rev, wordProd_reverse, inv_inv, h.1.inv, ←wordProd_reverse,
-    reverse_eraseIdx hi, reverse_reverse] at h2
-  exists ω.length - i - 1
-  constructor
-  · calc
-      ω.length - i - 1 < ω.length - i := Nat.sub_one_lt (Nat.sub_ne_zero_of_lt hi)
-      _ ≤ ω.length := Nat.sub_le _ _
-  · exact h2
-
 theorem exchange_property
   {ω : List (B W)} {i : B W} (h : cs.IsLeftDescent (cs.wordProd ω) i) :
   ∃ j < ω.length, cs.simple i * cs.wordProd ω = cs.wordProd (ω.eraseIdx j) :=
   strong_exchange ⟨cs.isReflection_simple i, h⟩
-
-theorem exchange_property'
-  {ω : List (B W)} {i : B W} (h : cs.IsRightDescent (cs.wordProd ω) i) :
-  ∃ j < ω.length, cs.wordProd ω * cs.simple i = cs.wordProd (ω.eraseIdx j) :=
-  strong_exchange' ⟨cs.isReflection_simple i, h⟩
 
 open Classical in
 def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
@@ -95,15 +76,6 @@ noncomputable instance {w : W} : Fintype {t : W // cs.IsLeftInversion w t} := by
   rw [←h2] at h
   exact Fintype.ofEquiv _ h.symm
 
-def equiv_IsLeftInversion_inv {w : W} :
-  {t : W // cs.IsLeftInversion w⁻¹ t} ≃ {t : W // cs.IsRightInversion w t} := by
-  apply Equiv.subtypeEquivRight
-  apply isLeftInversion_inv_iff
-
-open Classical in
-noncomputable instance {w : W} : Fintype {t : W // cs.IsRightInversion w t} :=
-  Fintype.ofEquiv _ equiv_IsLeftInversion_inv
-
 open Classical in
 /-- Bjorner--Brenti Corollary 1.4.5 -/
 theorem card_of_IsLeftInversion (w : W) :
@@ -113,10 +85,6 @@ theorem card_of_IsLeftInversion (w : W) :
   rw [hω1, Fintype.card_congr (equiv_IsLeftInversion ω hω1),
     Fintype.card_of_subtype (cs.leftInvSeq ω).toFinset (by simp),
     toFinset_card_of_nodup (hω1.nodup_leftInvSeq), length_leftInvSeq]
-
-theorem card_of_IsRightInversion (w : W) :
-  Fintype.card {t : W // cs.IsRightInversion w t} = cs.length w := by
-  rw [Fintype.ofEquiv_card equiv_IsLeftInversion_inv, card_of_IsLeftInversion, length_inv]
 
 open Classical in
 /-- Bjorner--Brenti Proposition 1.4.7 -/
@@ -196,5 +164,41 @@ theorem exists_reduced_subword' {w : W} {ω : List (B W)} (h : w = cs.wordProd �
   rw [h]
   have ⟨ω', h1, h2, h3⟩ := exists_reduced_subword ω
   exists ⟨ω', h2, h3⟩
+
+section rightVariants
+
+open MulOpposite
+
+/-! ### Right variants -/
+
+theorem strong_exchange_right
+  {ω : List (B W)} {t : W} (h : cs.IsRightInversion (cs.wordProd ω) t) :
+  ∃ i < ω.length, cs.wordProd ω * t = cs.wordProd (ω.eraseIdx i) := by
+  let ⟨i, hi1, hi2⟩ := @strong_exchange Wᵐᵒᵖ _ ω.reverse (op t) ?_
+  · exists ω.length - i - 1
+    rw [length_reverse] at hi1
+    rw [wordProd_op, ←op_mul, reverse_reverse, wordProd_op, op_inj, reverse_eraseIdx hi1,
+      reverse_reverse] at hi2
+    grind
+  · rwa [wordProd_op, isLeftInversion_op_iff, reverse_reverse]
+
+theorem exchange_property_right
+  {ω : List (B W)} {i : B W} (h : cs.IsRightDescent (cs.wordProd ω) i) :
+  ∃ j < ω.length, cs.wordProd ω * cs.simple i = cs.wordProd (ω.eraseIdx j) :=
+  strong_exchange_right ⟨cs.isReflection_simple i, h⟩
+
+def equiv_isRightInversion {w : W} :
+  {t : W // cs.IsRightInversion w t} ≃ {t : Wᵐᵒᵖ // cs.IsLeftInversion (op w) t} :=
+  Equiv.subtypeEquiv MulOpposite.opEquiv (fun t => (isLeftInversion_op_iff w t).symm)
+
+open Classical in
+noncomputable instance {w : W} : Fintype {t : W // cs.IsRightInversion w t} :=
+  Fintype.ofEquiv _ equiv_isRightInversion.symm
+
+theorem card_of_IsRightInversion (w : W) :
+  Fintype.card {t : W // cs.IsRightInversion w t} = cs.length w := by
+  rw [Fintype.card_congr equiv_isRightInversion, card_of_IsLeftInversion, length_op]
+
+end rightVariants
 
 end Coxeter
