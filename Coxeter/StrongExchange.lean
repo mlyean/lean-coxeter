@@ -45,7 +45,6 @@ theorem isLeftInversion_iff_mem_leftInvSeq
     exact mem_leftInvSeq_of_isLeftInversion h
   · exact cs.isLeftInversion_of_mem_leftInvSeq hω
 
-open Classical in
 /-- Bjorner--Brenti Theorem 1.4.3 -/
 theorem strong_exchange
   {ω : List (B W)} {t : W} (h : cs.IsLeftInversion (cs.wordProd ω) t) :
@@ -64,26 +63,25 @@ theorem exchange_property
   ∃ j < ω.length, cs.simple i * cs.wordProd ω = cs.wordProd (ω.eraseIdx j) :=
   strong_exchange ⟨cs.isReflection_simple i, h⟩
 
-open Classical in
 def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
   {t : W // cs.IsLeftInversion (cs.wordProd ω) t} ≃ {t : W // t ∈ cs.leftInvSeq ω} :=
     Equiv.subtypeEquivRight (fun t => isLeftInversion_iff_mem_leftInvSeq t hω)
 
 open Classical in
-noncomputable instance {w : W} : Fintype {t : W // cs.IsLeftInversion w t} := by
-  have ⟨h1, h2⟩ := choose_spec (cs.exists_reduced_word' w)
-  have h := equiv_IsLeftInversion (choose (cs.exists_reduced_word' w)) h1
+instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
+  have ⟨ω, h1, h2⟩ := cs.exists_reduced_word' w
+  have h := equiv_IsLeftInversion ω h1
   rw [←h2] at h
-  exact Fintype.ofEquiv _ h.symm
+  exact Finite.of_equiv _ h.symm
 
 open Classical in
 /-- Bjorner--Brenti Corollary 1.4.5 -/
 theorem card_of_IsLeftInversion (w : W) :
-  Fintype.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
+  Nat.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word' w
   subst hω2
-  rw [hω1, Fintype.card_congr (equiv_IsLeftInversion ω hω1),
-    Fintype.card_of_subtype (cs.leftInvSeq ω).toFinset (by simp),
+  rw [hω1, Nat.card_congr (equiv_IsLeftInversion ω hω1),
+    Nat.subtype_card (cs.leftInvSeq ω).toFinset (fun _ => List.mem_toFinset),
     toFinset_card_of_nodup (hω1.nodup_leftInvSeq), length_leftInvSeq]
 
 open Classical in
@@ -191,13 +189,12 @@ def equiv_isRightInversion {w : W} :
   {t : W // cs.IsRightInversion w t} ≃ {t : Wᵐᵒᵖ // cs.IsLeftInversion (op w) t} :=
   Equiv.subtypeEquiv MulOpposite.opEquiv (fun t => (isLeftInversion_op_iff w t).symm)
 
-open Classical in
-noncomputable instance {w : W} : Fintype {t : W // cs.IsRightInversion w t} :=
-  Fintype.ofEquiv _ equiv_isRightInversion.symm
+instance {w : W} : Finite {t : W // cs.IsRightInversion w t} :=
+  Finite.of_equiv _ equiv_isRightInversion.symm
 
 theorem card_of_IsRightInversion (w : W) :
-  Fintype.card {t : W // cs.IsRightInversion w t} = cs.length w := by
-  rw [Fintype.card_congr equiv_isRightInversion, card_of_IsLeftInversion, length_op]
+  Nat.card {t : W // cs.IsRightInversion w t} = cs.length w := by
+  rw [Nat.card_congr equiv_isRightInversion, card_of_IsLeftInversion, length_op]
 
 end rightVariants
 
