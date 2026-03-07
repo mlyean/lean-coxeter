@@ -88,54 +88,26 @@ open Classical in
 /-- Bjorner--Brenti Proposition 1.4.7 -/
 theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
   ∃ i j, i < j ∧ j < ω.length ∧ cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
-  have h1 : ¬ ω = [] := by
-    intro h
-    subst h
-    apply hω
-    apply IsReduced_nil
-  have h2 : ∃ i < ω.length, cs.IsReduced (drop (i + 1) ω) := by
-    exists ω.length - 1
-    constructor
-    · apply Nat.sub_one_lt
-      rw [ne_eq, List.length_eq_zero_iff]
-      exact h1
-    · rw [Nat.sub_one_add_one]
-      · rw [drop_length]
-        apply IsReduced_nil
-      · rw [ne_eq, length_eq_zero_iff]
-        exact h1
-  let i := Nat.find h2
-  have ⟨h3, h4⟩ := Nat.find_spec h2
-  have h5 : cs.IsLeftDescent (cs.wordProd (drop (i + 1) ω)) ω[i] := by
-    rw [←not_IsReduced_cons ω[i] h4, getElem_cons_drop]
-    cases Nat.eq_zero_or_pos i with
-    | inl h => rwa [h]
-    | inr h =>
-        intro h'
-        apply Nat.find_min h2 (Nat.sub_one_lt_of_lt h)
-        constructor
-        · exact lt_of_le_of_lt (Nat.sub_le _ _) h3
-        · rwa [Nat.sub_one_add_one_eq_of_pos h]
-  let ⟨k, h6, h7⟩ := exchange_property h5
-  exists i, i + k + 1
-  have h8 : i < i + k + 1 := by
-    rw [Nat.lt_succ_iff]
-    apply Nat.le_add_right
-  have h9 : i + k + 1 < ω.length := by
-    rw [length_drop] at h6
-    calc
-      i + k + 1 = k + (i + 1) := by ring
-      _ < ω.length - (i + 1) + (i + 1) := Nat.add_lt_add_right h6 _
-      _ ≤ ω.length := ?_
-    · rw [Nat.sub_add_cancel]
-      exact h3
-  apply And.intro h8 (And.intro h9 _)
-  rw [eraseIdx_eq_take_drop_succ, take_eraseIdx_eq_take_of_le _ i (i + k + 1) (le_of_lt h8)]
-  nth_rw 1 [←take_append_drop i ω]
-  rw [←wordProd_cons, getElem_cons_drop] at h7
-  rw [wordProd_append, wordProd_append, mul_right_inj, h7, add_right_comm]
-  congr
-  apply drop_eraseIdx
+  induction ω with
+  | nil =>
+      exfalso
+      exact hω IsReduced_nil
+  | cons k ks ih =>
+      cases Classical.em (cs.IsReduced ks) with
+      | inl h =>
+          have ⟨j, h2, h3⟩ := exchange_property ((not_IsReduced_cons k h).mp hω)
+          exists 0, j + 1
+          refine ⟨Nat.zero_lt_succ j, ?_, ?_⟩
+          · rw [length_cons]
+            exact add_lt_add_left h2 1
+          · rwa [eraseIdx_cons_succ, eraseIdx_zero, tail_cons, wordProd_cons]
+      | inr h =>
+          have ⟨i, j, h2, h3, h4⟩ := ih h
+          exists i + 1, j + 1
+          refine ⟨add_lt_add_left h2 1, ?_, ?_⟩
+          · rw [length_cons]
+            exact add_lt_add_left h3 1
+          · rw [eraseIdx_cons_succ, eraseIdx_cons_succ, wordProd_cons, wordProd_cons, h4]
 
 /-- Bjorner--Brenti Corollary 1.4.8 (i) -/
 theorem exists_reduced_subword (ω : List (B W)) :
@@ -148,14 +120,12 @@ theorem exists_reduced_subword (ω : List (B W)) :
           let ⟨i, j, _, _, h2⟩ := deletion_property h
           let ⟨ω', h3, h4, h5⟩ := ih ((ω.eraseIdx j).eraseIdx i) (by grind)
           exists ω'
-          constructor
+          refine ⟨?_, h4, ?_⟩
           · calc
               ω' <+ (ω.eraseIdx j).eraseIdx i := h3
               _ <+ (ω.eraseIdx j) := eraseIdx_sublist _ _
               _ <+ ω := eraseIdx_sublist _ _
-          · constructor
-            · exact h4
-            · rw [h2, h5]
+          · rw [h2, h5]
 
 theorem exists_reduced_subword' {w : W} {ω : List (B W)} (h : w = cs.wordProd ω) :
   ∃ (ω' : ReducedWord w), ω'.val <+ ω := by
@@ -177,7 +147,9 @@ theorem strong_exchange_right
     rw [length_reverse] at hi1
     rw [wordProd_op, ←op_mul, reverse_reverse, wordProd_op, op_inj, reverse_eraseIdx hi1,
       reverse_reverse] at hi2
-    grind
+    constructor
+    · lia
+    · exact hi2
   · rwa [wordProd_op, isLeftInversion_op_iff, reverse_reverse]
 
 theorem exchange_property_right

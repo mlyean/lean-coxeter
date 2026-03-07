@@ -103,7 +103,7 @@ theorem wordProd_eq {w : W} (ω : ReducedWord w) : cs.wordProd ω = w := ω.2.2.
 
 end ReducedWord
 
-theorem IsReduced_nil (W : Type*) [CoxeterGroup W] : (@cs W).IsReduced [] := by
+theorem IsReduced_nil : cs.IsReduced ([] : List (B W)) := by
   unfold CoxeterSystem.IsReduced
   rw [wordProd_nil, length_one, length_nil]
 
@@ -255,5 +255,15 @@ theorem simple_ne_one (i : B W) : cs.simple i ≠ 1 := by
 theorem isReduced_of_singleton (i : B W) : cs.IsReduced [i] := by
   unfold CoxeterSystem.IsReduced
   rw [wordProd_singleton, length_simple, length_cons, length_nil, zero_add]
+
+theorem not_isLeftInversion_one (t : W) : ¬ cs.IsLeftInversion 1 t := by
+  intro ⟨_, h⟩
+  rw [length_one] at h
+  exact Nat.not_lt_zero _ h
+
+theorem not_isRightInversion_one (t : W) : ¬ cs.IsRightInversion 1 t := by
+  intro ⟨_, h⟩
+  rw [length_one] at h
+  exact Nat.not_lt_zero _ h
 
 end Coxeter
