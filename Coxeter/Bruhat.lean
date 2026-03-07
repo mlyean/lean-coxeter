@@ -176,8 +176,7 @@ theorem mul_simple_lt_iff (i : B W) (w : W) : w * cs.simple i < w ↔ cs.IsRight
 
 theorem mul_reflection_lt_or_gt (w : W) {t : W} (ht : cs.IsReflection t) :
   t * w < w ∨ t * w > w := by
-  conv in t * w > w => change w < t * w
-  rw [reflection_mul_lt_iff ht, lt_reflection_mul_iff ht]
+  rw [gt_iff_lt, reflection_mul_lt_iff ht, lt_reflection_mul_iff ht]
   exact Nat.lt_or_gt_of_ne (ht.length_mul_right_ne w)
 
 open Classical in
@@ -740,7 +739,7 @@ instance : IsDirectedOrder W where
                 rw [simple_mul_simple_cancel_left] at h4 h5
                 constructor
                 · exact h5
-                · apply le_trans hx2 h3
+                · exact le_trans hx2 h3
 
 section finite
 

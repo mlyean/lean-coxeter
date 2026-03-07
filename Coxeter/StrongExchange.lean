@@ -82,7 +82,7 @@ theorem card_of_isLeftInversion (w : W) :
   subst hω2
   rw [hω1, Nat.card_congr (equiv_IsLeftInversion ω hω1),
     Nat.subtype_card (cs.leftInvSeq ω).toFinset (fun _ => List.mem_toFinset),
-    toFinset_card_of_nodup (hω1.nodup_leftInvSeq), length_leftInvSeq]
+    toFinset_card_of_nodup hω1.nodup_leftInvSeq, length_leftInvSeq]
 
 open Classical in
 /-- Bjorner--Brenti Proposition 1.4.7 -/

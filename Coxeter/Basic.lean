@@ -218,31 +218,17 @@ theorem getElem_leftInvSeq_mul_wordProd₂ {i j : ℕ}
 
 theorem adjacent_ne_of_isReduced {i : ℕ} {ω : List (B W)}
   (hi : i + 1 < ω.length) (hω : cs.IsReduced ω) : ω[i] ≠ ω[i + 1] := by
-  intro h
-  apply lt_irrefl ω.length
-  calc
-    ω.length = cs.length (cs.wordProd ω) := hω.symm
-    _ = cs.length (cs.wordProd (take i ω ++ [ω[i], ω[i + 1]] ++ drop (i + 2) ω)) := by simp
-    _ = cs.length (cs.wordProd (take i ω) * cs.wordProd [ω[i], ω[i + 1]]
-          * cs.wordProd (drop (i + 2) ω)) := by rw [wordProd_append, wordProd_append]
-    _ = cs.length (cs.wordProd (take i ω) * cs.wordProd (drop (i + 2) ω)) := ?_
-    _ = cs.length (cs.wordProd (take i ω ++ drop (i + 2) ω)) := by rw [wordProd_append]
-    _ ≤ (take i ω ++ drop (i + 2) ω).length := length_wordProd_le _ _
-    _ = ω.length - 2 := ?_
-    _ < ω.length := ?_
-  · rw [h]
-    conv in cs.wordProd [ω[i + 1], ω[i + 1]] =>
-      change cs.simple (ω[i + 1]) * (cs.simple (ω[i + 1]) * 1)
-      rw [mul_one, simple_mul_simple_self]
-    rw [mul_one]
-  · rw [length_append, length_take, length_drop,
-      min_eq_left (le_of_lt (lt_trans (Nat.le_refl _) hi)), ←Nat.add_sub_assoc hi]
-    conv in (i + 1).succ =>
-      change i + 2
-    rw [Nat.add_sub_add_left]
-  · apply Nat.sub_lt
-    · exact Nat.zero_lt_of_lt hi
-    · decide
+  wlog h : i = 0 with H
+  · have := @H _ _ 0 (drop i ω) (by grind) (hω.drop i) rfl
+    simpa
+  · subst h
+    match ω with
+    | i :: j :: is =>
+        dsimp
+        intro h
+        subst h
+        have h2 := hω.take 2
+        simp [CoxeterSystem.IsReduced, wordProd] at h2
 
 @[simp]
 theorem simple_ne_one (i : B W) : cs.simple i ≠ 1 := by
