@@ -26,11 +26,11 @@ open List CoxeterSystem CoxeterGroup
 
 variable {W : Type*} [CoxeterGroup W]
 
-open Classical in
 /-- Bjorner--Brenti Corollary 1.4.4 (a) implies (c) -/
 theorem mem_leftInvSeq_of_isLeftInversion
   {ω : List (B W)} {t : W} (h : cs.IsLeftInversion (cs.wordProd ω) t) :
   t ∈ cs.leftInvSeq ω := by
+  classical
   rw [←count_pos_iff, pos_iff_ne_zero]
   intro heq
   rw [←eta_eq_one_iff, eta_spec, heq] at h
@@ -67,24 +67,23 @@ def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
   {t : W // cs.IsLeftInversion (cs.wordProd ω) t} ≃ {t : W // t ∈ cs.leftInvSeq ω} :=
     Equiv.subtypeEquivRight (fun t => isLeftInversion_iff_mem_leftInvSeq t hω)
 
-open Classical in
 instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
+  classical
   have ⟨ω, h1, h2⟩ := cs.exists_reduced_word' w
   have h := equiv_IsLeftInversion ω h1
   rw [←h2] at h
   exact Finite.of_equiv _ h.symm
 
-open Classical in
 /-- Bjorner--Brenti Corollary 1.4.5 -/
 theorem card_of_isLeftInversion (w : W) :
   Nat.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
+  classical
   let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word' w
   subst hω2
   rw [hω1, Nat.card_congr (equiv_IsLeftInversion ω hω1),
     Nat.subtype_card (cs.leftInvSeq ω).toFinset (fun _ => List.mem_toFinset),
     toFinset_card_of_nodup hω1.nodup_leftInvSeq, length_leftInvSeq]
 
-open Classical in
 /-- Bjorner--Brenti Proposition 1.4.7 -/
 theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
   ∃ i j, i < j ∧ j < ω.length ∧ cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
@@ -93,39 +92,36 @@ theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
       exfalso
       exact hω IsReduced_nil
   | cons k ks ih =>
-      cases Classical.em (cs.IsReduced ks) with
-      | inl h =>
-          have ⟨j, h2, h3⟩ := exchange_property ((not_IsReduced_cons k h).mp hω)
-          exists 0, j + 1
-          refine ⟨Nat.zero_lt_succ j, ?_, ?_⟩
-          · rw [length_cons]
-            exact add_lt_add_left h2 1
-          · rwa [eraseIdx_cons_succ, eraseIdx_zero, tail_cons, wordProd_cons]
-      | inr h =>
-          have ⟨i, j, h2, h3, h4⟩ := ih h
-          exists i + 1, j + 1
-          refine ⟨add_lt_add_left h2 1, ?_, ?_⟩
-          · rw [length_cons]
-            exact add_lt_add_left h3 1
-          · rw [eraseIdx_cons_succ, eraseIdx_cons_succ, wordProd_cons, wordProd_cons, h4]
+      by_cases h : cs.IsReduced ks
+      · have ⟨j, h2, h3⟩ := exchange_property ((not_IsReduced_cons k h).mp hω)
+        exists 0, j + 1
+        refine ⟨Nat.zero_lt_succ j, ?_, ?_⟩
+        · rw [length_cons]
+          exact add_lt_add_left h2 1
+        · rwa [eraseIdx_cons_succ, eraseIdx_zero, tail_cons, wordProd_cons]
+      · have ⟨i, j, h2, h3, h4⟩ := ih h
+        exists i + 1, j + 1
+        refine ⟨add_lt_add_left h2 1, ?_, ?_⟩
+        · rw [length_cons]
+          exact add_lt_add_left h3 1
+        · rw [eraseIdx_cons_succ, eraseIdx_cons_succ, wordProd_cons, wordProd_cons, h4]
 
 /-- Bjorner--Brenti Corollary 1.4.8 (i) -/
 theorem exists_reduced_subword (ω : List (B W)) :
   ∃ (ω' : List (B W)), ω' <+ ω ∧ cs.IsReduced ω' ∧ cs.wordProd ω = cs.wordProd ω' := by
   induction ω using Nat.strongRecMeasure List.length with
   | ind ω ih =>
-      cases em (cs.IsReduced ω) with
-      | inl h => exists ω
-      | inr h =>
-          let ⟨i, j, _, _, h2⟩ := deletion_property h
-          let ⟨ω', h3, h4, h5⟩ := ih ((ω.eraseIdx j).eraseIdx i) (by grind)
-          exists ω'
-          refine ⟨?_, h4, ?_⟩
-          · calc
-              ω' <+ (ω.eraseIdx j).eraseIdx i := h3
-              _ <+ (ω.eraseIdx j) := eraseIdx_sublist _ _
-              _ <+ ω := eraseIdx_sublist _ _
-          · rw [h2, h5]
+      by_cases h : cs.IsReduced ω
+      · exists ω
+      · let ⟨i, j, _, _, h2⟩ := deletion_property h
+        let ⟨ω', h3, h4, h5⟩ := ih ((ω.eraseIdx j).eraseIdx i) (by grind)
+        exists ω'
+        refine ⟨?_, h4, ?_⟩
+        · calc
+            ω' <+ (ω.eraseIdx j).eraseIdx i := h3
+            _ <+ (ω.eraseIdx j) := eraseIdx_sublist _ _
+            _ <+ ω := eraseIdx_sublist _ _
+        · rw [h2, h5]
 
 theorem exists_reduced_subword' {w : W} {ω : List (B W)} (h : w = cs.wordProd ω) :
   ∃ (ω' : ReducedWord w), ω'.val <+ ω := by

@@ -179,11 +179,11 @@ theorem mul_reflection_lt_or_gt (w : W) {t : W} (ht : cs.IsReflection t) :
   rw [gt_iff_lt, reflection_mul_lt_iff ht, lt_reflection_mul_iff ht]
   exact Nat.lt_or_gt_of_ne (ht.length_mul_right_ne w)
 
-open Classical in
 /-- Bjorner--Brenti Lemma 2.2.1 -/
 theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
   (h1 : u ≠ w) (h2 : ∃ (μ : ReducedWord u), μ.val <+ ω.val) :
   ∃ (v : W), v > u ∧ cs.length v = cs.length u + 1 ∧ ∃ (ν : ReducedWord v), ν.val <+ ω.val := by
+  classical
   let P (i : ℕ) := ∃ (μ : ReducedWord u), take i μ.val = take i ω.val ∧ drop i μ.val <+ drop i ω.val
   let i := Nat.findGreatest P ω.length
   have h_P_i : P i := by
@@ -470,9 +470,9 @@ theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
 
 noncomputable instance : LocallyFiniteOrder W := LocallyFiniteOrder.ofFiniteIcc finite_Icc
 
-open Classical in
 /-- Bjorner--Brenti Corollary 2.2.4 -/
 theorem card_Icc_le (u w : W) : Finset.card (Finset.Icc u w) ≤ 2 ^ cs.length w := by
+  classical
   let ω : ReducedWord w := default
   let f : Finset.Icc u w → ω.val.sublists.toFinset :=
     fun x => ⟨chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩, ?_⟩
@@ -579,48 +579,46 @@ theorem lifting_property {u w : W} {i : B W}
   rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hω2
   have ⟨μ, hμ⟩ := exists_reduced_subword_of_le h1 ⟨i :: ω, h4, hω2⟩
   dsimp at hμ
-  cases em (u = 1) with
-  | inl hu =>
-      subst hu
-      constructor
-      · exact bot_le
-      · rw [mul_one, hω2]
-        apply le_of_reduced_subword ⟨[i], _⟩ ⟨i :: ω, _⟩
-        · rw [singleton_sublist]
-          exact mem_cons_self
-        · constructor
-          · apply isReduced_of_singleton
-          · rw [wordProd_singleton]
-        · constructor
-          · exact h4
-          · rfl
-  | inr hu =>
-      have h5 : ¬ μ.val = [] := by
-        intro h
-        have heq := μ.wordProd_eq
-        rw [h, wordProd_nil] at heq
-        exact hu heq.symm
-      have h6 : head μ.val h5 ≠ i := by
-        intro h
-        apply h3
-        rw [←isLeftInversion_simple_iff_isLeftDescent, ←μ.wordProd_eq]
-        apply cs.isLeftInversion_of_mem_leftInvSeq μ.2.1
-        rw [←cons_head_tail h5, leftInvSeq, h]
+  by_cases hu : u = 1
+  · subst hu
+    constructor
+    · exact bot_le
+    · rw [mul_one, hω2]
+      apply le_of_reduced_subword ⟨[i], _⟩ ⟨i :: ω, _⟩
+      · rw [singleton_sublist]
         exact mem_cons_self
-      have h7 : μ.val <+ ω := by
-        rw [←cons_head_tail h5] at hμ
-        have h8 := List.Sublist.of_cons_of_ne h6 hμ
-        rwa [cons_head_tail h5] at h8
-      constructor
-      · apply le_of_reduced_subword μ ⟨ω, hω1, _⟩
-        · exact h7
-        · rw [hω2, wordProd_cons, simple_mul_simple_cancel_left]
-      · apply le_of_reduced_subword ⟨i :: μ.val, _, _⟩ ⟨i :: ω, h4, hω2⟩
-        · exact List.Sublist.cons₂ _ h7
-        · unfold CoxeterSystem.IsReduced
-          rw [not_isLeftDescent_iff] at h3
-          rw [wordProd_cons, μ.wordProd_eq, h3, length_cons, ←μ.length_eq]
-        · rw [wordProd_cons, μ.wordProd_eq]
+      · constructor
+        · apply isReduced_of_singleton
+        · rw [wordProd_singleton]
+      · constructor
+        · exact h4
+        · rfl
+  · have h5 : ¬ μ.val = [] := by
+      intro h
+      have heq := μ.wordProd_eq
+      rw [h, wordProd_nil] at heq
+      exact hu heq.symm
+    have h6 : head μ.val h5 ≠ i := by
+      intro h
+      apply h3
+      rw [←isLeftInversion_simple_iff_isLeftDescent, ←μ.wordProd_eq]
+      apply cs.isLeftInversion_of_mem_leftInvSeq μ.2.1
+      rw [←cons_head_tail h5, leftInvSeq, h]
+      exact mem_cons_self
+    have h7 : μ.val <+ ω := by
+      rw [←cons_head_tail h5] at hμ
+      have h8 := List.Sublist.of_cons_of_ne h6 hμ
+      rwa [cons_head_tail h5] at h8
+    constructor
+    · apply le_of_reduced_subword μ ⟨ω, hω1, _⟩
+      · exact h7
+      · rw [hω2, wordProd_cons, simple_mul_simple_cancel_left]
+    · apply le_of_reduced_subword ⟨i :: μ.val, _, _⟩ ⟨i :: ω, h4, hω2⟩
+      · exact List.Sublist.cons₂ _ h7
+      · unfold CoxeterSystem.IsReduced
+        rw [not_isLeftDescent_iff] at h3
+        rw [wordProd_cons, μ.wordProd_eq, h3, length_cons, ←μ.length_eq]
+      · rw [wordProd_cons, μ.wordProd_eq]
 
 /-- Bjorner--Brenti Corollary 2.2.8 (i) -/
 theorem local_configuration {i : B W} {t w : W}
@@ -665,41 +663,39 @@ theorem local_configuration₂ {i i' : B W} {w : W}
   (cs.simple i * w ⋖ cs.simple i * w * cs.simple i' ∧
     w * cs.simple i' ⋖ cs.simple i * w * cs.simple i') ∨
   w = cs.simple i * w * cs.simple i' := by
-  cases em (cs.IsLeftDescent (w * cs.simple i') i) with
-  | inl h3 =>
-      right
-      rw [mul_assoc]
-      have h4 := h.1
-      rw [lt_simple_mul_iff] at h4
-      have h5 := (lifting_property (le_of_lt h2.1) h3 h4).1
-      apply eq_of_le_of_length_eq h5
-      rw [isLeftDescent_iff] at h3
-      rw [cover_iff] at h h2
-      lia
-  | inr h3 =>
-      left
-      have h4 : w * cs.simple i' < cs.simple i * (w * cs.simple i') := by
-        rwa [←lt_simple_mul_iff] at h3
-      have h5 : cs.IsLeftDescent (cs.simple i * (w * cs.simple i')) i := by
-        rwa [isLeftDescent_iff_not_isLeftDescent_mul, simple_mul_simple_cancel_left]
-      have h6 : ¬ cs.IsLeftDescent w i := by
-        rw [←lt_simple_mul_iff]
-        exact h.1
-      have h7 := lifting_property (le_of_lt (lt_trans h2.1 h4)) h5 h6
-      rw [simple_mul_simple_cancel_left, ←mul_assoc] at h7
+  by_cases h3 : cs.IsLeftDescent (w * cs.simple i') i
+  · right
+    rw [mul_assoc]
+    have h4 := h.1
+    rw [lt_simple_mul_iff] at h4
+    have h5 := (lifting_property (le_of_lt h2.1) h3 h4).1
+    apply eq_of_le_of_length_eq h5
+    rw [isLeftDescent_iff] at h3
+    rw [cover_iff] at h h2
+    lia
+  · left
+    have h4 : w * cs.simple i' < cs.simple i * (w * cs.simple i') := by
+      rwa [←lt_simple_mul_iff] at h3
+    have h5 : cs.IsLeftDescent (cs.simple i * (w * cs.simple i')) i := by
+      rwa [isLeftDescent_iff_not_isLeftDescent_mul, simple_mul_simple_cancel_left]
+    have h6 : ¬ cs.IsLeftDescent w i := by
+      rw [←lt_simple_mul_iff]
+      exact h.1
+    have h7 := lifting_property (le_of_lt (lt_trans h2.1 h4)) h5 h6
+    rw [simple_mul_simple_cancel_left, ←mul_assoc] at h7
+    constructor
+    · rw [cover_iff]
       constructor
-      · rw [cover_iff]
-        constructor
-        · exact h7.2
-        · rw [cover_iff] at h2
-          rw [not_isLeftDescent_iff, isLeftDescent_iff, ←mul_assoc, ←mul_assoc, ←mul_assoc] at *
-          rw [h3, h6, h2.2]
-      · rw [cover_iff]
-        constructor
-        · rw [←mul_assoc] at h4
-          exact le_of_lt h4
-        · rw [not_isLeftDescent_iff, ←mul_assoc] at h3
-          rw [h3]
+      · exact h7.2
+      · rw [cover_iff] at h2
+        rw [not_isLeftDescent_iff, isLeftDescent_iff, ←mul_assoc, ←mul_assoc, ←mul_assoc] at *
+        rw [h3, h6, h2.2]
+    · rw [cover_iff]
+      constructor
+      · rw [←mul_assoc] at h4
+        exact le_of_lt h4
+      · rw [not_isLeftDescent_iff, ←mul_assoc] at h3
+        rw [h3]
 
 /-- Bjorner--Brenti Proposition 2.2.9 -/
 instance : IsDirectedOrder W where
@@ -708,38 +704,34 @@ instance : IsDirectedOrder W where
     induction u using WellFoundedLT.induction with
     | ind u ih =>
         intro w
-        cases em (u = 1) with
-        | inl h =>
-            exists w
+        by_cases h : u = 1
+        · exists w
+          constructor
+          · rw [h]
+            exact bot_le
+          · apply le_refl
+        · let ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
+          have hlt : cs.simple i * u < u := by
+            rw [reflection_mul_lt_iff (cs.isReflection_simple i)]
+            exact hi
+          let ⟨x, hx1, hx2⟩ := ih (cs.simple i * u) hlt w
+          by_cases h2 : cs.IsLeftDescent x i
+          · exists x
+            rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
+            have ⟨h3, h4⟩ := lifting_property hx1 h2 hi
+            rw [simple_mul_simple_cancel_left] at h4
+            exact ⟨h4, hx2⟩
+          · exists cs.simple i * x
+            have h3 : cs.simple i * x ≥ x := by
+              rw [←lt_simple_mul_iff] at h2
+              exact le_of_lt h2
+            rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
+            rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
+            have ⟨h4, h5⟩ := lifting_property (le_trans hx1 h3) h2 hi
+            rw [simple_mul_simple_cancel_left] at h4 h5
             constructor
-            · rw [h]
-              exact bot_le
-            · apply le_refl
-        | inr h =>
-            let ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
-            have hlt : cs.simple i * u < u := by
-              rw [reflection_mul_lt_iff (cs.isReflection_simple i)]
-              exact hi
-            let ⟨x, hx1, hx2⟩ := ih (cs.simple i * u) hlt w
-            cases em (cs.IsLeftDescent x i) with
-            | inl h2 =>
-                exists x
-                rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
-                have ⟨h3, h4⟩ := lifting_property hx1 h2 hi
-                rw [simple_mul_simple_cancel_left] at h4
-                exact ⟨h4, hx2⟩
-            | inr h2 =>
-                exists cs.simple i * x
-                have h3 : cs.simple i * x ≥ x := by
-                  rw [←lt_simple_mul_iff] at h2
-                  exact le_of_lt h2
-                rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
-                rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
-                have ⟨h4, h5⟩ := lifting_property (le_trans hx1 h3) h2 hi
-                rw [simple_mul_simple_cancel_left] at h4 h5
-                constructor
-                · exact h5
-                · exact le_trans hx2 h3
+            · exact h5
+            · exact le_trans hx2 h3
 
 section finite
 
@@ -750,17 +742,15 @@ theorem isTop_iff_all_isLeftDescent {x : W} : (∀ (i : B W), cs.IsLeftDescent x
   · intro h u
     induction u using WellFoundedLT.induction with
     | ind u ih =>
-        cases em (u = 1) with
-        | inl h2 =>
-            rw [h2]
-            exact bot_le
-        | inr h2 =>
-            let ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h2
-            rw [←simple_mul_lt_iff] at hi
-            have h3 := ih _ hi
-            rw [simple_mul_lt_iff, isLeftDescent_iff_not_isLeftDescent_mul] at hi
-            have h4 := (lifting_property h3 (h i) hi).2
-            rwa [simple_mul_simple_cancel_left] at h4
+        by_cases h2 : u = 1
+        · rw [h2]
+          exact bot_le
+        · let ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h2
+          rw [←simple_mul_lt_iff] at hi
+          have h3 := ih _ hi
+          rw [simple_mul_lt_iff, isLeftDescent_iff_not_isLeftDescent_mul] at hi
+          have h4 := (lifting_property h3 (h i) hi).2
+          rwa [simple_mul_simple_cancel_left] at h4
   · intro h i
     rw [←simple_mul_lt_iff]
     apply lt_of_le_of_ne
