@@ -34,7 +34,7 @@ theorem drop_eraseIdx (l : List α) (i j : ℕ) :
       intro l
       cases l with
       | nil => simp
-      | cons a as =>
+      | cons =>
           rw [add_right_comm]
           apply ih
 
@@ -233,9 +233,8 @@ theorem adjacent_ne_of_isReduced {i : ℕ} {ω : List (B W)}
 @[simp]
 theorem simple_ne_one (i : B W) : cs.simple i ≠ 1 := by
   intro h
-  have h2 := cs.length_simple i
-  rw [h, length_one] at h2
-  contradiction
+  have h2 := congr_arg cs.length h
+  simp at h2
 
 @[simp]
 theorem isReduced_of_singleton (i : B W) : cs.IsReduced [i] := by

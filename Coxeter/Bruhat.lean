@@ -111,27 +111,22 @@ instance : OrderBot W where
     revert hω1
     induction ω with
     | nil =>
-        intro
         rw [wordProd_nil]
+        tauto
     | cons a as ih =>
         intro h
-        have h' := h.drop 1
-        dsimp at h'
-        specialize ih h'
-        apply le.step 1 (cs.wordProd as) _ ih
+        have h' : cs.IsReduced as := h.drop 1
+        apply le.step 1 _ _ (ih h')
         · rw [wordProd_cons, mul_inv_cancel_right]
-          exact cs.isReflection_simple a
-        · rw [h, h', length_cons]
-          apply Nat.le_refl
+          apply cs.isReflection_simple
+        · rw [h, h', length_cons, Nat.lt_succ_iff]
 
 theorem lt_reflection_mul_iff {t : W} (ht : cs.IsReflection t) (w : W) :
   w < t * w ↔ cs.length w < cs.length (t * w) := by
   constructor
+  · apply strictMono_length
   · intro h
-    apply strictMono_length
-    exact h
-  · intro h
-    constructor
+    apply lt_of_le_of_ne
     · apply le.step w w (t * w) (le.rfl _) _ h
       rwa [mul_inv_cancel_right]
     · intro h2
@@ -162,8 +157,8 @@ theorem lt_simple_mul_iff (i : B W) (w : W) : w < cs.simple i * w ↔ ¬ cs.IsLe
   unfold IsLeftDescent
   rw [simple_mul_simple_cancel_left]
 
-theorem simple_mul_lt_iff (i : B W) (w : W) : cs.simple i * w < w ↔ cs.IsLeftDescent w i := by
-  apply reflection_mul_lt_iff (cs.isReflection_simple i)
+theorem simple_mul_lt_iff (i : B W) (w : W) : cs.simple i * w < w ↔ cs.IsLeftDescent w i :=
+  reflection_mul_lt_iff (cs.isReflection_simple i) w
 
 theorem lt_mul_simple_iff (i : B W) (w : W) : w < w * cs.simple i ↔ ¬ cs.IsRightDescent w i := by
   rw [lt_mul_reflection_iff (cs.isReflection_simple i) w,
@@ -171,8 +166,8 @@ theorem lt_mul_simple_iff (i : B W) (w : W) : w < w * cs.simple i ↔ ¬ cs.IsRi
   unfold IsRightDescent
   rw [simple_mul_simple_cancel_right]
 
-theorem mul_simple_lt_iff (i : B W) (w : W) : w * cs.simple i < w ↔ cs.IsRightDescent w i := by
-  apply mul_reflection_lt_iff (cs.isReflection_simple i)
+theorem mul_simple_lt_iff (i : B W) (w : W) : w * cs.simple i < w ↔ cs.IsRightDescent w i :=
+  mul_reflection_lt_iff (cs.isReflection_simple i) w
 
 theorem mul_reflection_lt_or_gt (w : W) {t : W} (ht : cs.IsReflection t) :
   t * w < w ∨ t * w > w := by
@@ -361,7 +356,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
               rw [h', drop_length]
               apply nil_sublist
 
-theorem exists_reduced_subword_of_le {u w : W} (h : u ≤ w) (ω : ReducedWord w) :
+theorem exists_reduced_subword_of_le {u w : W} (ω : ReducedWord w) (h : u ≤ w) :
   ∃ (μ : ReducedWord u), μ.val <+ ω.val := by
   revert ω
   induction h with
@@ -376,11 +371,10 @@ theorem exists_reduced_subword_of_le {u w : W} (h : u ≤ w) (ω : ReducedWord w
         unfold t
         rw [inv_mul_cancel_right]
       have h4 : cs.IsLeftInversion (cs.wordProd ω) t := by
-        constructor
-        · exact h1
-        · rw [ω.wordProd_eq]
-          nth_rw 1 [h3]
-          rwa [←mul_assoc, h1.mul_self, one_mul]
+        refine ⟨h1, ?_⟩
+        rw [ω.wordProd_eq]
+        nth_rw 1 [h3]
+        rwa [←mul_assoc, h1.mul_self, one_mul]
       have ⟨i, _, h5⟩ := strong_exchange h4
       nth_rw 1 [ω.wordProd_eq, h3, ←mul_assoc, h1.mul_self, one_mul] at h5
       have ⟨ω', h6⟩ := exists_reduced_subword' h5
@@ -419,9 +413,7 @@ theorem le_of_reduced_subword {u w : W} (μ : ReducedWord u) (ω : ReducedWord w
 theorem subword_property (u : W) {w : W} (ω : ReducedWord w) :
   u ≤ w ↔ ∃ (μ : ReducedWord u), μ.val <+ ω.val := by
   constructor
-  · intro h
-    apply exists_reduced_subword_of_le
-    exact h
+  · apply exists_reduced_subword_of_le
   · intro ⟨μ, h⟩
     exact le_of_reduced_subword _ _ h
 
@@ -440,12 +432,12 @@ theorem subword_property' {u w : W} :
 private noncomputable def chooseReducedSubword {w : W} (ω : ReducedWord w) :
   Set.Iic w → {μ : List (B W) | μ <+ ω} :=
   fun ⟨_, hx⟩ =>
-    ⟨(Classical.choose (exists_reduced_subword_of_le hx ω)).val,
-      Classical.choose_spec (exists_reduced_subword_of_le hx ω)⟩
+    ⟨(Classical.choose (exists_reduced_subword_of_le ω hx)).val,
+      Classical.choose_spec (exists_reduced_subword_of_le ω hx)⟩
 
 private theorem wordProd_chooseReducedSubword {w : W} (ω : ReducedWord w) (x : Set.Iic w) :
   cs.wordProd ((chooseReducedSubword ω x).val) = x :=
-  (Classical.choose (exists_reduced_subword_of_le x.prop ω)).prop.2.symm
+  (Classical.choose (exists_reduced_subword_of_le ω x.prop)).prop.2.symm
 
 private theorem chooseReducedSubword_inj {w : W} (ω : ReducedWord w) :
   Injective (chooseReducedSubword ω) := by
@@ -476,8 +468,8 @@ theorem card_Icc_le (u w : W) : Finset.card (Finset.Icc u w) ≤ 2 ^ cs.length w
   let ω : ReducedWord w := default
   let f : Finset.Icc u w → ω.val.sublists.toFinset :=
     fun x => ⟨chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩, ?_⟩
-  swap
-  · change (chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩).val
+  on_goal 2 =>
+    change (chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩).val
       ∈ ω.val.sublists.toFinset
     rw [@List.mem_toFinset _ _ (ω.val.sublists)]
     rw [mem_sublists]
@@ -505,32 +497,26 @@ theorem monotone_inv : Monotone (@Inv.inv W _) := by
 
 theorem strictMono_inv : StrictMono (@Inv.inv W _) := by
   intro u w h
-  constructor
-  · exact monotone_inv h.1
-  · intro h2
-    rw [inv_inj] at h2
-    exact h.2 h2
+  apply lt_of_le_of_ne (monotone_inv h.1)
+  rw [ne_eq, inv_inj]
+  exact ne_of_lt h
 
 theorem length_cover {u w : W} (h : u ⋖ w) : cs.length w = cs.length u + 1 := by
   apply eq_of_le_of_ge
   · by_contra! h2
     let ω : ReducedWord w := default
-    have hne : u ≠ w := CovBy.ne h
-    let ⟨v, h3, h4, ν, hν⟩ := reduced_subword_extend ω hne (exists_reduced_subword_of_le h.1.1 ω)
-    apply h.2 h3
-    constructor
-    · exact le_of_reduced_subword ν ω hν
-    · intro heq
-      rw [←h4, heq, lt_self_iff_false] at h2
-      contradiction
+    let ⟨v, h3, h4, ν, hν⟩ :=
+      reduced_subword_extend ω (CovBy.ne h) (exists_reduced_subword_of_le ω h.1.1)
+    apply not_covBy_of_lt_of_lt h3 _ h
+    apply lt_of_le_of_ne (le_of_reduced_subword _ _ hν)
+    intro heq
+    rwa [←h4, heq, lt_self_iff_false] at h2
   · exact strictMono_length h.1
 
 theorem cover_iff {u w : W} : u ⋖ w ↔ u ≤ w ∧ cs.length w = cs.length u + 1 := by
   constructor
   · intro h
-    constructor
-    · exact le_of_lt h.1
-    · exact length_cover h
+    exact ⟨le_of_lt h.1, length_cover h⟩
   · intro h
     constructor
     · apply lt_of_le_of_ne h.1
@@ -546,14 +532,10 @@ theorem cover_iff {u w : W} : u ⋖ w ↔ u ≤ w ∧ cs.length w = cs.length u 
 theorem exists_cover_of_lt {u w : W} (h : u < w) : ∃ (v : W), u ⋖ v ∧ v ≤ w := by
   let ω : ReducedWord w := default
   have ⟨v, h2, h3, ν, hν⟩ := reduced_subword_extend ω (ne_of_lt h)
-    (exists_reduced_subword_of_le (le_of_lt h) ω)
+    (exists_reduced_subword_of_le ω (le_of_lt h))
   exists v
-  constructor
-  · rw [cover_iff]
-    constructor
-    · exact (le_of_lt h2)
-    · exact h3
-  · exact le_of_reduced_subword ν ω hν
+  rw [cover_iff]
+  exact ⟨⟨le_of_lt h2, h3⟩, le_of_reduced_subword ν ω hν⟩
 
 noncomputable instance : GradeMinOrder ℕ W where
   grade := cs.length
@@ -563,7 +545,7 @@ noncomputable instance : GradeMinOrder ℕ W where
     rw [Nat.covBy_iff_add_one_eq, length_cover h]
   isMin_grade := by
     intro x hx
-    rw [isMin_iff_eq_bot] at *
+    rw [isMin_iff_eq_bot] at hx ⊢
     rw [hx]
     exact cs.length_one
 
@@ -577,7 +559,7 @@ theorem lifting_property {u w : W} {i : B W}
     rw [isLeftDescent_iff_not_isLeftDescent_mul, not_isLeftDescent_iff] at h2
     rw [wordProd_cons, ←hω2, h2, hω2, length_cons, hω1]
   rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hω2
-  have ⟨μ, hμ⟩ := exists_reduced_subword_of_le h1 ⟨i :: ω, h4, hω2⟩
+  have ⟨μ, hμ⟩ := exists_reduced_subword_of_le ⟨i :: ω, h4, hω2⟩ h1
   dsimp at hμ
   by_cases hu : u = 1
   · subst hu
@@ -729,9 +711,7 @@ instance : IsDirectedOrder W where
             rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
             have ⟨h4, h5⟩ := lifting_property (le_trans hx1 h3) h2 hi
             rw [simple_mul_simple_cancel_left] at h4 h5
-            constructor
-            · exact h5
-            · exact le_trans hx2 h3
+            exact ⟨h5, le_trans hx2 h3⟩
 
 section finite
 
@@ -834,8 +814,7 @@ theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - 
       rw [←hw] at hk
       have h : ¬ w = w₀ := by
         intro h
-        subst h
-        exact lt_irrefl _ hk
+        rwa [h, lt_self_iff_false] at hk
       rw [←all_isLeftDescent_iff, not_forall] at h
       let ⟨i, hi⟩ := h
       rw [not_isLeftDescent_iff] at hi

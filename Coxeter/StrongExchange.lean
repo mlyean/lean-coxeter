@@ -41,8 +41,7 @@ theorem isLeftInversion_iff_mem_leftInvSeq
   {ω : List (B W)} (t : W) (hω : cs.IsReduced ω) :
   cs.IsLeftInversion (cs.wordProd ω) t ↔ t ∈ cs.leftInvSeq ω := by
   constructor
-  · intro h
-    exact mem_leftInvSeq_of_isLeftInversion h
+  · apply mem_leftInvSeq_of_isLeftInversion
   · exact cs.isLeftInversion_of_mem_leftInvSeq hω
 
 /-- Bjorner--Brenti Theorem 1.4.3 -/
@@ -70,9 +69,9 @@ def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
 instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
   classical
   have ⟨ω, h1, h2⟩ := cs.exists_reduced_word' w
-  have h := equiv_IsLeftInversion ω h1
-  rw [←h2] at h
-  exact Finite.of_equiv _ h.symm
+  have h3 := equiv_IsLeftInversion ω h1
+  rw [←h2] at h3
+  exact Finite.of_equiv _ h3.symm
 
 /-- Bjorner--Brenti Corollary 1.4.5 -/
 theorem card_of_isLeftInversion (w : W) :

@@ -169,11 +169,8 @@ theorem permRep_wordProd_eq_permRepAux (ω : List (B W)) :
   | nil =>
       rw [wordProd_nil, map_one, Equiv.Perm.coe_one, permRepAux_nil]
   | cons i is ih =>
-      rw [permRepAux_cons, wordProd_cons, map_mul, Equiv.Perm.coe_mul, ih]
-      congr
-      ext r
-      unfold permRep
-      rw [lift_apply_simple]
+      rw [permRepAux_cons, wordProd_cons, map_mul, Equiv.Perm.coe_mul, ih,
+        permRep, lift_apply_simple]
       rfl
 
 open Classical in
@@ -183,13 +180,12 @@ theorem eta_spec (ω : List (B W)) (t : W) :
   · have h : permRep (cs.wordProd (Classical.choose
       (cs.wordProd_surjective (cs.wordProd ω))).reverse) (⟨t, ht⟩, 0)
       = permRep (cs.wordProd ω.reverse) (⟨t, ht⟩, 0) := by
-      congr 1
-      apply congr_arg permRep
-      simp only [wordProd_reverse, inv_inj]
+      congr 2
+      rw [wordProd_reverse, wordProd_reverse, inv_inj]
       exact choose_spec (cs.wordProd_surjective (cs.wordProd ω))
     rw [permRep_wordProd_eq_permRepAux, permRep_wordProd_eq_permRepAux] at h
-    unfold permRepAux at h
     have h2 := congr_arg Prod.snd h
+    unfold permRepAux at h2
     simp only [etaAux, reverse_reverse, zero_add] at h2
     exact h2
   · unfold η
@@ -297,28 +293,24 @@ theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInve
 
 theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
   ¬ cs.IsLeftInversion w t := by
-  by_cases ht : cs.IsReflection t
-  · rw [←ht.isLeftInversion_mul_right_iff]
-    apply isLeftInversion_of_eta_eq_one
-    have h2 := permRep_inv_eq (t * w) (⟨t, ht⟩, 0)
-    have h3 := permRep_reflection ⟨t, ht⟩ 0
-    replace h2 : (permRep (t * w)⁻¹ (⟨t, ht⟩, 0)).2 = 0 + η (t * w) t :=
-      congr_arg Prod.snd h2
-    rw [zero_add, mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, ht.inv,
-      permRep_inv_eq, h3, h, zero_add] at h2
-    exact h2.symm
-  · intro h2
-    exact ht h2.1
+  intro h2
+  have ht := h2.1
+  rw [←ht.not_isLeftInversion_mul_right_iff] at h2
+  apply h2
+  apply isLeftInversion_of_eta_eq_one
+  have h3 := congr_arg Prod.snd (permRep_inv_eq (t * w) (⟨t, ht⟩, 0))
+  rwa [zero_add, mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, ht.inv,
+    permRep_inv_eq, permRep_reflection ⟨t, ht⟩, h, zero_add, Eq.comm] at h3
 
 theorem eta_eq_one_iff {t w : W} : η w t = 1 ↔ cs.IsLeftInversion w t := by
-  constructor
-  · apply isLeftInversion_of_eta_eq_one
-  · intro h
-    by_contra h2
-    replace h2 : η w t = 0 := by
-      unfold ZMod at *
-      grind
-    exact not_isLeftInversion_of_eta_eq_zero h2 h
+  generalize h : η w t = a
+  match a with
+  | 0 =>
+      simp only [zero_ne_one, false_iff]
+      apply not_isLeftInversion_of_eta_eq_zero h
+  | 1 =>
+      simp only [true_iff]
+      apply isLeftInversion_of_eta_eq_one h
 
 theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
   trans ¬ η w t = 1
