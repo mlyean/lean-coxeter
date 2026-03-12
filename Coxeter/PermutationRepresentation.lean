@@ -1,5 +1,3 @@
-import Mathlib.GroupTheory.Coxeter.Length
-import Mathlib.GroupTheory.Coxeter.Inversion
 import Coxeter.Basic
 
 /-!

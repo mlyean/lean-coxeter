@@ -81,7 +81,7 @@ instance : PartialOrder W where
     · intro h2 h3
       apply not_le_of_gt h2 (length_le_of_le h3)
     · intro h2
-      apply length_lt_of_lt ⟨h, ?_⟩
+      apply length_lt_of_lt ⟨h, _⟩
       intro h3
       subst h3
       exact h2 h
@@ -163,197 +163,111 @@ theorem mul_reflection_lt_or_gt (w : W) {t : W} (ht : cs.IsReflection t) :
   rw [gt_iff_lt, reflection_mul_lt_iff ht, lt_reflection_mul_iff ht]
   exact Nat.lt_or_gt_of_ne (ht.length_mul_right_ne w)
 
+private theorem reduced_subword_extend_aux (α μ ω : List (B W))
+  (hμ : cs.IsReduced (α ++ μ)) (hω : cs.IsReduced (α ++ ω)) (hsub : μ <+ ω) (hneq : μ ≠ ω) :
+  ∃ (ν : List (B W)), ν <+ (α ++ ω) ∧ cs.wordProd ν > cs.wordProd (α ++ μ) ∧
+    ν.length = (α ++ μ).length + 1 := by
+  revert α μ
+  induction ω using Nat.strongRecMeasure length with
+  | ind ω ih =>
+      intro α μ hμ hω hsub hne
+      cases hsub with
+      | slnil => contradiction
+      | @cons μ ω i hsub =>
+          let t := cs.wordProd α * cs.simple i * (cs.wordProd α)⁻¹
+          have ht : cs.IsReflection t := by
+            exists cs.wordProd α, i
+          by_cases! h1 : cs.IsLeftInversion (cs.wordProd (α ++ μ)) t
+          · rw [isLeftInversion_iff_mem_leftInvSeq hμ, leftInvSeq_append] at h1
+            simp only [mem_append, mem_map, MulAut.conj_apply] at h1
+            cases h1 with
+            | inl h1 =>
+                exfalso
+                have h4 : cs.IsReduced (α ++ [i]) := by
+                  rw [append_cons] at hω
+                  exact isReduced_append_left hω
+                have h5 := h4.nodup_leftInvSeq
+                rw [←concat_eq_append, leftInvSeq_concat, nodup_concat] at h5
+                apply h5.1 h1
+            | inr h1 =>
+                have ⟨w, hw1, hw2⟩ := h1
+                unfold t at hw2
+                rw [mul_left_inj, mul_right_inj] at hw2
+                subst hw2
+                rw [←isLeftInversion_iff_mem_leftInvSeq (isReduced_append_right hμ),
+                  isLeftInversion_simple_iff_isLeftDescent] at hw1
+                have ⟨j, hj1, hj2⟩ := exchange_property hw1
+                rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hj2
+                have h : cs.IsReduced (α ++ i :: μ.eraseIdx j) := by
+                  unfold CoxeterSystem.IsReduced at hμ ⊢
+                  rw [wordProd_append, ←hj2, ←wordProd_append, hμ, length_append, length_append,
+                    length_cons, length_eraseIdx_of_lt hj1]
+                  lia
+                rw [append_cons] at h hω
+                have ⟨ν, hν1, hν2, hν3⟩ := ih ω (Nat.lt_succ_self _) (α ++ [i]) (μ.eraseIdx j) h hω
+                  (Sublist.trans (eraseIdx_sublist _ _) hsub) ?_
+                · rw [←append_cons] at hν1 hν2 hν3
+                  rw [wordProd_append, ←hj2, ←wordProd_append] at hν2
+                  rw [length_append, length_cons, length_eraseIdx_add_one hj1] at hν3
+                  rw [length_append]
+                  exists ν
+                · intro h
+                  have := congr_arg length h
+                  rw [length_eraseIdx_of_lt hj1] at this
+                  have := hsub.length_le
+                  lia
+          · exists α ++ i :: μ
+            simp only [append_sublist_append_left, cons_sublist_cons, hsub, gt_iff_lt,
+              length_append, length_cons, add_assoc, and_true, true_and]
+            rw [←ht.not_isLeftInversion_mul_right_iff, not_not] at h1
+            unfold IsLeftInversion at h1
+            rw [←mul_assoc, ht.mul_self, one_mul] at h1
+            have : cs.wordProd (α ++ i :: μ) = t * cs.wordProd (α ++ μ) := by
+              unfold t
+              rw [wordProd_append, wordProd_append]
+              rw [mul_inv_mul_mul_cancel, wordProd_cons, mul_assoc]
+            rw [this]
+            rw [lt_reflection_mul_iff ht]
+            exact h1.2
+      | @cons₂ μ ω i hsub =>
+          rw [append_cons] at hμ hω
+          simp only [ne_eq, cons.injEq, true_and] at hne
+          have ⟨ν, hν1, hν2, hν3⟩ := ih ω (Nat.lt_succ_self _) (α ++ [i]) μ hμ hω hsub hne
+          rw [←append_cons] at hν1 hν2 hν3
+          exists ν
+
 /-- Bjorner--Brenti Lemma 2.2.1 -/
 theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
   (h1 : u ≠ w) (h2 : ∃ (μ : ReducedWord u), μ.val <+ ω.val) :
   ∃ (v : W), v > u ∧ cs.length v = cs.length u + 1 ∧ ∃ (ν : ReducedWord v), ν.val <+ ω.val := by
-  classical
-  let P (i : ℕ) := ∃ (μ : ReducedWord u), take i μ.val = take i ω.val ∧ drop i μ.val <+ drop i ω.val
-  let i := Nat.findGreatest P ω.length
-  have h_P_i : P i := by
-    apply Nat.findGreatest_spec (zero_le _)
-    simp only [P, take_zero, drop_zero, true_and]
-    exact h2
-  unfold P at h_P_i
-  have ⟨μ, h_take_eq, h_drop_sublist⟩ := h_P_i
-  have h_i_le : i ≤ μ.length := by
-    by_contra! h
-    apply lt_irrefl i
-    rw [take_of_length_le (le_of_lt h)] at h_take_eq
-    unfold ReducedWord.length at h
-    rwa [h_take_eq, length_take_of_le (Nat.findGreatest_le _)] at h
-  have hsub : μ.val <+ ω.val := by
-    apply sublist_take_drop _ h_drop_sublist
-    rw [h_take_eq]
-  have h_i_lt : i < ω.length := by
-    apply lt_of_lt_of_le (add_le_add_left h_i_le 1)
-    apply lt_of_le_of_ne hsub.length_le
+  have ⟨μ, hsub⟩ := h2
+  have ⟨ν', hν1, hν2, hν3⟩ := reduced_subword_extend_aux [] μ.val ω.val μ.prop.1 ω.prop.1 hsub ?_
+  on_goal 2 =>
     intro h
-    rw [hsub.length_eq] at h
-    rw [←μ.wordProd_eq, h, ω.wordProd_eq] at h1
+    rw [←μ.wordProd_eq, ←ω.wordProd_eq, h] at h1
     contradiction
-  have h_not_P_succ_i : ¬ P (i + 1) := Nat.findGreatest_is_greatest (Nat.lt_succ_self i) h_i_lt
-  have h_get_i_ne : (hi : i < μ.length) → μ.val[i] ≠ ω.val[i] := by
-    intro h h'
-    apply h_not_P_succ_i
-    exists μ
-    constructor
-    · calc
-        take (i + 1) μ.val = (take i μ.val).concat μ.val[i] := by rw [take_concat_get]
-        _ = (take i ω.val).concat ω.val[i] := by rw [h', h_take_eq]
-        _ = take (i + 1) ω.val := by rw [take_concat_get]
-    · have h'' := h_drop_sublist.drop 1
-      rwa [drop_drop, drop_drop] at h''
-  let t := cs.wordProd (take i ω) * cs.simple ω.val[i] * (cs.wordProd (take i ω))⁻¹
-  have ht : cs.IsReflection t := by exists cs.wordProd (take i ω.val), ω.val[i]
-  let v := t * u
-  let ν := take (i + 1) ω.val ++ drop i μ.val
-  have h3 : v = cs.wordProd ν := by
-    calc
-      t * u = cs.wordProd (take (i + 1) ω) * (cs.wordProd (take i ω))⁻¹ * cs.wordProd μ := ?_
-      _ = cs.wordProd (take (i + 1) ω) * (cs.wordProd (take i ω))⁻¹
-        * cs.wordProd (take i μ ++ drop i μ) := by rw [take_append_drop]
-      _ = cs.wordProd (take (i + 1) ↑ω ++ drop i ↑μ) := ?_
-    · unfold t
-      rw [μ.wordProd_eq, ←wordProd_concat, concat_eq_append, take_append_getElem]
-    · rw [wordProd_append, wordProd_append, h_take_eq]
-      group
-  cases mul_reflection_lt_or_gt u ht with
-  | inl h =>
-      exfalso
-      rw [reflection_mul_lt_iff ht] at h
-      replace ht : cs.IsLeftInversion u t := ⟨ht, h⟩
-      rw [←μ.wordProd_eq, isLeftInversion_iff_mem_leftInvSeq t μ.prop.1] at ht
-      have ⟨⟨j, hj1⟩, hj2⟩ := get_of_mem ht
-      rw [length_leftInvSeq] at hj1
-      replace hj2 : t = (cs.leftInvSeq μ.val)[j] := hj2.symm
-      cases Nat.lt_or_ge j i with
-      | inl h' =>
-          apply lt_irrefl (cs.length w)
-          have : i < (cs.leftInvSeq ω.val).length := by rwa [length_leftInvSeq]
-          have ht1 : t = (cs.leftInvSeq ω)[i] := by rw [getElem_leftInvSeq]
-          have ht2 : t = (cs.leftInvSeq ω)[j] := by
-            rw [hj2]
-            rw [ReducedWord.length, ←cs.length_leftInvSeq μ.val] at h_i_le
-            conv =>
-              lhs
-              rw [←@getElem_take _ _ i _ (by rwa [length_take_of_le h_i_le])]
-              congr
-              rw [←leftInvSeq_take, h_take_eq, leftInvSeq_take]
-            rw [getElem_take]
-          have hweq : w = cs.wordProd ((ω.val.eraseIdx i).eraseIdx j) := calc
-            w = t * t * w := by rw [(cs.isReflection_of_mem_leftInvSeq _ ht).mul_self, one_mul]
-            _ = (cs.leftInvSeq ↑ω)[j] * (cs.leftInvSeq ↑ω)[i] * cs.wordProd ω.val := by
-              rw [←ht1, ←ht2, ω.wordProd_eq]
-            _ = cs.wordProd ((ω.val.eraseIdx i).eraseIdx j) :=
-              getElem_leftInvSeq_mul_wordProd₂ ω.val h' h_i_lt
-          calc
-            cs.length w = cs.length (cs.wordProd ((ω.val.eraseIdx i).eraseIdx j)) :=
-              congr_arg cs.length hweq
-            _ ≤ ((ω.val.eraseIdx i).eraseIdx j).length := cs.length_wordProd_le _
-            _ < ω.length := by grind
-            _ = cs.length w := ω.length_eq
-      | inr h' =>
-          have h_i_lt2 : i < μ.length := lt_of_le_of_lt h' hj1
-          specialize h_get_i_ne h_i_lt2
-          let μ' := take (i + 1) ω.val ++ drop i (μ.val.eraseIdx j)
-          have h'' : u = cs.wordProd μ' := by
-            calc
-              u = t * t * u := by rw [(cs.isReflection_of_mem_leftInvSeq _ ht).mul_self, one_mul]
-              _ = t * ((cs.leftInvSeq ↑μ)[j] * cs.wordProd μ) := by
-                nth_rw 1 [←hj2, μ.wordProd_eq, mul_assoc]
-              _ = t * cs.wordProd (μ.val.eraseIdx j) := ?_
-              _ = cs.wordProd (take (i + 1) ω.val) * ((cs.wordProd (take i ω.val))⁻¹
-                  * cs.wordProd (μ.val.eraseIdx j)) := ?_
-              _ = cs.wordProd (take (i + 1) ω.val) * ((cs.wordProd (take i ω.val))⁻¹
-                  * cs.wordProd (take i (μ.val.eraseIdx j))
-                  * cs.wordProd (drop i (μ.val.eraseIdx j))) := ?_
-              _ = cs.wordProd (take (i + 1) ω.val) * cs.wordProd (drop i (μ.val.eraseIdx j)) := ?_
-              _ = cs.wordProd (take (i + 1) ω.val ++ drop i (μ.val.eraseIdx j)) := by
-                rw [wordProd_append]
-            · rw [←cs.getD_leftInvSeq_mul_wordProd (μ.val) j,
-                getD_eq_get (cs.leftInvSeq μ.val) 1 ⟨j, _⟩]
-              rfl
-            · unfold t
-              rw [←wordProd_concat, concat_eq_append, take_append_getElem, mul_assoc]
-            · rw [mul_right_inj, mul_assoc, mul_right_inj, ←wordProd_append, take_append_drop]
-            · simp only [mul_right_inj, mul_eq_right]
-              rw [inv_mul_eq_one]
-              congr 1
-              rw [take_eraseIdx_eq_take_of_le _ _ _ h']
-              exact h_take_eq.symm
-          have hμ_len : μ.length = μ'.length := by
-            unfold μ'
-            rw [length_append, length_take_of_le h_i_lt, length_drop, length_eraseIdx_of_lt hj1,
-              ←Nat.sub_add_eq]
-            nth_rw 2 [add_comm]
-            exact (Nat.add_sub_of_le h_i_lt2).symm
-          have hμ' : cs.IsReduced μ' := by
-            unfold CoxeterSystem.IsReduced
-            nth_rw 1 [←h'', ←hμ_len, ←μ.wordProd_eq]
-            exact μ.prop.1
-          apply h_not_P_succ_i
-          exists ⟨μ', hμ', h''⟩
-          unfold μ'
-          simp only [length_take_of_le h_i_lt, take_left', drop_left', true_and]
-          rw [←tail_drop]
-          cases lt_or_eq_of_le h' with
-          | inl hlt =>
-              have h4 : i < (μ.val.eraseIdx j).length := by
-                rw [length_eraseIdx_of_lt hj1, Nat.lt_sub_iff_add_lt]
-                exact lt_of_le_of_lt hlt hj1
-              have h5 : drop i (μ.val.eraseIdx j) ≠ [] := by
-                rwa [ne_eq, drop_eq_nil_iff, not_le]
-              apply sublist_tail_of_head_ne h5
-              · simp only [head_drop, ne_eq]
-                rw [getElem_eraseIdx_of_lt h4 hlt]
-                exact h_get_i_ne
-              · apply List.Sublist.drop
-                exact Sublist.trans (eraseIdx_sublist _ _) hsub
-          | inr heq =>
-              rw [←add_zero j, ←heq, ←drop_eraseIdx μ.val i 0, eraseIdx_zero, ←drop_one, ←drop_one]
-              exact h_drop_sublist.drop 1
-  | inr h =>
-      change u < v at h
-      exists v
-      have h4 : ν.length = μ.length + 1 := by
-        rw [length_append, length_take_of_le h_i_lt, length_drop,
-          add_comm, Nat.succ_eq_add_one, ←add_assoc, Nat.sub_add_cancel h_i_le]
-      have hν : cs.IsReduced ν := by
-        unfold CoxeterSystem.IsReduced
-        apply eq_of_le_of_ge (cs.length_wordProd_le _)
-        rw [h4, μ.length_eq, ←h3]
-        exact strictMono_length h
-      constructor
-      · exact h
-      · constructor
-        · rwa [h3, hν, ←μ.length_eq]
-        · exists ⟨ν, hν, h3⟩
-          dsimp [ν]
-          nth_rw 2 [←take_append_drop (i + 1) ω.val]
-          apply Sublist.append (Sublist.refl _)
-          cases Nat.lt_or_eq_of_le h_i_le with
-          | inl h' =>
-              rw [←tail_drop]
-              have h'' : drop i μ.val ≠ [] := by
-                rw [ne_eq, drop_eq_nil_iff, not_le]
-                exact h'
-              apply sublist_tail_of_head_ne h'' h_drop_sublist
-              rw [head_drop, head_drop]
-              exact h_get_i_ne h'
-          | inr h' =>
-              rw [h', drop_length]
-              apply nil_sublist
+  simp only [nil_append] at hν1 hν2 hν3
+  rw [←μ.wordProd_eq, μ.prop.1]
+  let v := cs.wordProd ν'
+  exists v
+  have : cs.IsReduced ν' := by
+    unfold CoxeterSystem.IsReduced
+    apply eq_of_le_of_ge
+    · apply length_wordProd_le
+    · have := length_lt_of_lt hν2
+      rw [μ.wordProd_eq, ←μ.length_eq] at this
+      rw [hν3]
+      lia
+  let ν : ReducedWord v := ⟨ν', this, rfl⟩
+  refine ⟨hν2, ?_, ?_⟩
+  · rwa [←ν.length_eq]
+  · exists ν
 
 theorem exists_reduced_subword_of_le {u w : W} (ω : ReducedWord w) (h : u ≤ w) :
   ∃ (μ : ReducedWord u), μ.val <+ ω.val := by
-  revert ω
   induction h with
-  | rfl =>
-      intro ω
-      exists ω
+  | rfl => exists ω
   | step v w _ h1 h2 ih =>
-      intro ω
       generalize h3 : w * v⁻¹ = t at h1
       rw [mul_inv_eq_iff_eq_mul] at h3
       have h4 : cs.IsLeftInversion (cs.wordProd ω) t := by
@@ -425,8 +339,7 @@ private theorem wordProd_chooseReducedSubword {w : W} (ω : ReducedWord w) (x : 
 private theorem chooseReducedSubword_inj {w : W} (ω : ReducedWord w) :
   Injective (chooseReducedSubword ω) := by
   intro x y h
-  ext
-  rw [←wordProd_chooseReducedSubword ω, h, wordProd_chooseReducedSubword ω]
+  rw [Subtype.ext_iff, ←wordProd_chooseReducedSubword ω, h, wordProd_chooseReducedSubword ω]
 
 theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
   let ω : ReducedWord w := default
@@ -439,9 +352,8 @@ theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
     exact h
   apply Finite.of_injective f
   intro x y h
-  ext
   replace h := chooseReducedSubword_inj ω h
-  rwa [Subtype.mk.injEq] at h
+  rwa [Subtype.mk.injEq, Subtype.val_inj] at h
 
 noncomputable instance : LocallyFiniteOrder W := LocallyFiniteOrder.ofFiniteIcc finite_Icc
 
@@ -452,10 +364,7 @@ theorem card_Icc_le (u w : W) : Finset.card (Finset.Icc u w) ≤ 2 ^ cs.length w
   let f : Finset.Icc u w → ω.val.sublists.toFinset :=
     fun x => ⟨chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩, ?_⟩
   on_goal 2 =>
-    change (chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩).val
-      ∈ ω.val.sublists.toFinset
-    rw [@List.mem_toFinset _ _ (ω.val.sublists)]
-    rw [mem_sublists]
+    rw [List.mem_toFinset, mem_sublists]
     exact (chooseReducedSubword ω ⟨x.val, (Finset.mem_Icc.mp x.prop).2⟩).prop
   have hf_inj : Injective f := by
     intro x y h
@@ -466,9 +375,7 @@ theorem card_Icc_le (u w : W) : Finset.card (Finset.Icc u w) ≤ 2 ^ cs.length w
     exact h
   rw [←ω.length_eq]
   have hle := le_trans (Finset.card_le_card_of_injective hf_inj) (List.toFinset_card_le _)
-  rw [length_sublists] at hle
-  unfold ReducedWord.length
-  exact hle
+  rwa [length_sublists] at hle
 
 /-- Bjorner--Brenti Corollary 2.2.5 -/
 theorem monotone_inv : Monotone (@Inv.inv W _) := by
@@ -549,15 +456,10 @@ theorem lifting_property {u w : W} {i : B W}
     constructor
     · exact bot_le
     · rw [mul_one, hω2]
-      apply le_of_reduced_subword ⟨[i], _⟩ ⟨i :: ω, _⟩
-      · rw [singleton_sublist]
-        exact mem_cons_self
-      · constructor
-        · apply isReduced_of_singleton
-        · rw [wordProd_singleton]
-      · constructor
-        · exact h4
-        · rfl
+      apply le_of_reduced_subword ⟨[i], ⟨_, _⟩⟩ ⟨i :: ω, ⟨h4, rfl⟩⟩
+      · exact Sublist.cons₂ _ (nil_sublist _)
+      · apply isReduced_of_singleton
+      · rw [wordProd_singleton]
   · have h5 : ¬ μ.val = [] := by
       intro h
       have heq := μ.wordProd_eq
@@ -575,9 +477,8 @@ theorem lifting_property {u w : W} {i : B W}
       have h8 := List.Sublist.of_cons_of_ne h6 hμ
       rwa [cons_head_tail h5] at h8
     constructor
-    · apply le_of_reduced_subword μ ⟨ω, hω1, _⟩
-      · exact h7
-      · rw [hω2, wordProd_cons, simple_mul_simple_cancel_left]
+    · apply le_of_reduced_subword μ ⟨ω, hω1, _⟩ h7
+      rw [hω2, wordProd_cons, simple_mul_simple_cancel_left]
     · apply le_of_reduced_subword ⟨i :: μ.val, _, _⟩ ⟨i :: ω, h4, hω2⟩
       · exact List.Sublist.cons₂ _ h7
       · unfold CoxeterSystem.IsReduced
@@ -593,14 +494,13 @@ theorem local_configuration {i : B W} {t w : W}
   | inl h4 =>
       exfalso
       apply h
-      have : cs.simple i * w ≤ t * w := by
-        apply (lifting_property (le_of_lt h3.1) _ _).2
+      rw [←mul_left_inj w]
+      apply eq_of_le_of_length_eq
+      · apply (lifting_property (le_of_lt h3.1) _ _).2
         · rwa [←simple_mul_lt_iff]
         · rw [←lt_simple_mul_iff]
           exact h2.1
-      rw [cover_iff] at h2 h3
-      have h5 := eq_of_le_of_length_eq this (Eq.trans h2.2 h3.2.symm)
-      rwa [mul_left_inj] at h5
+      · rw [length_cover h2, length_cover h3]
   | inr h4 =>
       have h5 : cs.IsLeftDescent (cs.simple i * (t * w)) i := by
         rwa [gt_iff_lt, lt_simple_mul_iff, isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h4
@@ -614,8 +514,7 @@ theorem local_configuration {i : B W} {t w : W}
         constructor
         · exact h7.2
         · rw [gt_iff_lt, lt_simple_mul_iff, not_isLeftDescent_iff, ←mul_assoc] at h4
-          rw [cover_iff] at h2 h3
-          rw [h4, h2.2, h3.2]
+          rw [h4, length_cover h2, length_cover h3]
       · rw [cover_iff]
         constructor
         · rw [mul_assoc]
@@ -648,13 +547,12 @@ theorem local_configuration₂ {i i' : B W} {w : W}
       exact h.1
     rw [not_isLeftDescent_iff, ←mul_assoc] at h3
     have h7 := lifting_property (le_of_lt (lt_trans h2.1 h4)) h5 h6
-    rw [cover_iff] at h2
     rw [←mul_assoc] at h4
     rw [not_isLeftDescent_iff] at h6
     rw [simple_mul_simple_cancel_left, ←mul_assoc] at h7
     rw [cover_iff, cover_iff]
     refine ⟨⟨h7.2, ?_⟩, ⟨le_of_lt h4, h3⟩⟩
-    rw [h3, h6, h2.2]
+    rw [h3, h6, length_cover h2]
 
 /-- Bjorner--Brenti Proposition 2.2.9 -/
 instance : IsDirectedOrder W where
@@ -819,8 +717,7 @@ theorem isLeftInversion_mul_w₀_iff {w t : W} (ht : cs.IsReflection t) :
 
 theorem isLeftInversion_w₀_iff (t : W) : cs.IsLeftInversion w₀ t ↔ cs.IsReflection t := by
   constructor
-  · intro ht
-    exact ht.1
+  · exact And.left
   · intro ht
     rw [←one_mul w₀, isLeftInversion_mul_w₀_iff ht]
     apply not_isLeftInversion_one
@@ -856,9 +753,8 @@ theorem antitone_mul_w₀ {u w : W} (h : u ≤ w) : w * w₀ ≤ u * w₀ := by
       apply le.step (w * w₀) (w * w₀) (v * w₀) (le.rfl _)
       · rw [mul_inv_rev, mul_assoc, mul_inv_cancel_left]
         rwa [←h2.inv, mul_inv_rev, inv_inv] at h2
-      · rw [length_mul_w₀, length_mul_w₀]
-        have := length_le_length_w₀ w
-        lia
+      · rwa [length_mul_w₀, length_mul_w₀,
+          tsub_lt_tsub_iff_left_of_le_of_le (length_le_length_w₀ _) (length_le_length_w₀ _)]
 
 theorem antitone_w₀_mul {u w : W} (h : u ≤ w) : w₀ * w ≤ w₀ * u := by
   rw [←inv_inv (w₀ * w), ←inv_inv (w₀ * u)]

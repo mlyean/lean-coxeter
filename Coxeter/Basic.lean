@@ -118,6 +118,14 @@ theorem not_IsReduced_cons {ω : List (B W)} (i : B W) (hω : cs.IsReduced ω) :
   apply IsReduced_cons
   exact hω
 
+theorem isReduced_append_left {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) : cs.IsReduced μ := by
+  have h2 := h.take (μ.length)
+  rwa [take_left] at h2
+
+theorem isReduced_append_right {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) : cs.IsReduced ω := by
+  have h2 := h.drop (μ.length)
+  rwa [drop_left] at h2
+
 theorem tail_leftInvSeq (i : B W) (ω : List (B W)) :
   tail (cs.leftInvSeq (i :: ω)) = map (MulAut.conj (cs.simple i)) (cs.leftInvSeq ω) := rfl
 
@@ -136,6 +144,14 @@ theorem drop_leftInvSeq (j : ℕ) (ω : List (B W)) :
       | cons _ _ =>
           rw [←drop_tail, tail_leftInvSeq, ←map_drop, ih, map_map,
             drop_succ_cons, take_succ_cons, ←MulAut.coe_mul, ←map_mul, wordProd_cons]
+
+theorem leftInvSeq_append (μ ω : List (B W)) :
+  cs.leftInvSeq (μ ++ ω) =
+    cs.leftInvSeq μ ++ map (MulAut.conj (cs.wordProd μ)) (cs.leftInvSeq ω) := by
+  induction μ with
+  | nil => simp
+  | cons i μ ih =>
+      simp [leftInvSeq, ih, wordProd_cons]
 
 theorem tail_alternatingWord (i j : (B W)) (p : ℕ) :
   tail (alternatingWord i j (p + 1)) = alternatingWord i j p := by

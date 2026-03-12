@@ -38,7 +38,7 @@ theorem mem_leftInvSeq_of_isLeftInversion
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
 theorem isLeftInversion_iff_mem_leftInvSeq
-  {ω : List (B W)} (t : W) (hω : cs.IsReduced ω) :
+  {ω : List (B W)} (hω : cs.IsReduced ω) (t : W) :
   cs.IsLeftInversion (cs.wordProd ω) t ↔ t ∈ cs.leftInvSeq ω := by
   constructor
   · apply mem_leftInvSeq_of_isLeftInversion
@@ -64,7 +64,7 @@ theorem exchange_property
 
 def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
   {t : W // cs.IsLeftInversion (cs.wordProd ω) t} ≃ {t : W // t ∈ cs.leftInvSeq ω} :=
-    Equiv.subtypeEquivRight (fun t => isLeftInversion_iff_mem_leftInvSeq t hω)
+    Equiv.subtypeEquivRight (isLeftInversion_iff_mem_leftInvSeq hω)
 
 instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
   classical
