@@ -77,7 +77,7 @@ instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
 theorem card_of_isLeftInversion (w : W) :
   Nat.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
   classical
-  let ⟨ω, ⟨hω1, hω2⟩⟩ := cs.exists_reduced_word' w
+  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w
   subst hω2
   rw [hω1, Nat.card_congr (equiv_IsLeftInversion ω hω1),
     Nat.subtype_card (cs.leftInvSeq ω).toFinset (fun _ => List.mem_toFinset),
@@ -92,7 +92,7 @@ theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
       exact hω IsReduced_nil
   | cons k ks ih =>
       by_cases h : cs.IsReduced ks
-      · have ⟨j, h2, h3⟩ := exchange_property ((not_IsReduced_cons k h).mp hω)
+      · have ⟨j, h2, h3⟩ := exchange_property ((not_IsReduced_cons h k).mp hω)
         exists 0, j + 1
         refine ⟨Nat.zero_lt_succ j, ?_, ?_⟩
         · rw [length_cons]
@@ -108,7 +108,7 @@ theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
 /-- Bjorner--Brenti Corollary 1.4.8 (i) -/
 theorem exists_reduced_subword (ω : List (B W)) :
   ∃ (ω' : List (B W)), ω' <+ ω ∧ cs.IsReduced ω' ∧ cs.wordProd ω = cs.wordProd ω' := by
-  induction ω using Nat.strongRecMeasure List.length with
+  induction ω using Nat.strongRecMeasure length with
   | ind ω ih =>
       by_cases h : cs.IsReduced ω
       · exists ω
@@ -142,9 +142,7 @@ theorem strong_exchange_right
     rw [length_reverse] at hi1
     rw [wordProd_op, ←op_mul, reverse_reverse, wordProd_op, op_inj, reverse_eraseIdx hi1,
       reverse_reverse] at hi2
-    constructor
-    · lia
-    · exact hi2
+    exact ⟨by lia, hi2⟩
   · rwa [wordProd_op, isLeftInversion_op_iff, reverse_reverse]
 
 theorem exchange_property_right

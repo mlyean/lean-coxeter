@@ -54,6 +54,17 @@ noncomputable section construction
 open Classical in
 def etaAux (ω : List (B W)) (t : W) : ZMod 2 := count t (cs.leftInvSeq ω)
 
+theorem etaAux_append (μ ω : List (B W)) (t : W) :
+  etaAux (μ ++ ω) t = etaAux μ t + etaAux ω ((cs.wordProd μ)⁻¹ * t * cs.wordProd μ) := by
+  classical
+  unfold etaAux
+  rw [leftInvSeq_append, count_append, Nat.cast_add, add_right_inj,
+    count_eq_countP, count_eq_countP, countP_map]
+  congr
+  ext w
+  simp only [comp_apply, MulAut.conj_apply, beq_eq_beq]
+  rw [mul_inv_eq_iff_eq_mul, mul_assoc, eq_inv_mul_iff_mul_eq]
+
 def permRepAux (ω : List (B W)) (r : RootSet W) : RootSet W :=
   ⟨⟨MulAut.conj (cs.wordProd ω) r.1.val, r.1.prop.conj _⟩, r.2 + etaAux ω.reverse r.1.val⟩
 
@@ -65,19 +76,17 @@ theorem permRepAux_nil : permRepAux ([] : List (B W)) = id := by
 theorem permRepAux_cons (i : B W) (ω : List (B W)) :
   permRepAux (i :: ω) = permRepAux [i] ∘ permRepAux ω := by
   classical
-  ext r
+  ext ⟨t, ε⟩
   rw [comp_apply]
   unfold permRepAux
-  apply Prod.ext
-  · simp [wordProd_cons]
-  · unfold etaAux
-    rw [add_assoc, add_right_inj, ←Nat.cast_add]
-    congr
-    rw [reverse_cons, ←concat_eq_append, leftInvSeq_concat, concat_eq_append, count_append,
-      add_right_inj, reverse_singleton, leftInvSeq_singleton, count_singleton, count_singleton]
-    congr 2
-    simp only [wordProd_reverse, inv_inv, MulAut.conj_apply, beq_eq_beq]
-    rw [mul_assoc, eq_mul_inv_iff_mul_eq, inv_mul_eq_iff_eq_mul]
+  dsimp
+  congr 1
+  · congr 1
+    change MulAut.conj (cs.wordProd (i :: ω)) t.val
+      = MulAut.conj (cs.wordProd [i]) (MulAut.conj (cs.wordProd ω) t.val)
+    rw [wordProd_singleton, wordProd_cons, map_mul, MulAut.mul_apply]
+  · rw [add_assoc, reverse_cons, reverse_singleton, add_right_inj, etaAux_append]
+    simp only [wordProd_reverse, inv_inv]
 
 theorem permRepAux_append (ω₁ ω₂ : List (B W)) :
   permRepAux (ω₁ ++ ω₂) = permRepAux ω₁ ∘ permRepAux ω₂ := by

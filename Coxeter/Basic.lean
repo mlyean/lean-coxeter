@@ -51,23 +51,6 @@ theorem reverse_eraseIdx {l : List α} {i : ℕ} (hi : i < l.length) :
     apply Nat.le_sub_of_add_le
     rwa [add_comm]
 
-theorem sublist_tail_of_head_ne {l₁ l₂ : List α} (hl₁ : l₁ ≠ [])
-  (hsub : l₁ <+ l₂) (h : head l₁ hl₁ ≠ head l₂ (by grind)) :
-  l₁ <+ tail l₂ := by
-  induction hsub with
-  | slnil => rfl
-  | cons =>
-      simp_all only [ne_eq, not_false_eq_true, forall_true_left, head_cons, tail_cons]
-  | cons₂ =>
-      simp_all only [ne_eq, head_cons, not_true_eq_false]
-
-theorem sublist_take_drop {l₁ l₂ : List α} {i : ℕ}
-  (h1 : take i l₁ <+ take i l₂) (h2 : drop i l₁ <+ drop i l₂) : l₁ <+ l₂ := by
-  calc
-    l₁ = take i l₁ ++ drop i l₁ := by rw [take_append_drop]
-    _ <+ take i l₂ ++ drop i l₂ := List.Sublist.append h1 h2
-    _ <+ l₂ := by rw [take_append_drop]
-
 end List
 
 namespace Coxeter
@@ -93,10 +76,7 @@ def reverse {w : W} (ω : ReducedWord w) : ReducedWord w⁻¹ :=
   ⟨ω.1.reverse, ω.prop.1.reverse,
     Eq.trans (congr_arg Inv.inv ω.prop.2) (cs.wordProd_reverse _).symm⟩
 
-abbrev length {w : W} (ω : ReducedWord w) : ℕ := ω.val.length
-
-theorem length_eq {w : W} (ω : ReducedWord w) : ω.length = cs.length w := by
-  unfold length
+theorem length_eq {w : W} (ω : ReducedWord w) : ω.val.length = cs.length w := by
   rw [←ω.2.1, ←ω.2.2]
 
 theorem wordProd_eq {w : W} (ω : ReducedWord w) : cs.wordProd ω = w := ω.2.2.symm
@@ -107,22 +87,24 @@ theorem IsReduced_nil : cs.IsReduced ([] : List (B W)) := by
   unfold CoxeterSystem.IsReduced
   rw [wordProd_nil, length_one, length_nil]
 
-theorem IsReduced_cons {ω : List (B W)} (i : B W) (hω : cs.IsReduced ω) :
+theorem IsReduced_cons {ω : List (B W)} (hω : cs.IsReduced ω) (i : B W) :
   cs.IsReduced (i :: ω) ↔ ¬ cs.IsLeftDescent (cs.wordProd ω) i := by
   unfold CoxeterSystem.IsReduced
   rw [not_isLeftDescent_iff, wordProd_cons, length_cons, hω]
 
-theorem not_IsReduced_cons {ω : List (B W)} (i : B W) (hω : cs.IsReduced ω) :
+theorem not_IsReduced_cons {ω : List (B W)} (hω : cs.IsReduced ω) (i : B W) :
   ¬ cs.IsReduced (i :: ω) ↔ cs.IsLeftDescent (cs.wordProd ω) i := by
   apply Iff.not_left
   apply IsReduced_cons
   exact hω
 
-theorem isReduced_append_left {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) : cs.IsReduced μ := by
+theorem isReduced_of_append_left {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) :
+  cs.IsReduced μ := by
   have h2 := h.take (μ.length)
   rwa [take_left] at h2
 
-theorem isReduced_append_right {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) : cs.IsReduced ω := by
+theorem isReduced_of_append_right {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) :
+  cs.IsReduced ω := by
   have h2 := h.drop (μ.length)
   rwa [drop_left] at h2
 
