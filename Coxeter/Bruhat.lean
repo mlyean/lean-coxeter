@@ -379,11 +379,8 @@ theorem monotone_inv : Monotone (@Inv.inv W _) := by
   exists μ.reverse, ω.reverse
   rwa [ReducedWord.reverse, ReducedWord.reverse, reverse_sublist]
 
-theorem strictMono_inv : StrictMono (@Inv.inv W _) := by
-  intro u w h
-  apply lt_of_le_of_ne (monotone_inv h.1)
-  rw [ne_eq, inv_inj]
-  exact ne_of_lt h
+theorem strictMono_inv : StrictMono (@Inv.inv W _) :=
+  monotone_inv.strictMono_of_injective inv_injective
 
 theorem length_cover {u w : W} (h : u ⋖ w) : cs.length w = cs.length u + 1 := by
   apply eq_of_le_of_ge
@@ -619,7 +616,7 @@ theorem finite_of_exists_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeft
 variable [Finite W]
 
 noncomputable def w₀ : W :=
-  Classical.choose (Set.Finite.exists_maximal Set.finite_univ Set.univ_nonempty)
+  Classical.choose (Set.finite_univ.exists_maximal Set.univ_nonempty)
 
 /-- Bjorner--Brenti Proposition 2.3.1 (i) -/
 noncomputable instance : OrderTop W where
@@ -627,7 +624,7 @@ noncomputable instance : OrderTop W where
   le_top := by
     apply IsMax.isTop
     intro w
-    exact (Classical.choose_spec (Set.Finite.exists_maximal Set.finite_univ Set.univ_nonempty)).2
+    exact (Classical.choose_spec (Set.finite_univ.exists_maximal Set.univ_nonempty)).2
       (Set.mem_univ w)
 
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) continued -/
@@ -694,13 +691,12 @@ theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - 
         exact h
 
 /-- Bjorner--Brenti Proposition 2.3.2 (iii) -/
-theorem isLeftInversion_mul_w₀_iff {w t : W} (ht : cs.IsReflection t) :
+theorem isLeftInversion_mul_w₀_iff {t : W} (ht : cs.IsReflection t) (w : W) :
   cs.IsLeftInversion (w * w₀) t ↔ ¬ cs.IsLeftInversion w t := by
   rw [←ht.isLeftInversion_mul_right_iff]
   unfold IsLeftInversion
   simp only [ht, true_and]
-  nth_rw 2 [←mul_assoc]
-  rw [ht.mul_self, one_mul, ←mul_assoc, length_mul_w₀, length_mul_w₀,
+  rw [←mul_assoc, ←mul_assoc, ht.mul_self, one_mul, length_mul_w₀, length_mul_w₀,
     tsub_lt_tsub_iff_left_of_le_of_le (length_le_length_w₀ _) (length_le_length_w₀ _)]
 
 theorem isLeftInversion_w₀_iff (t : W) : cs.IsLeftInversion w₀ t ↔ cs.IsReflection t := by
@@ -710,18 +706,13 @@ theorem isLeftInversion_w₀_iff (t : W) : cs.IsLeftInversion w₀ t ↔ cs.IsRe
     rw [←one_mul w₀, isLeftInversion_mul_w₀_iff ht]
     apply not_isLeftInversion_one
 
-private def isLeftInversion_equiv_isReflection :
-  {t : W // cs.IsLeftInversion w₀ t} ≃ ReflectionSet W :=
-  Equiv.subtypeEquivRight (@isLeftInversion_w₀_iff W _ _)
-
-instance : Finite (ReflectionSet W) :=
-  Finite.of_equiv _ isLeftInversion_equiv_isReflection
+instance : Finite (ReflectionSet W) := Subtype.finite
 
 /-- Bjorner--Brenti Proposition 2.3.2 (iv) -/
 theorem length_w₀_eq_card_reflectionSet :
   cs.length (w₀ : W) = Nat.card (ReflectionSet W) := by
   rw [←card_of_isLeftInversion]
-  exact Nat.card_congr isLeftInversion_equiv_isReflection
+  exact Nat.card_congr (Equiv.subtypeEquivRight isLeftInversion_w₀_iff)
 
 /-- Bjorner--Brenti Corollary 2.3.3 (i) -/
 theorem length_w₀_mul (w : W) : cs.length (w₀ * w) = cs.length (w₀ : W) - cs.length w := by

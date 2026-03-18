@@ -40,16 +40,9 @@ theorem drop_eraseIdx (l : List α) (i j : ℕ) :
 
 theorem reverse_eraseIdx {l : List α} {i : ℕ} (hi : i < l.length) :
   l.reverse.eraseIdx i = (l.eraseIdx (l.length - i - 1)).reverse := by
-  calc
-    l.reverse.eraseIdx i = take i (l.reverse) ++ drop (i + 1) l.reverse :=
-      eraseIdx_eq_take_drop_succ _ _
-    _ = (drop (l.length - i) l).reverse ++ (take (l.length - i - 1) l).reverse := ?_
-    _ = (take (l.length - i - 1) l ++ drop (l.length - i) l).reverse := reverse_append.symm
-    _ = (l.eraseIdx (l.length - i - 1)).reverse := ?_
-  · rw [take_reverse, drop_reverse, Nat.sub_add_eq]
-  · rw [eraseIdx_eq_take_drop_succ, Nat.sub_add_cancel]
-    apply Nat.le_sub_of_add_le
-    rwa [add_comm]
+  rw [←Nat.sub_ne_zero_iff_lt] at hi
+  rw [eraseIdx_eq_take_drop_succ, eraseIdx_eq_take_drop_succ, take_reverse, drop_reverse,
+    ←reverse_append, Nat.sub_one_add_one hi, Nat.sub_add_eq]
 
 end List
 
@@ -62,7 +55,7 @@ variable {W : Type*} [CoxeterGroup W]
 def ReducedWord (w : W) := {ω : List (B W) // cs.IsReduced ω ∧ w = cs.wordProd ω}
 
 instance {w : W} : CoeOut (ReducedWord w) (List (B W)) where
-  coe := fun ω => ω.val
+  coe := Subtype.val
 
 open Classical in
 noncomputable instance {w : W} : Inhabited (ReducedWord w) where
@@ -73,8 +66,7 @@ namespace ReducedWord
 
 @[simp]
 def reverse {w : W} (ω : ReducedWord w) : ReducedWord w⁻¹ :=
-  ⟨ω.1.reverse, ω.prop.1.reverse,
-    Eq.trans (congr_arg Inv.inv ω.prop.2) (cs.wordProd_reverse _).symm⟩
+  ⟨ω.val.reverse, ω.prop.1.reverse, (congr_arg Inv.inv ω.prop.2).trans (cs.wordProd_reverse _).symm⟩
 
 theorem length_eq {w : W} (ω : ReducedWord w) : ω.val.length = cs.length w := by
   rw [←ω.2.1, ←ω.2.2]
@@ -93,20 +85,13 @@ theorem IsReduced_cons {ω : List (B W)} (hω : cs.IsReduced ω) (i : B W) :
   rw [not_isLeftDescent_iff, wordProd_cons, length_cons, hω]
 
 theorem not_IsReduced_cons {ω : List (B W)} (hω : cs.IsReduced ω) (i : B W) :
-  ¬ cs.IsReduced (i :: ω) ↔ cs.IsLeftDescent (cs.wordProd ω) i := by
-  apply Iff.not_left
-  apply IsReduced_cons
-  exact hω
+  ¬ cs.IsReduced (i :: ω) ↔ cs.IsLeftDescent (cs.wordProd ω) i := Iff.not_left (IsReduced_cons hω i)
 
 theorem isReduced_of_append_left {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) :
-  cs.IsReduced μ := by
-  have h2 := h.take (μ.length)
-  rwa [take_left] at h2
+  cs.IsReduced μ := take_left.subst (h.take (μ.length))
 
 theorem isReduced_of_append_right {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) :
-  cs.IsReduced ω := by
-  have h2 := h.drop (μ.length)
-  rwa [drop_left] at h2
+  cs.IsReduced ω := drop_left.subst (h.drop (μ.length))
 
 theorem tail_leftInvSeq (i : B W) (ω : List (B W)) :
   tail (cs.leftInvSeq (i :: ω)) = map (MulAut.conj (cs.simple i)) (cs.leftInvSeq ω) := rfl
@@ -208,8 +193,8 @@ theorem getD_leftInvSeq_mul_wordProd₂ {i j : ℕ} (ω : List (B W)) (hij : i <
 
 theorem getElem_leftInvSeq_mul_wordProd₂ {i j : ℕ}
   (ω : List (B W)) (h1 : i < j) (h2 : j < ω.length) :
-  (cs.leftInvSeq ω)[i]'(by rw [length_leftInvSeq]; exact lt_trans h1 h2)
-  * (cs.leftInvSeq ω)[j]'(by rw [length_leftInvSeq]; exact h2)
+  (cs.leftInvSeq ω)[i]'((cs.length_leftInvSeq ω).symm.subst (lt_trans h1 h2))
+  * (cs.leftInvSeq ω)[j]'((cs.length_leftInvSeq ω).symm.subst h2)
   * cs.wordProd ω
   = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
     rw [←getD_leftInvSeq_mul_wordProd₂ ω h1, getD_eq_getElem, getD_eq_getElem]
