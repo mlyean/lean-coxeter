@@ -238,24 +238,20 @@ theorem permRep_inj : Function.Injective (@permRep W _) := by
   classical
   rw [injective_iff_map_eq_one]
   intro w hw
-  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word (w⁻¹)
+  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w⁻¹
   rw [inv_eq_iff_eq_inv] at hω2
   subst hω2
-  rw [inv_inv] at hω1
-  rw [inv_eq_one, ←cs.length_eq_zero_iff, ←hω1]
+  rw [inv_eq_one, ←cs.length_eq_zero_iff, hω1]
   cases ω with
   | nil => rfl
   | cons i is =>
-    have h : count (cs.simple i) (cs.leftInvSeq (i :: is)) = 1 := by
-      apply count_eq_one_of_mem
-      · apply IsReduced.nodup_leftInvSeq
-        exact hω1.symm
-      · apply Mem.head
-    have h2 := congr_arg Prod.snd (permRep_inv_eq (cs.wordProd (i :: is))
-      ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩)
-    rw [hw, Equiv.Perm.coe_one, id_eq, zero_add, eta_spec, h] at h2
-    dsimp at h2
-    contradiction
+      have h : count (cs.simple i) (cs.leftInvSeq (i :: is)) = 1 :=
+        count_eq_one_of_mem hω1.nodup_leftInvSeq (Mem.head _)
+      have h2 := congr_arg Prod.snd (permRep_inv_eq (cs.wordProd (i :: is))
+        ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩)
+      rw [hw, Equiv.Perm.coe_one, id_eq, zero_add, eta_spec, h] at h2
+      dsimp at h2
+      contradiction
 
 /-- Bjorner--Brenti Theorem 1.3.2 (ii) -/
 theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :

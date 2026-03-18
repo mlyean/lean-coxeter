@@ -368,7 +368,7 @@ theorem card_Icc_le (u w : W) : Finset.card (Finset.Icc u w) ≤ 2 ^ cs.length w
     replace h := chooseReducedSubword_inj ω h
     rwa [Subtype.mk.injEq, Subtype.val_inj] at h
   rw [←ω.length_eq]
-  have hle := le_trans (Finset.card_le_card_of_injective hf_inj) (List.toFinset_card_le _)
+  have hle := le_trans (Finset.card_le_card_of_injective hf_inj) (toFinset_card_le _)
   rwa [length_sublists] at hle
 
 /-- Bjorner--Brenti Corollary 2.2.5 -/
@@ -438,8 +438,8 @@ theorem lifting_property {u w : W} {i : B W}
   have h4 : cs.IsReduced (i :: ω) := by
     rwa [IsReduced_cons hω1, ←hω2, ←isLeftDescent_iff_not_isLeftDescent_mul]
   rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hω2
-  have ⟨μ, hμ⟩ := exists_reduced_subword_of_le ⟨i :: ω, h4, hω2⟩ h1
-  dsimp at hμ
+  have ⟨⟨μ, hμ1, hμ2⟩, hsub⟩ := exists_reduced_subword_of_le ⟨i :: ω, h4, hω2⟩ h1
+  dsimp at hsub
   by_cases hu : u = 1
   · subst hu
     constructor
@@ -449,29 +449,25 @@ theorem lifting_property {u w : W} {i : B W}
       · exact Sublist.cons₂ _ (nil_sublist _)
       · apply isReduced_of_singleton
       · rw [wordProd_singleton]
-  · have h5 : ¬ μ.val = [] := by
-      intro h
-      have heq := μ.wordProd_eq
-      rw [h, wordProd_nil] at heq
-      exact hu heq.symm
-    have h6 : head μ.val h5 ≠ i := by
-      intro h
-      apply h3
-      rw [←isLeftInversion_simple_iff_isLeftDescent, ←μ.wordProd_eq]
-      apply cs.isLeftInversion_of_mem_leftInvSeq μ.2.1
-      rw [←cons_head_tail h5, leftInvSeq, h]
-      exact mem_cons_self
-    have h7 : μ.val <+ ω := by
-      rw [←cons_head_tail h5] at hμ
-      have h8 := List.Sublist.of_cons_of_ne h6 hμ
-      rwa [cons_head_tail h5] at h8
-    constructor
-    · apply le_of_reduced_subword μ ⟨ω, hω1, _⟩ h7
-      rw [hω2, wordProd_cons, simple_mul_simple_cancel_left]
-    · apply le_of_reduced_subword ⟨i :: μ.val, _, _⟩ ⟨i :: ω, h4, hω2⟩
-      · exact List.Sublist.cons₂ _ h7
-      · rwa [IsReduced_cons μ.2.1, μ.wordProd_eq]
-      · rw [wordProd_cons, μ.wordProd_eq]
+  · match μ, hsub with
+    | [], _ =>
+        exfalso
+        rw [wordProd_nil] at hμ2
+        exact hu hμ2
+    | j :: μ, Sublist.cons _ hsub =>
+        constructor
+        · apply le_of_reduced_subword ⟨j :: μ, hμ1, hμ2⟩ ⟨ω, hω1, _⟩ hsub
+          rw [hω2, wordProd_cons, simple_mul_simple_cancel_left]
+        · apply le_of_reduced_subword ⟨i :: j :: μ, _, _⟩ ⟨i :: ω, h4, hω2⟩
+          · exact Sublist.cons₂ _ hsub
+          · rwa [IsReduced_cons hμ1, ←hμ2]
+          · rw [wordProd_cons, hμ2]
+    | i :: μ, Sublist.cons₂ _ hsub =>
+        exfalso
+        apply h3
+        rw [←isLeftInversion_simple_iff_isLeftDescent, hμ2]
+        apply cs.isLeftInversion_of_mem_leftInvSeq hμ1
+        exact mem_cons_self
 
 /-- Bjorner--Brenti Corollary 2.2.8 (i) -/
 theorem local_configuration {i : B W} {t w : W}
@@ -489,24 +485,17 @@ theorem local_configuration {i : B W} {t w : W}
           exact h2.1
       · rw [length_cover h2, length_cover h3]
   | inr h4 =>
+      have h4' : cs.length (cs.simple i * (t * w)) = cs.length (t * w) + 1 := by
+        rwa [gt_iff_lt, lt_simple_mul_iff, not_isLeftDescent_iff] at h4
       have h5 : cs.IsLeftDescent (cs.simple i * (t * w)) i := by
-        rwa [gt_iff_lt, lt_simple_mul_iff, isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h4
+        rw [isLeftDescent_iff, simple_mul_simple_cancel_left, h4']
       have h6 : ¬ cs.IsLeftDescent w i := by
         rw [←lt_simple_mul_iff]
         exact h2.1
-      have h7 := lifting_property (le_of_lt (lt_trans h3.1 h4)) h5 h6
-      simp only [←mul_assoc, simple_mul_simple_self, one_mul] at h7
-      constructor
-      · rw [cover_iff]
-        constructor
-        · exact h7.2
-        · rw [gt_iff_lt, lt_simple_mul_iff, not_isLeftDescent_iff, ←mul_assoc] at h4
-          rw [h4, length_cover h2, length_cover h3]
-      · rw [cover_iff]
-        constructor
-        · rw [mul_assoc]
-          exact le_of_lt h4
-        · rwa [gt_iff_lt, lt_simple_mul_iff, not_isLeftDescent_iff, ←mul_assoc] at h4
+      have h7 := (lifting_property (le_of_lt (lt_trans h3.1 h4)) h5 h6).2
+      rw [cover_iff, cover_iff, mul_assoc]
+      refine ⟨⟨h7, ?_⟩, ⟨le_of_lt h4, h4'⟩⟩
+      rw [h4', length_cover h2, length_cover h3]
 
 /-- Bjorner--Brenti Corollary 2.2.8 (ii) -/
 theorem local_configuration₂ {i i' : B W} {w : W}
