@@ -106,7 +106,7 @@ theorem sup_orthogonal_eq_top (B : LinearMap.BilinForm ℝ V)
   let u : W := ∑ (i : Fin (Module.finrank ℝ W)), B x (v i) • v i
   exists u
   constructor
-  · simp
+  · exact u.prop
   · exists x - u
     constructor
     · rw [Submodule.mem_orthogonalBilin_iff]
@@ -123,10 +123,8 @@ theorem sup_orthogonal_eq_top (B : LinearMap.BilinForm ℝ V)
           simp
         · intro w hw
           rw [Submodule.mem_span_set']
-          exists Module.finrank ℝ W
-          exists v.repr ⟨w, hw⟩, fun i => ⟨(v i).val, by simp⟩
-          have h1 : ∑ (i : Fin (Module.finrank ℝ W)), (v.repr ⟨w, hw⟩ i) • (v i) = w := by
-            simp only [Module.Basis.sum_repr]
+          exists Module.finrank ℝ W, v.repr ⟨w, hw⟩, fun i => ⟨(v i).val, by simp⟩
+          have h1 : ∑ (i : Fin (Module.finrank ℝ W)), (v.repr ⟨w, hw⟩ i) • (v i) = w := by simp
           conv =>
             lhs
             congr
@@ -151,10 +149,8 @@ theorem sup_orthogonal_eq_top (B : LinearMap.BilinForm ℝ V)
         intro i j
         by_cases h : j = i
         · simp only [h, Set.mem_singleton_iff, Set.indicator_of_mem]
-          have := hv1 i
-          simp only [LinearMap.BilinForm.restrict_apply, LinearMap.domRestrict_apply] at this
-          rw [this]
-          simp
+          have : B (v i).val (v i).val = 1 := hv1 i
+          rw [this, mul_one]
         · simp only [Set.mem_singleton_iff, h, not_false_eq_true, Set.indicator_of_notMem,
             mul_eq_zero]
           right
