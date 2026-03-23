@@ -100,7 +100,7 @@ theorem sup_orthogonal_eq_top (B : LinearMap.BilinForm ℝ V)
   W ⊔ W.orthogonalBilin B = ⊤ := by
   have hB1' : (B.restrict W).IsSymm := by
     exact hB1.restrict W
-  have ⟨v, hv1, hv2⟩ := @exists_orthonormal_basis W _ _ _ (B.restrict W) hB1' hB2 hB3
+  have ⟨v, hv1, hv2⟩ := exists_orthonormal_basis (B.restrict W) hB1' hB2 hB3
   rw [Submodule.sup_eq_top_iff]
   intro x
   let u : W := ∑ (i : Fin (Module.finrank ℝ W)), B x (v i) • v i
