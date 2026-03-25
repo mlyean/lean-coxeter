@@ -74,14 +74,14 @@ theorem exists_orthonormal_basis [FiniteDimensional ℝ V] (B : LinearMap.BilinF
     intro i
     apply Ne.isUnit
     grind
-  let w := v.unitsSMul (fun i => Classical.choose (h2 i))
+  let w := v.unitsSMul (fun i => (h2 i).choose)
   exists w
   constructor
   · intro i
     unfold w
     rw [Module.Basis.unitsSMul_apply]
-    change (B ((Classical.choose (h2 i)).val • v i)) ((Classical.choose (h2 i)).val • v i) = 1
-    rw [Classical.choose_spec (h2 i)]
+    change (B ((h2 i).choose.val • v i)) ((h2 i).choose.val • v i) = 1
+    rw [(h2 i).choose_spec]
     simp
     grind
   · intro i j h

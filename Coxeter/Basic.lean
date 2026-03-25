@@ -57,10 +57,8 @@ def ReducedWord (w : W) := {ω : List (B W) // cs.IsReduced ω ∧ w = cs.wordPr
 instance {w : W} : CoeOut (ReducedWord w) (List (B W)) where
   coe := Subtype.val
 
-open Classical in
-noncomputable instance {w : W} : Inhabited (ReducedWord w) where
-  default := ⟨Classical.choose (cs.exists_reduced_word' w),
-              Classical.choose_spec (cs.exists_reduced_word' w)⟩
+instance {w : W} : Nonempty (ReducedWord w) :=
+  ⟨(Classical.indefiniteDescription _ (cs.exists_reduced_word' w))⟩
 
 namespace ReducedWord
 

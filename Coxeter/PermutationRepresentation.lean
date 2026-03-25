@@ -75,7 +75,6 @@ theorem permRepAux_nil : permRepAux ([] : List (B W)) = id := by
 
 theorem permRepAux_cons (i : B W) (ω : List (B W)) :
   permRepAux (i :: ω) = permRepAux [i] ∘ permRepAux ω := by
-  classical
   ext ⟨t, ε⟩
   rw [comp_apply]
   unfold permRepAux
