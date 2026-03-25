@@ -1,8 +1,7 @@
-import Mathlib.Data.Real.Basic
-import Mathlib.LinearAlgebra.Matrix.BilinearForm
-import Mathlib.LinearAlgebra.QuadraticForm.Basic
 import Mathlib.Algebra.CharP.Invertible
 import Mathlib.Data.Real.Sqrt
+import Mathlib.LinearAlgebra.BilinearForm.Properties
+import Mathlib.LinearAlgebra.QuadraticForm.Basic
 
 /-!
 # Bilinear forms

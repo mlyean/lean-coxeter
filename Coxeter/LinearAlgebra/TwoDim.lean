@@ -1,4 +1,5 @@
 import Mathlib.Analysis.InnerProductSpace.TwoDim
+import Mathlib.LinearAlgebra.Reflection
 
 namespace Coxeter
 
@@ -6,7 +7,9 @@ open scoped RealInnerProductSpace
 open Module
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [Fact (finrank ℝ E = 2)]
-  (o : Orientation ℝ E (Fin 2))
+variable (o : Orientation ℝ E (Fin 2))
+
+instance : FiniteDimensional ℝ E := FiniteDimensional.of_fact_finrank_eq_two
 
 local notation "ω" => o.areaForm
 local notation "J" => o.rightAngleRotation
@@ -51,5 +54,11 @@ theorem eq_J_iff (x y : E) : J x = y ↔ ⟪x, y⟫ = 0 ∧ ‖y‖ = ‖x‖ �
           subst hc
           simp at h3
           contradiction
+
+noncomputable def reflect {x : E} (hx : ‖x‖ = 1) : E ≃ₗ[ℝ] E :=
+  @Module.reflection ℝ E _ _ _ x (2 • InnerProductSpace.toDual ℝ E x) (by simp [hx])
+
+theorem reflect_def {x : E} (hx : ‖x‖ = 1) (y : E) : reflect hx y = y - (2 * ⟪x, y⟫) • x := by
+  simp [reflect, Module.reflection_apply]
 
 end Coxeter
