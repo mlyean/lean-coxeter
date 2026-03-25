@@ -96,8 +96,7 @@ theorem eq_of_le_of_length_eq {u w : W} (h : u ≤ w) (h2 : cs.length u = cs.len
   apply eq_of_le_of_not_lt h
   intro h3
   apply strictMono_length at h3
-  rw [h2] at h3
-  exact lt_irrefl _ h3
+  rwa [h2, lt_self_iff_false] at h3
 
 instance : OrderBot W where
   bot := 1
@@ -524,18 +523,18 @@ instance : IsDirectedOrder W where
           by_cases h2 : cs.IsLeftDescent x i
           · exists x
             rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
-            have ⟨h3, h4⟩ := lifting_property hx1 h2 hi
-            rw [simple_mul_simple_cancel_left] at h4
-            exact ⟨h4, hx2⟩
+            have h3 := (lifting_property hx1 h2 hi).2
+            rw [simple_mul_simple_cancel_left] at h3
+            exact ⟨h3, hx2⟩
           · exists cs.simple i * x
-            have h3 : cs.simple i * x ≥ x := by
+            have h3 : x ≤ cs.simple i * x := by
               apply le_of_lt
               rwa [lt_simple_mul_iff]
             rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
             rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
-            have ⟨h4, h5⟩ := lifting_property (le_trans hx1 h3) h2 hi
-            rw [simple_mul_simple_cancel_left] at h4 h5
-            exact ⟨h5, le_trans hx2 h3⟩
+            have h4 := (lifting_property (le_trans hx1 h3) h2 hi).2
+            rw [simple_mul_simple_cancel_left] at h4
+            exact ⟨h4, le_trans hx2 h3⟩
 
 section finite
 
@@ -556,15 +555,12 @@ theorem isTop_iff_all_isLeftDescent {x : W} : (∀ (i : B W), cs.IsLeftDescent x
           rwa [simple_mul_simple_cancel_left] at h3
   · intro h i
     rw [←simple_mul_lt_iff]
-    apply lt_of_le_of_ne
-    · apply h
-    · rw [ne_eq, mul_eq_right]
-      apply simple_ne_one
+    apply lt_of_le_of_ne (h _)
+    rw [ne_eq, mul_eq_right]
+    apply simple_ne_one
 
 instance [OrderTop W] : Finite W := by
-  apply Finite.of_finite_univ
-  apply Set.Finite.ofFinset (Finset.Icc (⊥ : W) (⊤ : W))
-  intro w
+  apply Finite.of_finite_univ (Set.Finite.ofFinset (Finset.Icc ⊥ ⊤) _)
   simp
 
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) -/
@@ -578,8 +574,7 @@ theorem finite_of_exists_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeft
 
 variable [Finite W]
 
-noncomputable def w₀ : W :=
-  Classical.choose (Set.finite_univ.exists_maximal Set.univ_nonempty)
+noncomputable def w₀ : W := (Set.finite_univ.exists_maximal Set.univ_nonempty).choose
 
 /-- Bjorner--Brenti Proposition 2.3.1 (i) -/
 noncomputable instance : OrderTop W where
@@ -587,8 +582,7 @@ noncomputable instance : OrderTop W where
   le_top := by
     apply IsMax.isTop
     intro w
-    exact (Classical.choose_spec (Set.finite_univ.exists_maximal Set.univ_nonempty)).2
-      (Set.mem_univ w)
+    exact (Set.finite_univ.exists_maximal Set.univ_nonempty).choose_spec.2 (Set.mem_univ w)
 
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) continued -/
 theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) ↔ x = w₀ := by
@@ -600,13 +594,13 @@ theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) �
     rw [h]
     exact le_top
 
-theorem length_le_length_w₀ (w : W) : cs.length w ≤ cs.length (w₀ : W) :=
-  monotone_length le_top
+theorem length_le_length_w₀ (w : W) : cs.length w ≤ cs.length (w₀ : W) := monotone_length le_top
 
 theorem eq_w₀_of_length_ge {x : W} (h : cs.length x ≥ cs.length (w₀ : W)) : x = w₀ := by
-  apply eq_of_le_of_not_lt le_top
-  intro h2
-  exact not_le_of_gt (strictMono_length h2) h
+  by_contra! h2
+  replace h2 : x < w₀ := Ne.lt_top h2
+  apply_fun cs.length at h2 using (@strictMono_length W _)
+  exact not_le_of_gt h2 h
 
 theorem eq_w₀_of_length_eq {x : W} (h : cs.length x = cs.length (w₀ : W)) : x = w₀ :=
   eq_w₀_of_length_ge (ge_of_eq h)
@@ -633,8 +627,7 @@ theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - 
   | self =>
       intro w hw
       apply eq_w₀_of_length_eq at hw
-      subst hw
-      rw [w₀_mul_self, length_one]
+      rw [hw, w₀_mul_self, length_one]
       apply Nat.zero_le
   | of_succ k hk ih =>
       intro w hw
@@ -644,14 +637,12 @@ theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - 
         intro h
         rwa [h, lt_self_iff_false] at hk
       rw [not_isLeftDescent_iff] at hi
-      calc
-        cs.length (w * w₀) ≤ cs.length (cs.simple i * w * w₀) + 1 := ?_
-        _ ≤ cs.length (w₀ : W) - (cs.length w + 1) + 1 :=
-          Nat.succ_le_succ (ih (cs.simple i * w) hi)
-        _ = cs.length w₀ - cs.length w := by lia
-      · have h := cs.length_mul_le (cs.simple i) (cs.simple i * w * w₀)
-        nth_rw 1 [mul_assoc] at h
+      specialize ih (cs.simple i * w) hi
+      rw [mul_assoc] at ih
+      trans cs.length (cs.simple i * (w * w₀)) + 1
+      · have h := cs.length_mul_le (cs.simple i) (cs.simple i * (w * w₀))
         rwa [simple_mul_simple_cancel_left, length_simple, add_comm] at h
+      · lia
 
 /-- Bjorner--Brenti Proposition 2.3.2 (iii) -/
 theorem isLeftInversion_mul_w₀_iff {t : W} (ht : cs.IsReflection t) (w : W) :
@@ -671,8 +662,7 @@ theorem isLeftInversion_w₀_iff (t : W) : cs.IsLeftInversion w₀ t ↔ cs.IsRe
 instance : Finite (ReflectionSet W) := Subtype.finite
 
 /-- Bjorner--Brenti Proposition 2.3.2 (iv) -/
-theorem length_w₀_eq_card_reflectionSet :
-  cs.length (w₀ : W) = Nat.card (ReflectionSet W) := by
+theorem length_w₀_eq_card_reflectionSet : cs.length (w₀ : W) = Nat.card (ReflectionSet W) := by
   rw [←card_of_isLeftInversion]
   exact Nat.card_congr (Equiv.subtypeEquivRight isLeftInversion_w₀_iff)
 
@@ -691,12 +681,13 @@ theorem antitone_mul_w₀ : Antitone (Equiv.mulRight (w₀ : W)) := by
   induction h with
   | rfl => rfl
   | step v w h1 h2 h3 ih =>
-      apply le_trans _ ih
-      apply le.step (w * w₀) (w * w₀) (v * w₀) (le.rfl _)
-      · rw [mul_inv_rev, mul_assoc, mul_inv_cancel_left]
-        rwa [←h2.inv, mul_inv_rev, inv_inv] at h2
-      · rwa [length_mul_w₀, length_mul_w₀,
-          tsub_lt_tsub_iff_left_of_le_of_le (length_le_length_w₀ _) (length_le_length_w₀ _)]
+      apply le_trans (le_of_lt _) ih
+      dsimp
+      generalize ht : w * v⁻¹ = t at h2
+      rw [←h2.inv, mul_inv_eq_iff_eq_mul, eq_inv_mul_iff_mul_eq] at ht
+      rw [←ht, mul_assoc, lt_reflection_mul_iff h2, ←mul_assoc, length_mul_w₀, length_mul_w₀, ht]
+      have := length_le_length_w₀ w
+      lia
 
 theorem antitone_w₀_mul : Antitone (Equiv.mulLeft (w₀ : W)) := by
   intro u w h

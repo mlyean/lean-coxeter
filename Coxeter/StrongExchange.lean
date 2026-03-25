@@ -34,7 +34,7 @@ theorem mem_leftInvSeq_of_isLeftInversion
   rw [←count_pos_iff, pos_iff_ne_zero]
   intro heq
   rw [←eta_eq_one_iff, eta_spec, heq] at h
-  tauto
+  trivial
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
 theorem isLeftInversion_iff_mem_leftInvSeq

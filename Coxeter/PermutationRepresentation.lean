@@ -130,8 +130,7 @@ theorem permRepAux_alternatingWord (i i' : B W) :
       unfold p
       simp
 
-theorem permRepAux_singleton_involutive (i : B W) :
-  Function.Involutive (permRepAux [i]) := by
+theorem permRepAux_singleton_involutive (i : B W) : Involutive (permRepAux [i]) := by
   suffices h : permRepAux [i] ∘ permRepAux [i] = id from congr_fun h
   rw [←permRepAux_cons]
   have h := permRepAux_alternatingWord i i
@@ -233,7 +232,7 @@ theorem permRep_inv_eq (w : W) (r : RootSet W) : permRep w⁻¹ r
   rw [permRep_eq, inv_inv]
 
 /-- Bjorner--Brenti Theorem 1.3.2 (i): injectivity -/
-theorem permRep_inj : Function.Injective (@permRep W _) := by
+theorem permRep_inj : Injective (@permRep W _) := by
   classical
   rw [injective_iff_map_eq_one]
   intro w hw
