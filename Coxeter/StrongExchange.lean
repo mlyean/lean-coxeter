@@ -88,8 +88,8 @@ theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
   ∃ i j, i < j ∧ j < ω.length ∧ cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
   induction ω with
   | nil =>
-      exfalso
-      exact hω IsReduced_nil
+      absurd hω
+      exact IsReduced_nil
   | cons k ks ih =>
       by_cases h : cs.IsReduced ks
       · have ⟨j, h2, h3⟩ := exchange_property ((not_IsReduced_cons h k).mp hω)
