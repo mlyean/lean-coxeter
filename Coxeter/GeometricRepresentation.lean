@@ -95,6 +95,9 @@ def sigmaAux (i : B W) : V W →ₗ[ℝ] V W where
     · simp
       ring
 
+theorem sigmaAux_apply (i : B W) (x : V W) :
+  sigmaAux i x = x - (2 * bil (stdBasis i) x) • stdBasis i := rfl
+
 theorem sigmaAux_involutive (i : B W) : Involutive (sigmaAux i) := by
   intro x
   unfold sigmaAux
@@ -334,7 +337,6 @@ section finite_order
 
 variable {i i' : B W}
 variable [h : Fact (M i i' ≥ 2)]
-include h
 
 theorem i_ne_i' : i ≠ i' := by
   intro heq
@@ -490,10 +492,116 @@ noncomputable instance : NormedAddCommGroup (E i i') :=
 noncomputable instance : InnerProductSpace ℝ (E i i') :=
   InnerProductSpace.ofCore inferInstance
 
+@[simp]
+theorem norm_stdBasisE_0 : ‖@stdBasisE _ _ _ _ h 0‖ = 1 := by
+  rw [@norm_eq_sqrt_re_inner ℝ (E i i')]
+  change √(RCLike.re (bil.restrict (E i i') (stdBasisE 0) (stdBasisE 0))) = 1
+  rw [LinearMap.BilinForm.restrict_apply]
+  simp
+
+@[simp]
+theorem norm_stdBasisE_1 : ‖@stdBasisE _ _ _ _ h 1‖ = 1 := by
+  rw [@norm_eq_sqrt_re_inner ℝ (E i i')]
+  change √(RCLike.re (bil.restrict (E i i') (stdBasisE 1) (stdBasisE 1))) = 1
+  rw [LinearMap.BilinForm.restrict_apply]
+  simp
+
+@[simp]
+theorem inner_stdBasisE_0_1 :
+  inner ℝ (@stdBasisE _ _ _ _ h 0) (@stdBasisE _ _ _ _ h 1) = -cos (π / M.M i i') := by
+  change bil.restrict (E i i') (@stdBasisE _ _ _ _ h 0) (@stdBasisE _ _ _ _ h 1)
+    = -cos (π / ↑(M.M i i'))
+  simp
+
 def o : Orientation ℝ (E i i') (Fin 2) := stdBasisE.orientation
 
 instance : Fact (Module.finrank ℝ (E i i') = 2) where
   out := dimE_eq_two
+
+theorem oangle_stdBasisE :
+  (@o _ _ _ _ h).oangle (stdBasisE 0) (stdBasisE 1) = (Real.pi - Real.pi / M.M i i' : ℝ) ∨
+  (@o _ _ _ _ h).oangle (stdBasisE 0) (stdBasisE 1) = -(Real.pi - Real.pi / M.M i i' : ℝ) := by
+  have h2 := (@o _ _ _ _ h).inner_eq_norm_mul_norm_mul_cos_oangle (stdBasisE 0) (stdBasisE 1)
+  symm at h2
+  simp only [Fin.isValue, inner_stdBasisE_0_1, norm_stdBasisE_0, norm_stdBasisE_1, mul_one,
+    one_mul] at h2
+  rwa [←Real.cos_pi_sub, Real.Angle.cos_eq_real_cos_iff_eq_or_eq_neg] at h2
+
+omit h in
+theorem restrict_sigmaAux_mul :
+  (sigmaAux i * sigmaAux i').restrict (sigmaAux_E_2 i i')
+  = (sigmaAux i).restrict (sigmaAux_E_left i i')
+    ∘ₗ (sigmaAux i').restrict (sigmaAux_E_right i i') := by
+  trivial
+
+theorem sigmaAux_i_restrict_eq_reflect : (sigmaAux i).restrict (sigmaAux_E_left i i') =
+  reflect (@norm_stdBasisE_0 _ _ _ _ h) := by
+  ext x : 1
+  rw [LinearMap.restrict_apply]
+  simp only [Fin.isValue, LinearEquiv.coe_coe]
+  rw [reflect_apply]
+  rw [←Subtype.coe_inj]
+  simp only [Fin.isValue, AddSubgroupClass.coe_sub, SetLike.val_smul, stdBasisE_0]
+  rw [sigmaAux_apply]
+  congr 3
+  change (bil (stdBasis i)) ↑x = bil.restrict (E i i') (stdBasisE 0) x
+  rw [LinearMap.BilinForm.restrict_apply, stdBasisE_0]
+  simp
+
+theorem sigmaAux_i'_restrict_eq_reflect : (sigmaAux i').restrict (sigmaAux_E_right i i') =
+  reflect (@norm_stdBasisE_1 _ _ _ _ h) := by
+  ext x : 1
+  rw [LinearMap.restrict_apply]
+  simp only [Fin.isValue, LinearEquiv.coe_coe]
+  rw [reflect_apply]
+  rw [←Subtype.coe_inj]
+  simp only [Fin.isValue, AddSubgroupClass.coe_sub, SetLike.val_smul, stdBasisE_1]
+  rw [sigmaAux_apply]
+  congr 3
+  change (bil (stdBasis i')) ↑x = bil.restrict (E i i') (stdBasisE 1) x
+  rw [LinearMap.BilinForm.restrict_apply, stdBasisE_1]
+  simp
+
+theorem sigmaAux_2_restrict_eq_rotate :
+  (sigmaAux i * sigmaAux i').restrict (sigmaAux_E_2 i i')
+  = (o.rotation (2 * Real.pi / M i i' : ℝ)).toLinearMap ∨
+  (sigmaAux i * sigmaAux i').restrict (sigmaAux_E_2 i i')
+  = (o.rotation (2 * Real.pi / (-M i i') : ℝ)).toLinearMap := by
+  rw [restrict_sigmaAux_mul, sigmaAux_i_restrict_eq_reflect, sigmaAux_i'_restrict_eq_reflect]
+  simp only [Fin.isValue, LinearEquiv.comp_coe, LinearEquiv.toLinearMap_inj]
+  rw [reflect_reflect o]
+  cases @oangle_stdBasisE _ _ _ _ h with
+  | inl h2 =>
+      left
+      rw [Orientation.oangle_rev, h2]
+      conv =>
+        lhs
+        congr
+        congr
+        · skip
+        · rw [Real.Angle.coe_sub, smul_neg, smul_sub, neg_sub, ←Real.Angle.coe_nsmul]
+          simp
+      ext
+      simp only [SemilinearEquivClass.semilinearEquiv_apply, LinearIsometryEquiv.coe_toLinearEquiv]
+      congr 5
+      ring
+  | inr h2 =>
+      right
+      rw [Orientation.oangle_rev, h2]
+      conv =>
+        lhs
+        congr
+        congr
+        · skip
+        · rw [neg_neg]
+          rw [Real.Angle.coe_sub]
+          rw [smul_sub]
+          simp
+          rw [←Real.Angle.coe_nsmul, ←Real.Angle.coe_neg]
+      ext
+      simp only [SemilinearEquivClass.semilinearEquiv_apply, LinearIsometryEquiv.coe_toLinearEquiv]
+      congr 5
+      ring
 
 end finite_order
 
