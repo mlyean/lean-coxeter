@@ -603,7 +603,71 @@ theorem sigmaAux_2_restrict_eq_rotate :
       congr 5
       ring
 
+theorem sigmaAux_2_pow_eq_id : (sigmaAux i * sigmaAux i') ^ M i i' = 1 := by
+  rw [order_sigmaAux_2_eq_order_restrict]
+  cases @sigmaAux_2_restrict_eq_rotate _ _ _ _ h with
+  | inl h2 =>
+      rw [h2]
+      ext x : 1
+      rw [Module.End.pow_apply]
+      simp only [LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv, Module.End.one_apply]
+      rw [iterate_rotation, ←Real.Angle.coe_nsmul]
+      replace h := h.out
+      conv =>
+        congr
+        congr
+        congr
+        · skip
+        · congr
+          simp
+          field_simp
+      simp
+  | inr h2 =>
+      rw [h2]
+      ext x : 1
+      rw [Module.End.pow_apply]
+      simp only [LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv, Module.End.one_apply]
+      rw [iterate_rotation, ←Real.Angle.coe_nsmul]
+      replace h := h.out
+      conv =>
+        congr
+        congr
+        congr
+        · skip
+        · congr
+          simp
+          field_simp
+      simp
+
 end finite_order
+
+theorem sigmaAux'_liftable : M.IsLiftable (@sigmaAux' W _) := by
+  intro i i'
+  generalize hm : M.M i i' = m
+  have : m = 0 ∨ m = 1 ∨ m ≥ 2 := by
+    grind
+  match this with
+  | Or.inl h =>
+      subst h
+      simp
+  | Or.inr (Or.inl h) =>
+      subst h
+      have : i = i' := by
+        by_contra!
+        have := M.off_diagonal i i' this
+        contradiction
+      subst this
+      simp only [pow_one]
+      apply sigmaAux'_involutive
+  | Or.inr (Or.inr h) =>
+      subst hm
+      suffices (sigmaAux i * sigmaAux i') ^ M.M i i' = 1 by
+        apply_fun Units.val using Units.val_injective
+        exact this
+      haveI : Fact (M.M i i' ≥ 2) := { out := h }
+      apply sigmaAux_2_pow_eq_id
+
+def sigma := cs.lift ⟨@sigmaAux' W _, sigmaAux'_liftable⟩
 
 end
 
