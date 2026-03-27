@@ -111,41 +111,51 @@ theorem rotation_inj : Injective o.rotation := by
     rw [h2]
   · simpa
 
-theorem iterate_rotation (n : ℕ) (θ : Real.Angle) : (o.rotation θ)^[n] = o.rotation (n • θ) := by
-  ext x
+theorem rotation_pow (n : ℕ) (θ : Real.Angle) : (o.rotation θ) ^ n = o.rotation (n • θ) := by
   induction n with
-  | zero => simp
+  | zero =>
+      simp
+      rfl
   | succ n ih =>
-      rw [add_comm, iterate_add, comp_apply, ih, iterate_one,
-        Orientation.rotation_rotation, add_smul]
+      rw [pow_add, ih, add_smul]
+      ext x
       simp
 
-theorem iterate_eq_id_iff (m : ℤ) (n : ℕ) (hm : m ≠ 0) :
-  (o.rotation ((2 * π / m) : ℝ))^[n] = id ↔ m ∣ n := by
-  have h : (o.rotation 0).toFun = id := by simp
-  rw [←h, iterate_rotation]
+theorem order_rotation_two_pi_div (m : ℕ) (hm : m ≠ 0) :
+  orderOf (o.rotation ((2 * π / m) : ℝ)) = m := by
+  rw [orderOf_eq_iff (by grind)]
   constructor
-  · intro h
-    replace h : o.rotation (n • (2 * π / m : ℝ)) = o.rotation 0 :=
-      LinearIsometryEquiv.ext_iff.mpr (congrFun h)
+  · rw [rotation_pow, ←Real.Angle.coe_nsmul]
+    conv in m • (2 * π / ↑m) =>
+      simp
+      field_simp
+    simp
+    rfl
+  · intro k hk1 hk2
+    rw [rotation_pow]
+    intro h
+    replace h : o.rotation (k • (2 * π / m : ℝ)) = o.rotation 0 := by
+      rwa [Orientation.rotation_zero]
     have h2 := rotation_inj o h
     rw [←Real.Angle.coe_nsmul, Real.Angle.coe_eq_zero_iff] at h2
-    have ⟨k, hk⟩ := h2
-    simp at hk
-    field_simp at hk
-    change (k : ℝ) * ((m : ℤ) : ℝ) = ((n : ℤ) : ℝ) at hk
-    rw [←Int.cast_mul, Int.cast_inj] at hk
-    exact dvd_of_mul_left_eq k hk
-  · intro h
-    rw [dvd_iff_exists_eq_mul_left] at h
-    have ⟨k, hk⟩ := h
-    suffices h : n • ((2 * π / m) : ℝ) = (0 : Real.Angle) by
-      simp [h]
-    rw [←Real.Angle.coe_nsmul, Real.Angle.coe_eq_zero_iff]
-    exists k
-    change k • (2 * π) = (n : ℤ) • (2 * π / m)
-    rw [hk]
-    simp
-    field
+    have ⟨r, hr⟩ := h2
+    simp at hr
+    field_simp at hr
+    change (r : ℝ) * ((m : ℤ) : ℝ) = ((k : ℤ) : ℝ) at hr
+    rw [←Int.cast_mul, Int.cast_inj] at hr
+    zify at hk1 hk2
+    rw [←hr] at hk1 hk2
+    qify at hk1 hk2
+    have : (m : ℚ) > 0 := by
+      grind
+    replace hk1 : r < 1 := by
+      have hr_lt_one : (r : ℚ) < 1 := by
+        simp_all only [mul_lt_iff_lt_one_left]
+      exact Rat.intCast_lt_intCast.mp hr_lt_one
+    replace hk2 : 0 < r := by
+      have : 0 < (r : ℚ) := by
+        simp_all only [mul_pos_iff_of_pos_right]
+      simp_all only [mul_pos_iff_of_pos_left, gt_iff_lt, Nat.cast_pos, Int.cast_pos]
+    lia
 
 end Coxeter
