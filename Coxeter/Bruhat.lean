@@ -11,7 +11,7 @@ This file defines the Bruhat order.
 * `Coxeter.le` : The Bruhat order
 * `Coxeter.w₀` : The longest element
 
-## Main Statements
+## Main statements
 
 * `Coxeter.subword_property`
 * `Coxeter.lifting_property`
