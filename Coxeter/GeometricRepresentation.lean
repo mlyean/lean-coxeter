@@ -280,14 +280,8 @@ theorem geomRepAux_E_perp_left (i i' : B W) :
 
 theorem geomRepAux_E_perp_right (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i' z = z := by
-  intro z hz
-  rw [geomRepAux_apply]
-  simp only [sub_eq_self, smul_eq_zero, mul_eq_zero, OfNat.ofNat_ne_zero, false_or]
-  left
-  apply hz (stdBasis i')
-  rw [mem_E_iff]
-  exists 0, 1
-  simp
+  rw [E_symm]
+  apply geomRepAux_E_perp_left
 
 theorem geomRepAux_E_left (i i' : B W) : ∀ z ∈ E i i', geomRepAux i z ∈ E i i' := by
   intro z hz
@@ -310,24 +304,8 @@ theorem geomRepAux_E_left (i i' : B W) : ∀ z ∈ E i i', geomRepAux i z ∈ E 
     · ring
 
 theorem geomRepAux_E_right (i i' : B W) : ∀ z ∈ E i i', geomRepAux i' z ∈ E i i' := by
-  intro z hz
-  rw [mem_E_iff] at hz
-  have ⟨x, y, h⟩ := hz
-  rw [h]
-  simp only [map_add, map_smul]
-  apply add_mem
-  · apply Submodule.smul_mem
-    rw [geomRepAux_apply, mem_E_iff]
-    simp only [bil_eq, mul_neg, neg_smul, sub_neg_eq_add]
-    exists 1, 2 * cos (π / M i' i)
-    match_scalars
-    · ring
-    · ring
-  · apply Submodule.smul_mem
-    simp only [geomRepAux_stdBasis, neg_mem_iff]
-    rw [mem_E_iff]
-    exists 0, 1
-    simp
+  rw [E_symm]
+  apply geomRepAux_E_left
 
 theorem geomRepAux_E_2 (i i' : B W) : ∀ z ∈ E i i', (geomRepAux i * geomRepAux i') z ∈ E i i' := by
   intro z hz

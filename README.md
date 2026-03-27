@@ -18,6 +18,8 @@ We formalize in Lean some results on Coxeter groups, following the textbooks [[1
     * The longest element of a finite Coxeter group
 * [GeometricRepresentation.lean](Coxeter/GeometricRepresentation.lean)
     * Construction of the geometric repersentation
+    * Order of $s_i s_{i'}$
+    * Injectivity of `cs.simple`
 
 ## References
 
