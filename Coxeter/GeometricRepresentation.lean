@@ -1,13 +1,11 @@
 import Coxeter.Basic
 import Coxeter.LinearAlgebra.BilinearForm
 import Coxeter.LinearAlgebra.TwoDim
-import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
-import Mathlib.Geometry.Euclidean.Angle.Oriented.Rotation
 
 /-!
 # Geometric representation of Coxeter groups
 
-This file attempts to define the geometric representation of a Coxeter group.
+This file defines the geometric representation of a Coxeter group.
 
 ## References
 
@@ -79,8 +77,9 @@ theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis
         · norm_num
           grind
 
-def sigmaAux (i : B W) : V W →ₗ[ℝ] V W where
+def sigmaAux (i : B W) : V W ≃ₗ[ℝ] V W where
   toFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
+  invFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
   map_add' := by
     intro x y
     match_scalars
@@ -94,35 +93,31 @@ def sigmaAux (i : B W) : V W →ₗ[ℝ] V W where
     · rfl
     · simp
       ring
+  left_inv := by
+    intro x
+    simp only [map_sub, map_smul, bil_diag, smul_eq_mul, mul_one]
+    match_scalars
+    · rfl
+    · ring
+  right_inv := by
+    intro x
+    simp only [map_sub, map_smul, bil_diag, smul_eq_mul, mul_one]
+    match_scalars
+    · rfl
+    · ring
 
 theorem sigmaAux_apply (i : B W) (x : V W) :
   sigmaAux i x = x - (2 * bil (stdBasis i) x) • stdBasis i := rfl
 
-theorem sigmaAux_involutive (i : B W) : Involutive (sigmaAux i) := by
-  intro x
-  unfold sigmaAux
-  simp only [LinearMap.coe_mk, AddHom.coe_mk, map_sub, map_smul]
+theorem sigmaAux_involutive (i : B W) : Involutive (sigmaAux i) := (sigmaAux i).left_inv
+
+@[simp]
+theorem sigmaAux_stdBasis (i : B W) :
+  sigmaAux i (stdBasis i) = -stdBasis i := by
+  rw [sigmaAux_apply]
   match_scalars
-  · rfl
-  · simp [bil_diag]
-    ring
-
-def sigmaAux' (i : B W) : LinearMap.GeneralLinearGroup ℝ (V W) where
-  val := sigmaAux i
-  inv := sigmaAux i
-  val_inv := by
-    ext x y
-    simp only [LinearMap.coe_comp, comp_apply, lsingle_apply, Module.End.mul_apply,
-      Module.End.one_apply]
-    rw [sigmaAux_involutive i]
-  inv_val := by
-    ext x y
-    simp only [LinearMap.coe_comp, comp_apply, lsingle_apply, Module.End.mul_apply,
-      Module.End.one_apply]
-    rw [sigmaAux_involutive i]
-
-theorem sigmaAux'_involutive (i : B W) : (sigmaAux' i) ^ 2 = 1 := by
-  exact Units.val_eq_one.mp (sigmaAux' i).val_inv
+  simp
+  ring
 
 def E (i i' : B W) : Submodule ℝ (V W) := supported ℝ _ {i, i'}
 
@@ -268,8 +263,8 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
 theorem sigmaAux_E_perp_left (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, sigmaAux i z = z := by
   intro z hz
-  simp only [sigmaAux, LinearMap.coe_mk, AddHom.coe_mk, sub_eq_self, smul_eq_zero, mul_eq_zero,
-    OfNat.ofNat_ne_zero, false_or]
+  rw [sigmaAux_apply]
+  simp only [sub_eq_self, smul_eq_zero, mul_eq_zero, OfNat.ofNat_ne_zero, false_or]
   left
   apply hz (stdBasis i)
   rw [mem_E_iff]
@@ -279,8 +274,8 @@ theorem sigmaAux_E_perp_left (i i' : B W) :
 theorem sigmaAux_E_perp_right (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, sigmaAux i' z = z := by
   intro z hz
-  simp only [sigmaAux, LinearMap.coe_mk, AddHom.coe_mk, sub_eq_self, smul_eq_zero, mul_eq_zero,
-    OfNat.ofNat_ne_zero, false_or]
+  rw [sigmaAux_apply]
+  simp only [sub_eq_self, smul_eq_zero, mul_eq_zero, OfNat.ofNat_ne_zero, false_or]
   left
   apply hz (stdBasis i')
   rw [mem_E_iff]
@@ -294,17 +289,17 @@ theorem sigmaAux_E_left (i i' : B W) : ∀ z ∈ E i i', sigmaAux i z ∈ E i i'
   rw [h]
   simp only [map_add, map_smul]
   apply add_mem
-  · simp only [sigmaAux, LinearMap.coe_mk, AddHom.coe_mk, bil_diag, mul_one]
+  · apply Submodule.smul_mem
+    simp only [sigmaAux_stdBasis, neg_mem_iff]
     rw [mem_E_iff]
-    exists -x, 0
+    exists 1, 0
+    simp
+  · apply Submodule.smul_mem
+    rw [sigmaAux_apply, mem_E_iff]
+    simp only [bil_eq, mul_neg, neg_smul, sub_neg_eq_add]
+    exists 2 * cos (π / M i i'), 1
     match_scalars
     · ring
-    · simp
-  · simp only [sigmaAux, LinearMap.coe_mk, AddHom.coe_mk]
-    rw [mem_E_iff]
-    exists -2 * y * bil (stdBasis i) (stdBasis i'), y
-    match_scalars
-    · rfl
     · ring
 
 theorem sigmaAux_E_right (i i' : B W) : ∀ z ∈ E i i', sigmaAux i' z ∈ E i i' := by
@@ -314,18 +309,18 @@ theorem sigmaAux_E_right (i i' : B W) : ∀ z ∈ E i i', sigmaAux i' z ∈ E i 
   rw [h]
   simp only [map_add, map_smul]
   apply add_mem
-  · simp only [sigmaAux, LinearMap.coe_mk, AddHom.coe_mk]
-    rw [mem_E_iff]
-    exists x, -2 * x * bil (stdBasis i') (stdBasis i)
-    match_scalars
-    · rfl
-    · ring
-  · simp only [sigmaAux, LinearMap.coe_mk, AddHom.coe_mk, bil_diag, mul_one]
-    rw [mem_E_iff]
-    exists 0, -y
+  · apply Submodule.smul_mem
+    rw [sigmaAux_apply, mem_E_iff]
+    simp only [bil_eq, mul_neg, neg_smul, sub_neg_eq_add]
+    exists 1, 2 * cos (π / M i' i)
     match_scalars
     · ring
-    · simp
+    · ring
+  · apply Submodule.smul_mem
+    simp only [sigmaAux_stdBasis, neg_mem_iff]
+    rw [mem_E_iff]
+    exists 0, 1
+    simp
 
 theorem sigmaAux_E_2 (i i' : B W) : ∀ z ∈ E i i', (sigmaAux i * sigmaAux i') z ∈ E i i' := by
   intro z hz
@@ -427,15 +422,17 @@ theorem order_sigmaAux_2_eq_order_restrict (m : ℕ) :
   constructor
   · intro h2
     rw [Module.End.pow_restrict]
-    conv =>
-      lhs
-      congr
-      rw [h2]
-    rfl
+    ext ⟨x, hx⟩ : 1
+    rw [LinearMap.restrict_apply]
+    simp only [LinearEquiv.coe_toLinearMap_mul, Module.End.one_apply, Subtype.mk.injEq]
+    rw [Module.End.pow_apply]
+    have := LinearEquiv.congr_fun h2 x
+    rw [LinearEquiv.pow_apply] at this
+    exact this
   · intro h2
-    apply LinearMap.ext
+    apply LinearEquiv.ext
     intro z
-    simp only [Module.End.one_apply]
+    simp only [LinearEquiv.coe_one, id_eq]
     have h3 := @E_sup_orthogonal _ _ i i'
     rw [Submodule.sup_eq_top_iff] at h3
     have ⟨u, hu, v, hv, hz⟩ := h3 z
@@ -444,8 +441,9 @@ theorem order_sigmaAux_2_eq_order_restrict (m : ℕ) :
     congr
     · have := LinearMap.congr_fun h2 ⟨u, hu⟩
       rw [Module.End.pow_restrict, LinearMap.restrict_apply] at this
-      simp_all only [ge_iff_le, Submodule.mem_orthogonalBilin_iff, Module.End.one_apply,
-        Subtype.mk.injEq]
+      simp only [LinearEquiv.coe_toLinearMap_mul, Module.End.one_apply, Subtype.mk.injEq] at this
+      rw [Module.End.pow_apply] at this
+      rwa [LinearEquiv.pow_apply]
     · clear h2
       induction m with
       | zero => simp
@@ -489,8 +487,7 @@ noncomputable instance : InnerProductSpace.Core ℝ (E i i') where
 noncomputable instance : NormedAddCommGroup (E i i') :=
   @InnerProductSpace.Core.toNormedAddCommGroup ℝ (E i i') _ _ _ inferInstance
 
-noncomputable instance : InnerProductSpace ℝ (E i i') :=
-  InnerProductSpace.ofCore inferInstance
+noncomputable instance : InnerProductSpace ℝ (E i i') := InnerProductSpace.ofCore inferInstance
 
 @[simp]
 theorem norm_stdBasisE_0 : ‖@stdBasisE _ _ _ _ h 0‖ = 1 := by
@@ -519,8 +516,8 @@ instance : Fact (Module.finrank ℝ (E i i') = 2) where
   out := dimE_eq_two
 
 theorem oangle_stdBasisE :
-  (@o _ _ _ _ h).oangle (stdBasisE 0) (stdBasisE 1) = (Real.pi - Real.pi / M.M i i' : ℝ) ∨
-  (@o _ _ _ _ h).oangle (stdBasisE 0) (stdBasisE 1) = -(Real.pi - Real.pi / M.M i i' : ℝ) := by
+  (@o _ _ _ _ h).oangle (stdBasisE 0) (stdBasisE 1) = (π - π / M.M i i' : ℝ) ∨
+  (@o _ _ _ _ h).oangle (stdBasisE 0) (stdBasisE 1) = -(π - π / M.M i i' : ℝ) := by
   have h2 := (@o _ _ _ _ h).inner_eq_norm_mul_norm_mul_cos_oangle (stdBasisE 0) (stdBasisE 1)
   symm at h2
   simp only [Fin.isValue, inner_stdBasisE_0_1, norm_stdBasisE_0, norm_stdBasisE_1, mul_one,
@@ -564,9 +561,9 @@ theorem sigmaAux_i'_restrict_eq_reflect : (sigmaAux i').restrict (sigmaAux_E_rig
 
 theorem sigmaAux_2_restrict_eq_rotate :
   (sigmaAux i * sigmaAux i').restrict (sigmaAux_E_2 i i')
-  = (o.rotation (2 * Real.pi / M i i' : ℝ)).toLinearMap ∨
+  = (o.rotation (2 * π / M i i' : ℝ)).toLinearMap ∨
   (sigmaAux i * sigmaAux i').restrict (sigmaAux_E_2 i i')
-  = (o.rotation (2 * Real.pi / (-M i i') : ℝ)).toLinearMap := by
+  = (o.rotation (2 * π / (-M i i') : ℝ)).toLinearMap := by
   rw [restrict_sigmaAux_mul, sigmaAux_i_restrict_eq_reflect, sigmaAux_i'_restrict_eq_reflect]
   simp only [Fin.isValue, LinearEquiv.comp_coe, LinearEquiv.toLinearMap_inj]
   rw [reflect_reflect o]
@@ -593,9 +590,7 @@ theorem sigmaAux_2_restrict_eq_rotate :
         congr
         congr
         · skip
-        · rw [neg_neg]
-          rw [Real.Angle.coe_sub]
-          rw [smul_sub]
+        · rw [neg_neg, Real.Angle.coe_sub, smul_sub]
           simp
           rw [←Real.Angle.coe_nsmul, ←Real.Angle.coe_neg]
       ext
@@ -641,33 +636,30 @@ theorem sigmaAux_2_pow_eq_id : (sigmaAux i * sigmaAux i') ^ M i i' = 1 := by
 
 end finite_order
 
-theorem sigmaAux'_liftable : M.IsLiftable (@sigmaAux' W _) := by
+theorem sigmaAux_liftable : M.IsLiftable (@sigmaAux W _) := by
   intro i i'
   generalize hm : M.M i i' = m
-  have : m = 0 ∨ m = 1 ∨ m ≥ 2 := by
+  have h : m = 0 ∨ m = 1 ∨ m ≥ 2 := by
     grind
-  match this with
+  match h with
   | Or.inl h =>
       subst h
       simp
   | Or.inr (Or.inl h) =>
       subst h
-      have : i = i' := by
-        by_contra!
-        have := M.off_diagonal i i' this
-        contradiction
-      subst this
-      simp only [pow_one]
-      apply sigmaAux'_involutive
+      have heq : i = i' := by
+        have := M.off_diagonal i i'
+        grind
+      subst heq
+      ext x : 1
+      exact sigmaAux_involutive i x
   | Or.inr (Or.inr h) =>
       subst hm
-      suffices (sigmaAux i * sigmaAux i') ^ M.M i i' = 1 by
-        apply_fun Units.val using Units.val_injective
-        exact this
       haveI : Fact (M.M i i' ≥ 2) := { out := h }
       apply sigmaAux_2_pow_eq_id
 
-def sigma := cs.lift ⟨@sigmaAux' W _, sigmaAux'_liftable⟩
+/-- The geometric representation -/
+def sigma := cs.lift ⟨@sigmaAux W _, sigmaAux_liftable⟩
 
 end
 
