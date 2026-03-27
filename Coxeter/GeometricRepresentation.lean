@@ -7,6 +7,10 @@ import Coxeter.LinearAlgebra.TwoDim
 
 This file defines the geometric representation of a Coxeter group.
 
+## Main definitions
+
+* `Coxeter.geomRep` : The geometric representation
+
 ## References
 
 * [bourbaki2007] N. Bourbaki, *Groupes et algèbres de Lie*
@@ -77,7 +81,7 @@ theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis
         · norm_num
           grind
 
-def sigmaAux (i : B W) : V W ≃ₗ[ℝ] V W where
+def geomRepAux (i : B W) : V W ≃ₗ[ℝ] V W where
   toFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
   invFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
   map_add' := by
@@ -106,15 +110,15 @@ def sigmaAux (i : B W) : V W ≃ₗ[ℝ] V W where
     · rfl
     · ring
 
-theorem sigmaAux_apply (i : B W) (x : V W) :
-  sigmaAux i x = x - (2 * bil (stdBasis i) x) • stdBasis i := rfl
+theorem geomRepAux_apply (i : B W) (x : V W) :
+  geomRepAux i x = x - (2 * bil (stdBasis i) x) • stdBasis i := rfl
 
-theorem sigmaAux_involutive (i : B W) : Involutive (sigmaAux i) := (sigmaAux i).left_inv
+theorem geomRepAux_involutive (i : B W) : Involutive (geomRepAux i) := (geomRepAux i).left_inv
 
 @[simp]
-theorem sigmaAux_stdBasis (i : B W) :
-  sigmaAux i (stdBasis i) = -stdBasis i := by
-  rw [sigmaAux_apply]
+theorem geomRepAux_stdBasis (i : B W) :
+  geomRepAux i (stdBasis i) = -stdBasis i := by
+  rw [geomRepAux_apply]
   match_scalars
   simp
   ring
@@ -260,10 +264,10 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
   · rw [←LinearMap.BilinForm.isSymm_iff]
     exact bil_restrict_E_isSymm i i'
 
-theorem sigmaAux_E_perp_left (i i' : B W) :
-  ∀ z ∈ (E i i').orthogonalBilin bil, sigmaAux i z = z := by
+theorem geomRepAux_E_perp_left (i i' : B W) :
+  ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i z = z := by
   intro z hz
-  rw [sigmaAux_apply]
+  rw [geomRepAux_apply]
   simp only [sub_eq_self, smul_eq_zero, mul_eq_zero, OfNat.ofNat_ne_zero, false_or]
   left
   apply hz (stdBasis i)
@@ -271,10 +275,10 @@ theorem sigmaAux_E_perp_left (i i' : B W) :
   exists 1, 0
   simp
 
-theorem sigmaAux_E_perp_right (i i' : B W) :
-  ∀ z ∈ (E i i').orthogonalBilin bil, sigmaAux i' z = z := by
+theorem geomRepAux_E_perp_right (i i' : B W) :
+  ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i' z = z := by
   intro z hz
-  rw [sigmaAux_apply]
+  rw [geomRepAux_apply]
   simp only [sub_eq_self, smul_eq_zero, mul_eq_zero, OfNat.ofNat_ne_zero, false_or]
   left
   apply hz (stdBasis i')
@@ -282,7 +286,7 @@ theorem sigmaAux_E_perp_right (i i' : B W) :
   exists 0, 1
   simp
 
-theorem sigmaAux_E_left (i i' : B W) : ∀ z ∈ E i i', sigmaAux i z ∈ E i i' := by
+theorem geomRepAux_E_left (i i' : B W) : ∀ z ∈ E i i', geomRepAux i z ∈ E i i' := by
   intro z hz
   rw [mem_E_iff] at hz
   have ⟨x, y, h⟩ := hz
@@ -290,19 +294,19 @@ theorem sigmaAux_E_left (i i' : B W) : ∀ z ∈ E i i', sigmaAux i z ∈ E i i'
   simp only [map_add, map_smul]
   apply add_mem
   · apply Submodule.smul_mem
-    simp only [sigmaAux_stdBasis, neg_mem_iff]
+    simp only [geomRepAux_stdBasis, neg_mem_iff]
     rw [mem_E_iff]
     exists 1, 0
     simp
   · apply Submodule.smul_mem
-    rw [sigmaAux_apply, mem_E_iff]
+    rw [geomRepAux_apply, mem_E_iff]
     simp only [bil_eq, mul_neg, neg_smul, sub_neg_eq_add]
     exists 2 * cos (π / M i i'), 1
     match_scalars
     · ring
     · ring
 
-theorem sigmaAux_E_right (i i' : B W) : ∀ z ∈ E i i', sigmaAux i' z ∈ E i i' := by
+theorem geomRepAux_E_right (i i' : B W) : ∀ z ∈ E i i', geomRepAux i' z ∈ E i i' := by
   intro z hz
   rw [mem_E_iff] at hz
   have ⟨x, y, h⟩ := hz
@@ -310,22 +314,22 @@ theorem sigmaAux_E_right (i i' : B W) : ∀ z ∈ E i i', sigmaAux i' z ∈ E i 
   simp only [map_add, map_smul]
   apply add_mem
   · apply Submodule.smul_mem
-    rw [sigmaAux_apply, mem_E_iff]
+    rw [geomRepAux_apply, mem_E_iff]
     simp only [bil_eq, mul_neg, neg_smul, sub_neg_eq_add]
     exists 1, 2 * cos (π / M i' i)
     match_scalars
     · ring
     · ring
   · apply Submodule.smul_mem
-    simp only [sigmaAux_stdBasis, neg_mem_iff]
+    simp only [geomRepAux_stdBasis, neg_mem_iff]
     rw [mem_E_iff]
     exists 0, 1
     simp
 
-theorem sigmaAux_E_2 (i i' : B W) : ∀ z ∈ E i i', (sigmaAux i * sigmaAux i') z ∈ E i i' := by
+theorem geomRepAux_E_2 (i i' : B W) : ∀ z ∈ E i i', (geomRepAux i * geomRepAux i') z ∈ E i i' := by
   intro z hz
-  apply sigmaAux_E_left i i'
-  apply sigmaAux_E_right i i'
+  apply geomRepAux_E_left i i'
+  apply geomRepAux_E_right i i'
   exact hz
 
 section finite_order
@@ -416,9 +420,9 @@ theorem E_sup_orthogonal : E i i' ⊔ (E i i').orthogonalBilin bil = ⊤ := by
     replace h := h.out
     grind
 
-theorem order_sigmaAux_2_eq_order_restrict (m : ℕ) :
-  (sigmaAux i * sigmaAux i') ^ m = 1
-  ↔ (sigmaAux i * sigmaAux i').restrict (sigmaAux_E_2 i i') ^ m = 1 := by
+theorem order_geomRepAux_2_eq_order_restrict (m : ℕ) :
+  (geomRepAux i * geomRepAux i') ^ m = 1
+  ↔ (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i') ^ m = 1 := by
   constructor
   · intro h2
     rw [Module.End.pow_restrict]
@@ -449,8 +453,8 @@ theorem order_sigmaAux_2_eq_order_restrict (m : ℕ) :
       | zero => simp
       | succ m ih =>
           rw [pow_succ]
-          change ((sigmaAux i * sigmaAux i') ^ m) (sigmaAux i (sigmaAux i' v)) = v
-          rw [sigmaAux_E_perp_right i i' v hv, sigmaAux_E_perp_left i i' v hv, ih]
+          change ((geomRepAux i * geomRepAux i') ^ m) (geomRepAux i (geomRepAux i' v)) = v
+          rw [geomRepAux_E_perp_right i i' v hv, geomRepAux_E_perp_left i i' v hv, ih]
 
 noncomputable instance : PreInnerProductSpace.Core ℝ (E i i') where
   inner x y := bil.restrict (E i i') x y
@@ -525,13 +529,13 @@ theorem oangle_stdBasisE :
   rwa [←Real.cos_pi_sub, Real.Angle.cos_eq_real_cos_iff_eq_or_eq_neg] at h2
 
 omit h in
-theorem restrict_sigmaAux_mul :
-  (sigmaAux i * sigmaAux i').restrict (sigmaAux_E_2 i i')
-  = (sigmaAux i).restrict (sigmaAux_E_left i i')
-    ∘ₗ (sigmaAux i').restrict (sigmaAux_E_right i i') := by
+theorem restrict_geomRepAux_mul :
+  (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
+  = (geomRepAux i).restrict (geomRepAux_E_left i i')
+    ∘ₗ (geomRepAux i').restrict (geomRepAux_E_right i i') := by
   trivial
 
-theorem sigmaAux_i_restrict_eq_reflect : (sigmaAux i).restrict (sigmaAux_E_left i i') =
+theorem geomRepAux_i_restrict_eq_reflect : (geomRepAux i).restrict (geomRepAux_E_left i i') =
   reflect (@norm_stdBasisE_0 _ _ _ _ h) := by
   ext x : 1
   rw [LinearMap.restrict_apply]
@@ -539,13 +543,13 @@ theorem sigmaAux_i_restrict_eq_reflect : (sigmaAux i).restrict (sigmaAux_E_left 
   rw [reflect_apply]
   rw [←Subtype.coe_inj]
   simp only [Fin.isValue, AddSubgroupClass.coe_sub, SetLike.val_smul, stdBasisE_0]
-  rw [sigmaAux_apply]
+  rw [geomRepAux_apply]
   congr 3
   change (bil (stdBasis i)) ↑x = bil.restrict (E i i') (stdBasisE 0) x
   rw [LinearMap.BilinForm.restrict_apply, stdBasisE_0]
   simp
 
-theorem sigmaAux_i'_restrict_eq_reflect : (sigmaAux i').restrict (sigmaAux_E_right i i') =
+theorem geomRepAux_i'_restrict_eq_reflect : (geomRepAux i').restrict (geomRepAux_E_right i i') =
   reflect (@norm_stdBasisE_1 _ _ _ _ h) := by
   ext x : 1
   rw [LinearMap.restrict_apply]
@@ -553,18 +557,18 @@ theorem sigmaAux_i'_restrict_eq_reflect : (sigmaAux i').restrict (sigmaAux_E_rig
   rw [reflect_apply]
   rw [←Subtype.coe_inj]
   simp only [Fin.isValue, AddSubgroupClass.coe_sub, SetLike.val_smul, stdBasisE_1]
-  rw [sigmaAux_apply]
+  rw [geomRepAux_apply]
   congr 3
   change (bil (stdBasis i')) ↑x = bil.restrict (E i i') (stdBasisE 1) x
   rw [LinearMap.BilinForm.restrict_apply, stdBasisE_1]
   simp
 
-theorem sigmaAux_2_restrict_eq_rotate :
-  (sigmaAux i * sigmaAux i').restrict (sigmaAux_E_2 i i')
+theorem geomRepAux_2_restrict_eq_rotate :
+  (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
   = (o.rotation (2 * π / M i i' : ℝ)).toLinearMap ∨
-  (sigmaAux i * sigmaAux i').restrict (sigmaAux_E_2 i i')
+  (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
   = (o.rotation (2 * π / (-M i i') : ℝ)).toLinearMap := by
-  rw [restrict_sigmaAux_mul, sigmaAux_i_restrict_eq_reflect, sigmaAux_i'_restrict_eq_reflect]
+  rw [restrict_geomRepAux_mul, geomRepAux_i_restrict_eq_reflect, geomRepAux_i'_restrict_eq_reflect]
   simp only [Fin.isValue, LinearEquiv.comp_coe, LinearEquiv.toLinearMap_inj]
   rw [reflect_reflect o]
   cases @oangle_stdBasisE _ _ _ _ h with
@@ -598,9 +602,9 @@ theorem sigmaAux_2_restrict_eq_rotate :
       congr 5
       ring
 
-theorem sigmaAux_2_pow_eq_id : (sigmaAux i * sigmaAux i') ^ M i i' = 1 := by
-  rw [order_sigmaAux_2_eq_order_restrict]
-  cases @sigmaAux_2_restrict_eq_rotate _ _ _ _ h with
+theorem geomRepAux_2_pow_eq_id : (geomRepAux i * geomRepAux i') ^ M i i' = 1 := by
+  rw [order_geomRepAux_2_eq_order_restrict]
+  cases @geomRepAux_2_restrict_eq_rotate _ _ _ _ h with
   | inl h2 =>
       rw [h2]
       ext x : 1
@@ -636,7 +640,7 @@ theorem sigmaAux_2_pow_eq_id : (sigmaAux i * sigmaAux i') ^ M i i' = 1 := by
 
 end finite_order
 
-theorem sigmaAux_liftable : M.IsLiftable (@sigmaAux W _) := by
+theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
   intro i i'
   generalize hm : M.M i i' = m
   have h : m = 0 ∨ m = 1 ∨ m ≥ 2 := by
@@ -652,14 +656,14 @@ theorem sigmaAux_liftable : M.IsLiftable (@sigmaAux W _) := by
         grind
       subst heq
       ext x : 1
-      exact sigmaAux_involutive i x
+      exact geomRepAux_involutive i x
   | Or.inr (Or.inr h) =>
       subst hm
       haveI : Fact (M.M i i' ≥ 2) := { out := h }
-      apply sigmaAux_2_pow_eq_id
+      apply geomRepAux_2_pow_eq_id
 
 /-- The geometric representation -/
-def sigma := cs.lift ⟨@sigmaAux W _, sigmaAux_liftable⟩
+def geomRep : W →* (V W ≃ₗ[ℝ] V W) := cs.lift ⟨geomRepAux, geomRepAux_liftable⟩
 
 end
 

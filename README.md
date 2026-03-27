@@ -16,6 +16,8 @@ We formalize in Lean some results on Coxeter groups, following the textbooks [[1
     * Subword property
     * Lifting property
     * The longest element of a finite Coxeter group
+* [GeometricRepresentation.lean](Coxeter/GeometricRepresentation.lean)
+    * Construction of the geometric repersentation
 
 ## References
 
