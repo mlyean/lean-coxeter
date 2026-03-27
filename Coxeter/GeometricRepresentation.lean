@@ -11,6 +11,11 @@ This file defines the geometric representation of a Coxeter group.
 
 * `Coxeter.geomRep` : The geometric representation
 
+## Main statements
+
+* `Coxeter.orderOf_simple_mul_simple` : $s_i s_{i'}$ has the expected order
+* `Coxeter.simple_inj`
+
 ## TODO
 
 * Pin down the orientation in `Coxeter.oangle_stdBasisE`
@@ -157,6 +162,11 @@ theorem mem_E_iff (i i' : B W) (v : V W)
     all_goals
     apply single_mem_supported
     simp
+
+theorem E_symm (i i' : B W) : E i i' = E i' i := by
+  unfold E
+  congr 1
+  grind
 
 theorem bil_restrict_E_diag (i i' : B W) (x y : ℝ) :
   bil (x • stdBasis i + y • stdBasis i') (x • stdBasis i + y • stdBasis i')
@@ -331,6 +341,57 @@ theorem restrict_geomRepAux_mul (i i' : B W) :
     ∘ₗ (geomRepAux i').restrict (geomRepAux_E_right i i') := by
   trivial
 
+section infinite_order
+
+variable (i i' : B W) (h : M i i' = 0)
+include h
+
+theorem geomRepAux_2_add_of_order_zero (n : ℕ) :
+  ((geomRepAux i * geomRepAux i') ^ n) (stdBasis i)
+  = (2 * n) • (stdBasis i + stdBasis i') + stdBasis i := by
+  generalize hu : stdBasis i + stdBasis i' = u
+  have h1 : bil (stdBasis i) u = 0 := by
+    rw [←hu]
+    simp only [map_add, bil_diag, bil_eq]
+    rw [h]
+    simp
+  have h2 : bil (stdBasis i') u = 0 := by
+    rw [←hu]
+    simp only [map_add, bil_eq]
+    rw [M.symmetric i' i, h]
+    simp
+  have h3 : (geomRepAux i * geomRepAux i') u = u := by
+    rw [LinearEquiv.mul_apply]
+    nth_rw 2 [geomRepAux_apply]
+    rw [h2]
+    simp only [mul_zero, zero_smul, sub_zero]
+    rw [geomRepAux_apply, h1]
+    simp
+  have h4 : (geomRepAux i * geomRepAux i') (stdBasis i) = 2 • u + stdBasis i := by
+    rw [LinearEquiv.mul_apply, ←hu]
+    simp only [geomRepAux_apply, bil_eq, mul_neg, neg_smul, sub_neg_eq_add, map_add,
+      map_smul, smul_add]
+    rw [M.symmetric i' i, h]
+    simp only [CoxeterMatrix.diagonal, Nat.cast_one, div_one, cos_pi, mul_neg, mul_one, neg_smul,
+      CharP.cast_eq_zero, div_zero, cos_zero]
+    match_scalars
+    · ring
+    · ring
+  suffices ((geomRepAux i * geomRepAux i') ^ n) (stdBasis i) = (2 * n) • u + stdBasis i ∧
+    ((geomRepAux i * geomRepAux i') ^ n) u = u by
+    exact this.1
+  induction n with
+  | zero => simp
+  | succ n ih =>
+      constructor
+      · rw [pow_succ, LinearEquiv.mul_apply, h4, map_add, ih.1, map_nsmul, ih.2]
+        match_scalars
+        · ring
+        · rfl
+      · rw [pow_succ, LinearEquiv.mul_apply, h3, ih.2]
+
+end infinite_order
+
 section finite_order
 
 variable (i i' : B W) [Fact (M i i' ≥ 2)]
@@ -349,10 +410,10 @@ def e : ({i, i'} : Set (B W)) ≃ Fin 2 where
   | 1 => ⟨i', by tauto⟩
   left_inv x := by
     match x with
-    | (Subtype.mk x (Or.inl h)) =>
+    | Subtype.mk x (Or.inl h) =>
         subst h
         simp
-    | (Subtype.mk x (Or.inr h)) =>
+    | Subtype.mk x (Or.inr h) =>
         simp at h
         simp
         simp [h]
@@ -450,8 +511,7 @@ theorem order_geomRepAux_2_eq_order_restrict (m : ℕ) :
 
 instance : PreInnerProductSpace.Core ℝ (E i i') where
   inner x y := bil.restrict (E i i') x y
-  conj_inner_symm := by
-    intro x y
+  conj_inner_symm x y := by
     simp only [conj_trivial]
     apply bil_isSymm.eq
   re_inner_nonneg := by
@@ -483,8 +543,7 @@ instance : InnerProductSpace.Core ℝ (E i i') where
 instance : NormedAddCommGroup (E i i') :=
   @InnerProductSpace.Core.toNormedAddCommGroup ℝ (E i i') _ _ _ inferInstance
 
-instance : InnerProductSpace ℝ (E i i') :=
-  InnerProductSpace.ofCore inferInstance
+instance : InnerProductSpace ℝ (E i i') := InnerProductSpace.ofCore inferInstance
 
 @[simp]
 theorem norm_stdBasisE_0 : ‖stdBasisE i i' 0‖ = 1 := by
@@ -637,6 +696,56 @@ theorem geomRep_simple_apply (i : B W) (x : V W) :
   geomRep (cs.simple i) x = x - (2 * bil (stdBasis i) x) • stdBasis i := by
   rw [geomRep_simple]
   rfl
+
+theorem orderOf_simple_mul_simple (i i' : B W) : orderOf (cs.simple i * cs.simple i') = M i i' := by
+  have h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by
+    grind
+  match h with
+  | Or.inl h =>
+      rw [h]
+      rw [orderOf_eq_zero_iff']
+      intro n hn
+      apply_fun geomRep
+      rw [map_pow, map_mul, map_one, geomRep_simple, geomRep_simple]
+      intro h2
+      have h3 := LinearEquiv.congr_fun h2 (stdBasis i)
+      rw [geomRepAux_2_add_of_order_zero i i' h n] at h3
+      simp only [smul_add, LinearEquiv.coe_one, id_eq, add_eq_right] at h3
+      have : i ≠ i' := by
+        intro heq
+        rw [heq] at h
+        simp at h
+      unfold stdBasis at h3
+      simp only [coe_basisSingleOne, smul_single, nsmul_eq_mul, Nat.cast_mul, Nat.cast_ofNat,
+        mul_one] at h3
+      rw [Finsupp.ext_iff] at h3
+      specialize h3 i
+      simp [this] at h3
+      grind
+  | Or.inr (Or.inl h) =>
+      rw [h]
+      have : i = i' := by
+        have := M.off_diagonal i i'
+        grind
+      rw [this]
+      simp
+  | Or.inr (Or.inr h) =>
+      haveI : Fact (M i i' ≥ 2) := { out := h }
+      have h2 := orderOf_map_dvd geomRep (cs.simple i * cs.simple i')
+      rw [map_mul, geomRep_simple, geomRep_simple, order_geomRepAux_2_eq i i'] at h2
+      have h3 : orderOf (cs.simple i * cs.simple i') ∣ M.M i i' := by
+        apply orderOf_dvd_of_pow_eq_one
+        simp
+      exact Nat.dvd_antisymm h3 h2
+
+theorem simple_inj : Injective ((@cs W).simple) := by
+  intro i i' h
+  have : orderOf (cs.simple i * cs.simple i') = 1 := by
+    rw [h]
+    simp
+  rw [orderOf_simple_mul_simple] at this
+  have := M.off_diagonal i i'
+  grind
 
 end
 
