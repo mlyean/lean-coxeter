@@ -11,6 +11,10 @@ This file defines the geometric representation of a Coxeter group.
 
 * `Coxeter.geomRep` : The geometric representation
 
+## TODO
+
+* Pin down the orientation in `Coxeter.oangle_stdBasisE`
+
 ## References
 
 * [bourbaki2007] N. Bourbaki, *Groupes et algèbres de Lie*
@@ -29,38 +33,29 @@ variable {W : Type*} [CoxeterGroup W]
 
 def stdBasis : Module.Basis (B W) ℝ (V W) := Finsupp.basisSingleOne
 
-def bilAux (i i' : B W) : ℝ := - cos (π / M i i')
-
-def bil : LinearMap.BilinForm ℝ (V W) := Matrix.toBilin stdBasis bilAux
+def bil : LinearMap.BilinForm ℝ (V W) := Matrix.toBilin stdBasis (fun i i' => -cos (π / M i i'))
 
 theorem bil_isSymm : (@bil W _).IsSymm := by
   rw [LinearMap.BilinForm.isSymm_iff_basis stdBasis]
   intro i i'
   unfold bil
-  rw [Matrix.toBilin_single, Matrix.toBilin_single]
-  unfold bilAux
-  rw [M.symmetric i i']
+  rw [Matrix.toBilin_single, Matrix.toBilin_single, M.symmetric i i']
 
-@[simp high]
+@[simp]
 theorem bil_diag (i : B W) : bil (stdBasis i) (stdBasis i) = 1 := by
   unfold bil
   rw [Matrix.toBilin_single]
-  unfold bilAux
   simp
 
-@[simp low]
+@[simp]
 theorem bil_eq (i i' : B W) :
   bil (stdBasis i) (stdBasis i') = - cos (π / M.M i i') := by
   unfold bil
   rw [Matrix.toBilin_single]
-  unfold bilAux
-  simp
 
 theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis i') ≤ 0 := by
   unfold bil
-  rw [Matrix.toBilin_single]
-  unfold bilAux
-  rw [Left.neg_nonpos_iff]
+  rw [Matrix.toBilin_single, Left.neg_nonpos_iff]
   apply Real.cos_nonneg_of_mem_Icc
   have := M.off_diagonal i i' h
   rw [Set.mem_Icc]
@@ -173,7 +168,6 @@ theorem bil_restrict_E_diag (i i' : B W) (x y : ℝ) :
   · simp only [map_add, map_smul, LinearMap.add_apply, LinearMap.smul_apply, smul_eq_mul]
     unfold bil
     simp only [Matrix.toBilin_single stdBasis]
-    unfold bilAux
     rw [M.symmetric i i']
     simp
     ring
@@ -431,8 +425,7 @@ theorem order_geomRepAux_2_eq_order_restrict (m : ℕ) :
     simp only [LinearEquiv.coe_toLinearMap_mul, Module.End.one_apply, Subtype.mk.injEq]
     rw [Module.End.pow_apply]
     have := LinearEquiv.congr_fun h2 x
-    rw [LinearEquiv.pow_apply] at this
-    exact this
+    rwa [LinearEquiv.pow_apply] at this
   · intro h2
     apply LinearEquiv.ext
     intro z
@@ -514,19 +507,24 @@ theorem inner_stdBasisE_0_1 :
     = -cos (π / ↑(M.M i i'))
   simp
 
-def o : Orientation ℝ (E i i') (Fin 2) := stdBasisE.orientation
-
 instance : Fact (Module.finrank ℝ (E i i') = 2) where
   out := dimE_eq_two
 
-theorem oangle_stdBasisE :
-  (@o _ _ _ _ h).oangle (stdBasisE 0) (stdBasisE 1) = (π - π / M.M i i' : ℝ) ∨
-  (@o _ _ _ _ h).oangle (stdBasisE 0) (stdBasisE 1) = -(π - π / M.M i i' : ℝ) := by
-  have h2 := (@o _ _ _ _ h).inner_eq_norm_mul_norm_mul_cos_oangle (stdBasisE 0) (stdBasisE 1)
+theorem oangle_stdBasisE : ∃ (o : Orientation ℝ (E i i') (Fin 2)),
+  o.oangle (stdBasisE 0) (stdBasisE 1) = (π - π / M.M i i' : ℝ) := by
+  let o := (@stdBasisE _ _ _ _ h).orientation
+  have h2 := o.inner_eq_norm_mul_norm_mul_cos_oangle (stdBasisE 0) (stdBasisE 1)
   symm at h2
   simp only [Fin.isValue, inner_stdBasisE_0_1, norm_stdBasisE_0, norm_stdBasisE_1, mul_one,
     one_mul] at h2
-  rwa [←Real.cos_pi_sub, Real.Angle.cos_eq_real_cos_iff_eq_or_eq_neg] at h2
+  rw [←Real.cos_pi_sub, Real.Angle.cos_eq_real_cos_iff_eq_or_eq_neg] at h2
+  cases h2 with
+  | inl h2 =>
+      exists o
+  | inr h2 =>
+      exists -o
+      rw [Orientation.oangle_neg_orientation_eq_neg, h2]
+      simp
 
 omit h in
 theorem restrict_geomRepAux_mul :
@@ -553,90 +551,53 @@ theorem geomRepAux_i'_restrict_eq_reflect : (geomRepAux i').restrict (geomRepAux
   reflect (@norm_stdBasisE_1 _ _ _ _ h) := by
   ext x : 1
   rw [LinearMap.restrict_apply]
-  simp only [Fin.isValue, LinearEquiv.coe_coe]
-  rw [reflect_apply]
-  rw [←Subtype.coe_inj]
+  simp only [LinearEquiv.coe_coe]
+  rw [reflect_apply, ←Subtype.coe_inj]
   simp only [Fin.isValue, AddSubgroupClass.coe_sub, SetLike.val_smul, stdBasisE_1]
   rw [geomRepAux_apply]
   congr 3
-  change (bil (stdBasis i')) ↑x = bil.restrict (E i i') (stdBasisE 1) x
+  change bil (stdBasis i') x.val = bil.restrict (E i i') (stdBasisE 1) x
   rw [LinearMap.BilinForm.restrict_apply, stdBasisE_1]
   simp
 
-theorem geomRepAux_2_restrict_eq_rotate :
+theorem geomRepAux_2_restrict_eq_rotate : ∃ (o : Orientation ℝ (E i i') (Fin 2)),
   (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
-  = (o.rotation (2 * π / M i i' : ℝ)).toLinearMap ∨
-  (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
-  = (o.rotation (2 * π / (-M i i') : ℝ)).toLinearMap := by
+  = (o.rotation (2 * π / M i i' : ℝ)).toLinearMap := by
+  have ⟨o, ho⟩ := @oangle_stdBasisE _ _ _ _ h
+  exists o
   rw [restrict_geomRepAux_mul, geomRepAux_i_restrict_eq_reflect, geomRepAux_i'_restrict_eq_reflect]
   simp only [Fin.isValue, LinearEquiv.comp_coe, LinearEquiv.toLinearMap_inj]
-  rw [reflect_reflect o]
-  cases @oangle_stdBasisE _ _ _ _ h with
-  | inl h2 =>
-      left
-      rw [Orientation.oangle_rev, h2]
-      conv =>
-        lhs
-        congr
-        congr
-        · skip
-        · rw [Real.Angle.coe_sub, smul_neg, smul_sub, neg_sub, ←Real.Angle.coe_nsmul]
-          simp
-      ext
-      simp only [SemilinearEquivClass.semilinearEquiv_apply, LinearIsometryEquiv.coe_toLinearEquiv]
-      congr 5
-      ring
-  | inr h2 =>
-      right
-      rw [Orientation.oangle_rev, h2]
-      conv =>
-        lhs
-        congr
-        congr
-        · skip
-        · rw [neg_neg, Real.Angle.coe_sub, smul_sub]
-          simp
-          rw [←Real.Angle.coe_nsmul, ←Real.Angle.coe_neg]
-      ext
-      simp only [SemilinearEquivClass.semilinearEquiv_apply, LinearIsometryEquiv.coe_toLinearEquiv]
-      congr 5
-      ring
+  rw [reflect_reflect o, Orientation.oangle_rev, ho]
+  conv =>
+    lhs
+    congr
+    congr
+    · skip
+    · rw [Real.Angle.coe_sub, smul_neg, smul_sub, neg_sub, ←Real.Angle.coe_nsmul]
+      simp
+  ext
+  simp only [SemilinearEquivClass.semilinearEquiv_apply, LinearIsometryEquiv.coe_toLinearEquiv]
+  congr 5
+  ring
 
 theorem geomRepAux_2_pow_eq_id : (geomRepAux i * geomRepAux i') ^ M i i' = 1 := by
   rw [order_geomRepAux_2_eq_order_restrict]
-  cases @geomRepAux_2_restrict_eq_rotate _ _ _ _ h with
-  | inl h2 =>
-      rw [h2]
-      ext x : 1
-      rw [Module.End.pow_apply]
-      simp only [LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv, Module.End.one_apply]
-      rw [iterate_rotation, ←Real.Angle.coe_nsmul]
-      replace h := h.out
-      conv =>
-        congr
-        congr
-        congr
-        · skip
-        · congr
-          simp
-          field_simp
+  have ⟨o, ho⟩ := @geomRepAux_2_restrict_eq_rotate _ _ _ _ h
+  rw [ho]
+  ext x : 1
+  rw [Module.End.pow_apply]
+  simp only [LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv, Module.End.one_apply]
+  rw [iterate_rotation, ←Real.Angle.coe_nsmul]
+  replace h := h.out
+  conv =>
+    congr
+    congr
+    congr
+    · skip
+    · congr
       simp
-  | inr h2 =>
-      rw [h2]
-      ext x : 1
-      rw [Module.End.pow_apply]
-      simp only [LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv, Module.End.one_apply]
-      rw [iterate_rotation, ←Real.Angle.coe_nsmul]
-      replace h := h.out
-      conv =>
-        congr
-        congr
-        congr
-        · skip
-        · congr
-          simp
-          field_simp
-      simp
+      field_simp
+  simp
 
 end finite_order
 
