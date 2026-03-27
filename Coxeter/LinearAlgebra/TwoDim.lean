@@ -8,7 +8,7 @@ theorem cos_two_nsmul (θ : Real.Angle) :
   rw [two_nsmul, Real.Angle.cos_add]
 
 open scoped RealInnerProductSpace
-open Function Module
+open Function Module Real
 
 variable {E : Type*} [NormedAddCommGroup E] [InnerProductSpace ℝ E] [hdim2 : Fact (finrank ℝ E = 2)]
 variable (o : Orientation ℝ E (Fin 2))
@@ -116,20 +116,18 @@ theorem iterate_rotation (n : ℕ) (θ : Real.Angle) : (o.rotation θ)^[n] = o.r
   induction n with
   | zero => simp
   | succ n ih =>
-      rw [add_comm, iterate_add, comp_apply, ih]
-      simp only [iterate_one, Orientation.rotation_rotation]
-      congr
-      rw [add_smul]
+      rw [add_comm, iterate_add, comp_apply, ih, iterate_one,
+        Orientation.rotation_rotation, add_smul]
       simp
 
 theorem iterate_eq_id_iff (m : ℤ) (n : ℕ) (hm : m ≠ 0) :
-  (o.rotation ((2 * Real.pi / m) : ℝ))^[n] = id ↔ m ∣ n := by
+  (o.rotation ((2 * π / m) : ℝ))^[n] = id ↔ m ∣ n := by
   have h : (o.rotation 0).toFun = id := by simp
   rw [←h, iterate_rotation]
   constructor
   · intro h
-    replace h : o.rotation (n • ↑(2 * Real.pi / ↑m)) = o.rotation 0 := by
-      exact LinearIsometryEquiv.ext_iff.mpr (congrFun h)
+    replace h : o.rotation (n • (2 * π / m : ℝ)) = o.rotation 0 :=
+      LinearIsometryEquiv.ext_iff.mpr (congrFun h)
     have h2 := rotation_inj o h
     rw [←Real.Angle.coe_nsmul, Real.Angle.coe_eq_zero_iff] at h2
     have ⟨k, hk⟩ := h2
@@ -141,11 +139,11 @@ theorem iterate_eq_id_iff (m : ℤ) (n : ℕ) (hm : m ≠ 0) :
   · intro h
     rw [dvd_iff_exists_eq_mul_left] at h
     have ⟨k, hk⟩ := h
-    suffices h : n • ((2 * Real.pi / ↑m) : ℝ) = (0 : Real.Angle) by
+    suffices h : n • ((2 * π / m) : ℝ) = (0 : Real.Angle) by
       simp [h]
     rw [←Real.Angle.coe_nsmul, Real.Angle.coe_eq_zero_iff]
     exists k
-    change k • (2 * Real.pi) = (n : ℤ) • (2 * Real.pi / ↑m)
+    change k • (2 * π) = (n : ℤ) • (2 * π / m)
     rw [hk]
     simp
     field
