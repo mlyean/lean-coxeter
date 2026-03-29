@@ -71,11 +71,9 @@ theorem exists_orthonormal_basis [FiniteDimensional ℝ V] (B : LinearMap.BilinF
   have h1 : ∀ (i : Fin (Module.finrank ℝ V)), B (v i) (v i) > 0 := by
     intro i
     unfold LinearMap.BilinForm.Nondegenerate at hB3
-    rw [LinearMap.BilinForm.nondegenerate_iff'] at hB3
-    · apply hB3
-      exact Module.Basis.ne_zero v i
-    · apply hB2.nonneg
-    · exact hB1
+    rw [LinearMap.BilinForm.nondegenerate_iff' _ hB2.nonneg hB1] at hB3
+    apply hB3
+    exact v.ne_zero i
   have h2 : ∀ (i : Fin (Module.finrank ℝ V)), IsUnit (1 / sqrt (B (v i) (v i))) := by
     intro i
     apply Ne.isUnit
@@ -93,8 +91,7 @@ theorem exists_orthonormal_basis [FiniteDimensional ℝ V] (B : LinearMap.BilinF
   · intro i j h
     change B (w i) (w j) = 0
     unfold w
-    simp only [one_div, Module.Basis.unitsSMul_apply, LinearMap.map_smul_of_tower,
-      LinearMap.smul_apply]
+    simp only [Module.Basis.unitsSMul_apply, LinearMap.map_smul_of_tower, LinearMap.smul_apply]
     rw [hv h]
     simp
 
@@ -113,64 +110,58 @@ theorem sup_orthogonal_eq_top (B : LinearMap.BilinForm ℝ V)
   intro x
   let u : W := ∑ (i : Fin (Module.finrank ℝ W)), B x (v i) • v i
   exists u
-  constructor
-  · exact u.prop
-  · exists x - u
-    constructor
-    · rw [Submodule.mem_orthogonalBilin_iff]
-      unfold LinearMap.IsOrtho
-      conv =>
-        intro
-        rw [hB1.eq]
-        rw [←LinearMap.mem_ker]
-      change W ≤ (B (x - ↑u)).ker
-      have : Submodule.span ℝ (Set.range (Subtype.val ∘ v)) = W := by
-        apply Submodule.span_eq_of_le
-        · rw [Set.range_subset_iff]
-          intro i
-          simp
-        · intro w hw
-          rw [Submodule.mem_span_set']
-          exists Module.finrank ℝ W, v.repr ⟨w, hw⟩, fun i => ⟨(v i).val, by simp⟩
-          have h1 : ∑ (i : Fin (Module.finrank ℝ W)), (v.repr ⟨w, hw⟩ i) • (v i) = w := by simp
-          conv =>
-            lhs
-            congr
-            · skip
-            · intro i
-              change ((v.repr ⟨w, hw⟩) i • (v i)).val
-          rw [←Submodule.coe_sum]
-          exact h1
-      nth_rw 1 [←this]
-      rw [Submodule.span_le, Set.range_subset_iff]
+  refine ⟨u.prop, x - u, ?_, by simp⟩
+  rw [Submodule.mem_orthogonalBilin_iff]
+  unfold LinearMap.IsOrtho
+  conv =>
+    intro
+    rw [hB1.eq, ←LinearMap.mem_ker]
+  change W ≤ (B (x - ↑u)).ker
+  have : Submodule.span ℝ (Set.range (Subtype.val ∘ v)) = W := by
+    apply Submodule.span_eq_of_le
+    · rw [Set.range_subset_iff]
       intro i
-      simp only [map_sub, Function.comp_apply, SetLike.mem_coe, LinearMap.mem_ker,
-        LinearMap.sub_apply]
-      rw [sub_eq_zero]
-      symm
-      unfold u
-      simp only [AddSubmonoidClass.coe_finset_sum, SetLike.val_smul, map_sum, map_smul,
-        LinearMap.coe_sum, Finset.sum_apply, LinearMap.smul_apply, smul_eq_mul]
-      change ∑ j, B x (v j) * B (v j) (v i) = B x (v i)
-      have : ∀ (i j : Fin (Module.finrank ℝ W)), (B x (v j)) * B (v j) (v i)
-        = Set.indicator {i} (fun j => B x (v j)) j := by
-        intro i j
-        by_cases h : j = i
-        · simp only [h, Set.mem_singleton_iff, Set.indicator_of_mem]
-          have : B (v i).val (v i).val = 1 := hv1 i
-          rw [this, mul_one]
-        · simp only [Set.mem_singleton_iff, h, not_false_eq_true, Set.indicator_of_notMem,
-            mul_eq_zero]
-          right
-          exact hv2 h
+      simp
+    · intro w hw
+      rw [Submodule.mem_span_set']
+      exists Module.finrank ℝ W, v.repr ⟨w, hw⟩, fun i => ⟨(v i).val, by simp⟩
+      have h1 : ∑ (i : Fin (Module.finrank ℝ W)), (v.repr ⟨w, hw⟩ i) • (v i) = w := by simp
       conv =>
         lhs
         congr
         · skip
-        · intro j
-          rw [this]
-      simp
-    · simp
+        · intro i
+          change ((v.repr ⟨w, hw⟩) i • (v i)).val
+      rwa [←Submodule.coe_sum]
+  nth_rw 1 [←this]
+  rw [Submodule.span_le, Set.range_subset_iff]
+  intro i
+  simp only [map_sub, Function.comp_apply, SetLike.mem_coe, LinearMap.mem_ker,
+    LinearMap.sub_apply]
+  rw [sub_eq_zero]
+  symm
+  unfold u
+  simp only [AddSubmonoidClass.coe_finset_sum, SetLike.val_smul, map_sum, map_smul,
+    LinearMap.coe_sum, Finset.sum_apply, LinearMap.smul_apply, smul_eq_mul]
+  change ∑ j, B x (v j) * B (v j) (v i) = B x (v i)
+  have : ∀ (i j : Fin (Module.finrank ℝ W)), (B x (v j)) * B (v j) (v i)
+    = Set.indicator {i} (fun j => B x (v j)) j := by
+    intro i j
+    by_cases h : j = i
+    · simp only [h, Set.mem_singleton_iff, Set.indicator_of_mem]
+      have : B (v i).val (v i).val = 1 := hv1 i
+      rw [this, mul_one]
+    · simp only [Set.mem_singleton_iff, h, not_false_eq_true, Set.indicator_of_notMem,
+        mul_eq_zero]
+      right
+      exact hv2 h
+  conv =>
+    lhs
+    congr
+    · skip
+    · intro j
+      rw [this]
+  simp
 
 end real
 

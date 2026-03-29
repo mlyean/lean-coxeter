@@ -92,7 +92,7 @@ theorem permRepAux_append (ω₁ ω₂ : List (B W)) :
   induction ω₁ with
   | nil =>
       rw [permRepAux_nil]
-      simp
+      rfl
   | cons i is ih =>
       rw [cons_append, permRepAux_cons, ih]
       nth_rw 2 [permRepAux_cons]
@@ -107,7 +107,7 @@ theorem permRepAux_alternatingWord (i i' : B W) :
   · simp [prod_alternatingWord_eq_mul_pow]
   · unfold etaAux
     rw [id_eq, add_eq_left, reverse_alternatingWord, ZMod.natCast_eq_zero_iff]
-    let p := M.M i i'
+    let p := M i i'
     suffices h : take p (cs.leftInvSeq (alternatingWord i' i (2 * p)))
       = drop p (cs.leftInvSeq (alternatingWord i' i (2 * p))) by
       rw [←take_append_drop p (cs.leftInvSeq (alternatingWord i' i (2 * p))), count_append,
@@ -149,16 +149,15 @@ theorem permRepAux_iterate (i i' : B W) (k : ℕ) :
   | zero =>
       rw [iterate_zero, alternatingWord, permRepAux_nil]
   | succ k ih =>
-      simp only [iterate_succ, alternatingWord, Nat.mul_eq, concat_eq_append, append_assoc,
-        cons_append, nil_append]
-      rw [permRepAux_append, ih]
+      rw [iterate_succ, ih, ←permRepAux_append, mul_add]
+      simp [alternatingWord]
 
 theorem permRepAux_liftable : (@M W).IsLiftable permRepAux_equiv := by
   intro i i'
   ext r
   rw [Equiv.Perm.coe_one, Equiv.Perm.coe_pow, Equiv.Perm.coe_mul]
-  change ((permRepAux [i]) ∘ (permRepAux [i']))^[M.M i i'] r = id r
-  rw [←permRepAux_cons, permRepAux_iterate i i' (M.M i i'), permRepAux_alternatingWord]
+  change ((permRepAux [i]) ∘ (permRepAux [i']))^[M i i'] r = id r
+  rw [←permRepAux_cons, permRepAux_iterate i i' (M i i'), permRepAux_alternatingWord]
 
 /-- Bjorner--Brenti Theorem 1.3.2 (i): extension -/
 def permRep : W →* Equiv.Perm (RootSet W) := cs.lift ⟨permRepAux_equiv, permRepAux_liftable⟩
