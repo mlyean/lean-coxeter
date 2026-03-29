@@ -86,29 +86,20 @@ def geomRepAux (i : B W) : V W ≃ₗ[ℝ] V W where
   invFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
   map_add' := by
     intro x y
-    match_scalars
-    · rfl
-    · rfl
-    · simp
-      ring
+    rw [map_add]
+    match_scalars <;> ring
   map_smul' := by
     intro r x
-    match_scalars
-    · rfl
-    · simp
-      ring
+    simp only [map_smul, smul_eq_mul, RingHom.id_apply]
+    match_scalars <;> ring
   left_inv := by
     intro x
     simp only [map_sub, map_smul, bil_diag, smul_eq_mul, mul_one]
-    match_scalars
-    · rfl
-    · ring
+    match_scalars <;> ring
   right_inv := by
     intro x
     simp only [map_sub, map_smul, bil_diag, smul_eq_mul, mul_one]
-    match_scalars
-    · rfl
-    · ring
+    match_scalars <;> ring
 
 theorem geomRepAux_apply (i : B W) (x : V W) :
   geomRepAux i x = x - (2 * bil (stdBasis i) x) • stdBasis i := rfl
@@ -119,9 +110,9 @@ theorem geomRepAux_involutive (i : B W) : Involutive (geomRepAux i) := (geomRepA
 theorem geomRepAux_stdBasis (i : B W) :
   geomRepAux i (stdBasis i) = -stdBasis i := by
   rw [geomRepAux_apply]
+  simp only [bil_diag, mul_one]
   match_scalars
-  simp
-  ring
+  norm_num
 
 def E (i i' : B W) : Submodule ℝ (V W) := supported ℝ _ {i, i'}
 
@@ -165,8 +156,7 @@ theorem mem_E_iff (i i' : B W) (v : V W)
 
 theorem E_symm (i i' : B W) : E i i' = E i' i := by
   unfold E
-  congr 1
-  grind
+  rw [Set.pair_comm]
 
 theorem bil_restrict_E_diag (i i' : B W) (x y : ℝ) :
   bil (x • stdBasis i + y • stdBasis i') (x • stdBasis i + y • stdBasis i')
@@ -186,8 +176,7 @@ theorem bil_restrict_E_diag (i i' : B W) (x y : ℝ) :
     ring
 
 theorem bil_restrict_E_isSymm (i i' : B W) : (bil.restrict (E i i')).IsSymm := by
-  apply LinearMap.BilinForm.IsSymm.restrict
-  exact bil_isSymm
+  apply LinearMap.BilinForm.IsSymm.restrict bil_isSymm
 
 theorem bil_restrict_E_nonneg (i i' : B W) : (bil.restrict (E i i')).IsNonneg := by
   rw [LinearMap.BilinForm.isNonneg_def]
@@ -200,9 +189,7 @@ theorem bil_restrict_E_nonneg (i i' : B W) : (bil.restrict (E i i')).IsNonneg :=
 /-- Bourbaki Ch V, §4, Proposition 1 -/
 theorem bil_restrict_E_isPosSemidef (i i' : B W) : (bil.restrict (E i i')).IsPosSemidef := by
   rw [LinearMap.BilinForm.isPosSemidef_def]
-  constructor
-  · apply bil_restrict_E_isSymm
-  · apply bil_restrict_E_nonneg
+  exact ⟨bil_restrict_E_isSymm i i', bil_restrict_E_nonneg i i'⟩
 
 /-- Bourbaki Ch V, §4, Proposition 1 (continued) -/
 theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
@@ -220,19 +207,13 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
         · rw [mem_E_iff]
           exists cos (π / M.M i i'), 1
           simp
-        · constructor
-          · simp only [one_smul, ne_eq, Submodule.mk_eq_zero]
-            rw [←ne_eq, Finsupp.ne_iff]
-            exists i'
-            simp [stdBasis, h]
-          · apply le_of_eq
-            have := bil_restrict_E_diag i i' (cos (π / M.M i i')) 1
-            rw [h2] at this ⊢
-            simp only [CharP.cast_eq_zero, div_zero, cos_zero, one_smul, map_add,
-              LinearMap.add_apply, bil_diag, bil_eq, mul_one, sub_self, ne_eq, OfNat.ofNat_ne_zero,
-              not_false_eq_true, zero_pow, sin_zero, mul_zero, add_zero,
-              LinearMap.BilinForm.restrict_apply, LinearMap.domRestrict_apply] at this ⊢
-            exact this
+        · simp only [h2, CharP.cast_eq_zero, div_zero, cos_zero, one_smul, ne_eq,
+            Submodule.mk_eq_zero, LinearMap.BilinForm.restrict_apply, map_add,
+            LinearMap.domRestrict_apply, LinearMap.add_apply, bil_diag, bil_eq, add_neg_cancel,
+            M.symmetric i' i, neg_add_cancel, add_zero, Std.le_refl, and_true]
+          rw [←ne_eq, Finsupp.ne_iff]
+          exists i'
+          simp [stdBasis, h]
     | Or.inr (Or.inl h2) =>
         have := M.off_diagonal i i' h
         contradiction
@@ -270,13 +251,11 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
 theorem geomRepAux_E_perp_left (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i z = z := by
   intro z hz
-  rw [geomRepAux_apply]
-  simp only [sub_eq_self, smul_eq_zero, mul_eq_zero, OfNat.ofNat_ne_zero, false_or]
-  left
-  apply hz (stdBasis i)
-  rw [mem_E_iff]
-  exists 1, 0
-  simp
+  rw [geomRepAux_apply, sub_eq_self, hz (stdBasis i)]
+  · rw [mul_zero, zero_smul]
+  · rw [mem_E_iff]
+    exists 1, 0
+    simp
 
 theorem geomRepAux_E_perp_right (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i' z = z := by
@@ -289,19 +268,14 @@ theorem geomRepAux_E_left (i i' : B W) : ∀ z ∈ E i i', geomRepAux i z ∈ E 
   have ⟨x, y, h⟩ := hz
   rw [h]
   simp only [map_add, map_smul]
-  apply add_mem
-  · apply Submodule.smul_mem
-    simp only [geomRepAux_stdBasis, neg_mem_iff]
-    rw [mem_E_iff]
+  apply add_mem <;> apply Submodule.smul_mem
+  · rw [geomRepAux_stdBasis, neg_mem_iff, mem_E_iff]
     exists 1, 0
     simp
-  · apply Submodule.smul_mem
-    rw [geomRepAux_apply, mem_E_iff]
+  · rw [geomRepAux_apply, mem_E_iff]
     simp only [bil_eq, mul_neg, neg_smul, sub_neg_eq_add]
     exists 2 * cos (π / M i i'), 1
-    match_scalars
-    · ring
-    · ring
+    match_scalars <;> ring
 
 theorem geomRepAux_E_right (i i' : B W) : ∀ z ∈ E i i', geomRepAux i' z ∈ E i i' := by
   rw [E_symm]
@@ -341,10 +315,7 @@ theorem geomRepAux_2_add_of_order_zero (n : ℕ) :
   have h3 : (geomRepAux i * geomRepAux i') u = u := by
     rw [LinearEquiv.mul_apply]
     nth_rw 2 [geomRepAux_apply]
-    rw [h2]
-    simp only [mul_zero, zero_smul, sub_zero]
-    rw [geomRepAux_apply, h1]
-    simp
+    rw [h2, mul_zero, zero_smul, sub_zero, geomRepAux_apply, h1, mul_zero, zero_smul, sub_zero]
   have h4 : (geomRepAux i * geomRepAux i') (stdBasis i) = 2 • u + stdBasis i := by
     rw [LinearEquiv.mul_apply, ←hu]
     simp only [geomRepAux_apply, bil_eq, mul_neg, neg_smul, sub_neg_eq_add, map_add,
@@ -352,9 +323,7 @@ theorem geomRepAux_2_add_of_order_zero (n : ℕ) :
     rw [M.symmetric i' i, h]
     simp only [CoxeterMatrix.diagonal, Nat.cast_one, div_one, cos_pi, mul_neg, mul_one, neg_smul,
       CharP.cast_eq_zero, div_zero, cos_zero]
-    match_scalars
-    · ring
-    · ring
+    match_scalars <;> ring
   suffices ((geomRepAux i * geomRepAux i') ^ n) (stdBasis i) = (2 * n) • u + stdBasis i ∧
     ((geomRepAux i * geomRepAux i') ^ n) u = u by
     exact this.1
@@ -363,9 +332,7 @@ theorem geomRepAux_2_add_of_order_zero (n : ℕ) :
   | succ n ih =>
       constructor
       · rw [pow_succ, LinearEquiv.mul_apply, h4, map_add, ih.1, map_nsmul, ih.2]
-        match_scalars
-        · ring
-        · rfl
+        match_scalars <;> ring
       · rw [pow_succ, LinearEquiv.mul_apply, h3, ih.2]
 
 end infinite_order
@@ -386,16 +353,7 @@ def e : ({i, i'} : Set (B W)) ≃ Fin 2 where
   invFun
   | 0 => ⟨i, by tauto⟩
   | 1 => ⟨i', by tauto⟩
-  left_inv x := by
-    match x with
-    | Subtype.mk x (Or.inl h) =>
-        subst h
-        simp
-    | Subtype.mk x (Or.inr h) =>
-        simp at h
-        simp
-        simp [h]
-        grind
+  left_inv x := by grind
   right_inv
   | 0 => by simp
   | 1 => by
@@ -564,13 +522,12 @@ theorem geomRepAux_i_restrict_eq_reflect :
   (geomRepAux i).restrict (geomRepAux_E_left i i') = reflect (norm_stdBasisE_0 i i') := by
   ext x : 1
   rw [LinearMap.restrict_apply]
-  simp only [Fin.isValue, LinearEquiv.coe_coe]
-  rw [reflect_apply]
-  rw [←Subtype.coe_inj]
-  simp only [Fin.isValue, AddSubgroupClass.coe_sub, SetLike.val_smul, stdBasisE_0]
+  simp only [LinearEquiv.coe_coe]
+  rw [reflect_apply, ←Subtype.coe_inj]
+  simp only [AddSubgroupClass.coe_sub, SetLike.val_smul, stdBasisE_0]
   rw [geomRepAux_apply]
   congr 3
-  change (bil (stdBasis i)) ↑x = bil.restrict (E i i') (stdBasisE i i' 0) x
+  change (bil (stdBasis i)) x.val = bil.restrict (E i i') (stdBasisE i i' 0) x
   rw [LinearMap.BilinForm.restrict_apply, stdBasisE_0]
   simp
 
@@ -615,11 +572,10 @@ theorem order_geomRepAux_2_eq :
     = (⇑(o.rotation ↑(2 * π / ↑(M.M i i'))))^[m] x := by
     intro m x
     induction m with
-    | zero =>
-        simp
+    | zero => simp
     | succ m ih =>
         rw [add_comm, pow_add, iterate_add, comp_apply, ←ih]
-        simp
+        rfl
   constructor
   · rw [order_geomRepAux_2_eq_order_restrict, ho]
     ext x : 1
@@ -649,15 +605,15 @@ theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
   match h with
   | Or.inl h =>
       rw [h]
-      simp
+      rfl
   | Or.inr (Or.inl h) =>
       rw [h]
       have heq : i = i' := by
-        have := M.off_diagonal i i'
-        grind
+        by_contra! h2
+        exact M.off_diagonal i i' h2 h
       subst heq
-      ext x : 1
-      exact geomRepAux_involutive i x
+      ext : 1
+      apply geomRepAux_involutive i
   | Or.inr (Or.inr h) =>
       haveI : Fact (M i i' ≥ 2) := { out := h }
       have h2 := order_geomRepAux_2_eq i i'
@@ -689,7 +645,7 @@ theorem orderOf_simple_mul_simple (i i' : B W) : orderOf (cs.simple i * cs.simpl
       have h3 := LinearEquiv.congr_fun h2 (stdBasis i)
       rw [geomRepAux_2_add_of_order_zero i i' h n] at h3
       simp only [smul_add, LinearEquiv.coe_one, id_eq, add_eq_right] at h3
-      have : i ≠ i' := by
+      have h4 : i ≠ i' := by
         intro heq
         rw [heq] at h
         simp at h
@@ -698,32 +654,30 @@ theorem orderOf_simple_mul_simple (i i' : B W) : orderOf (cs.simple i * cs.simpl
         mul_one] at h3
       rw [Finsupp.ext_iff] at h3
       specialize h3 i
-      simp [this] at h3
-      grind
+      simp [h4] at h3
+      lia
   | Or.inr (Or.inl h) =>
-      rw [h]
-      have : i = i' := by
-        have := M.off_diagonal i i'
-        grind
-      rw [this]
+      have h2 : i = i' := by
+        by_contra! h2
+        exact M.off_diagonal i i' h2 h
+      rw [h2]
       simp
   | Or.inr (Or.inr h) =>
       haveI : Fact (M i i' ≥ 2) := { out := h }
-      have h2 := orderOf_map_dvd geomRep (cs.simple i * cs.simple i')
-      rw [map_mul, geomRep_simple, geomRep_simple, order_geomRepAux_2_eq i i'] at h2
-      have h3 : orderOf (cs.simple i * cs.simple i') ∣ M.M i i' := by
-        apply orderOf_dvd_of_pow_eq_one
+      apply Nat.dvd_antisymm
+      · apply orderOf_dvd_of_pow_eq_one
         simp
-      exact Nat.dvd_antisymm h3 h2
+      · have h2 := orderOf_map_dvd geomRep (cs.simple i * cs.simple i')
+        rwa [map_mul, geomRep_simple, geomRep_simple, order_geomRepAux_2_eq i i'] at h2
 
 theorem simple_inj : Injective ((@cs W).simple) := by
   intro i i' h
+  by_contra! h2
+  apply M.off_diagonal i i' h2
   have : orderOf (cs.simple i * cs.simple i') = 1 := by
     rw [h]
     simp
-  rw [orderOf_simple_mul_simple] at this
-  have := M.off_diagonal i i'
-  grind
+  rwa [orderOf_simple_mul_simple] at this
 
 end
 
