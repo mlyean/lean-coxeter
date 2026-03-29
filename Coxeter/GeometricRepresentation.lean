@@ -214,25 +214,26 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
         intro z hz1 hz2
         apply lt_of_le_of_ne
         · exact (bil_restrict_E_nonneg i i').nonneg ⟨z, hz1⟩
-        · have ⟨x, y, h⟩ := (mem_E_iff i i' z).mp hz1
+        · rw [mem_E_iff] at hz1
+          have ⟨x, y, h⟩ := hz1
           rw [h, bil_restrict_E_diag]
           intro h3
           symm at h3
           rw [sq, sq, mul_self_add_mul_self_eq_zero] at h3
           replace ⟨h3, h4⟩ := h3
-          have : sin (π / M i i') ≠ 0 := by
+          have h5 : sin (π / M i i') ≠ 0 := by
             apply ne_of_gt
-            apply sin_pos_of_mem_Ioo
-            rw [Set.mem_Ioo]
-            constructor
+            apply sin_pos_of_pos_of_lt_pi
             · positivity
-            · field_simp
-              rw [Nat.one_lt_cast]
-              exact h2
-          simp only [mul_eq_zero, this, or_false] at h4
-          rw [h4, zero_mul, sub_zero] at h3
-          rw [h3, h4] at h
-          simp at h
+            · apply div_lt_self
+              · positivity
+              · norm_num
+                exact h2
+          rw [mul_eq_zero_iff_right h5] at h4
+          subst h4
+          rw [zero_mul, sub_zero] at h3
+          subst h3
+          rw [zero_smul, zero_smul, add_zero] at h
           contradiction
   · exact (bil_restrict_E_nonneg i i').nonneg
   · rw [←LinearMap.BilinForm.isSymm_iff]
