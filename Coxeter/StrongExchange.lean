@@ -37,16 +37,14 @@ theorem mem_leftInvSeq_of_isLeftInversion
   trivial
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
-theorem isLeftInversion_iff_mem_leftInvSeq
-  {ω : List (B W)} (hω : cs.IsReduced ω) (t : W) :
+theorem isLeftInversion_iff_mem_leftInvSeq {ω : List (B W)} (hω : cs.IsReduced ω) (t : W) :
   cs.IsLeftInversion (cs.wordProd ω) t ↔ t ∈ cs.leftInvSeq ω := by
   constructor
   · apply mem_leftInvSeq_of_isLeftInversion
   · exact cs.isLeftInversion_of_mem_leftInvSeq hω
 
 /-- Bjorner--Brenti Theorem 1.4.3 -/
-theorem strong_exchange
-  {ω : List (B W)} {t : W} (h : cs.IsLeftInversion (cs.wordProd ω) t) :
+theorem strong_exchange {ω : List (B W)} {t : W} (h : cs.IsLeftInversion (cs.wordProd ω) t) :
   ∃ i < ω.length, t * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
   have h2 := mem_leftInvSeq_of_isLeftInversion h
   rw [mem_iff_get] at h2
@@ -57,8 +55,7 @@ theorem strong_exchange
     exact i.prop
   · rw [←hi, ←getD_leftInvSeq_mul_wordProd, getD_eq_get]
 
-theorem exchange_property
-  {ω : List (B W)} {i : B W} (h : cs.IsLeftDescent (cs.wordProd ω) i) :
+theorem exchange_property {ω : List (B W)} {i : B W} (h : cs.IsLeftDescent (cs.wordProd ω) i) :
   ∃ j < ω.length, cs.simple i * cs.wordProd ω = cs.wordProd (ω.eraseIdx j) :=
   strong_exchange ⟨cs.isReflection_simple i, h⟩
 
@@ -125,7 +122,7 @@ theorem exists_reduced_subword (ω : List (B W)) :
 theorem exists_reduced_subword' {w : W} {ω : List (B W)} (h : w = cs.wordProd ω) :
   ∃ (ω' : ReducedWord w), ω'.val <+ ω := by
   rw [h]
-  have ⟨ω', h1, h2, h3⟩ := exists_reduced_subword ω
+  have ⟨ω', _, h2, h3⟩ := exists_reduced_subword ω
   exists ⟨ω', h2, h3⟩
 
 section rightVariants
@@ -134,8 +131,7 @@ open MulOpposite
 
 /-! ### Right variants -/
 
-theorem strong_exchange_right
-  {ω : List (B W)} {t : W} (h : cs.IsRightInversion (cs.wordProd ω) t) :
+theorem strong_exchange_right {ω : List (B W)} {t : W} (h : cs.IsRightInversion (cs.wordProd ω) t) :
   ∃ i < ω.length, cs.wordProd ω * t = cs.wordProd (ω.eraseIdx i) := by
   let ⟨i, hi1, hi2⟩ := @strong_exchange Wᵐᵒᵖ _ ω.reverse (op t) ?_
   · exists ω.length - i - 1

@@ -456,21 +456,19 @@ instance : PreInnerProductSpace.Core ℝ (E i i') where
   smul_left := by simp
 
 instance : InnerProductSpace.Core ℝ (E i i') where
-  definite := by
-    have h := (inferInstance : Fact (M i i' ≥ 2)).out
-    intro x h2
-    change bil.restrict (E i i') x x = 0 at h2
-    have : (bil.restrict (E i i')).Nondegenerate := by
+  definite x h := by
+    have h2 := (inferInstance : Fact (M i i' ≥ 2)).out
+    change bil.restrict (E i i') x x = 0 at h
+    have h3 : (bil.restrict (E i i')).Nondegenerate := by
       rw [bil_restrict_E_nondegenerate_iff]
       · grind
       · intro h3
         subst h3
-        simp at h
-    unfold LinearMap.BilinForm.Nondegenerate at this
-    rw [LinearMap.BilinForm.nondegenerate_iff] at this
-    · specialize this x
-      rw [this] at h2
-      exact h2
+        simp at h2
+    unfold LinearMap.BilinForm.Nondegenerate at h3
+    rw [LinearMap.BilinForm.nondegenerate_iff] at h3
+    · specialize h3 x
+      rwa [h3] at h
     · exact (bil_restrict_E_nonneg i i').nonneg
     · rw [←LinearMap.BilinForm.isSymm_iff]
       exact bil_restrict_E_isSymm i i'
@@ -480,26 +478,25 @@ instance : NormedAddCommGroup (E i i') :=
 
 instance : InnerProductSpace ℝ (E i i') := InnerProductSpace.ofCore inferInstance
 
+open scoped RealInnerProductSpace
+
 @[simp]
 theorem norm_stdBasisE_0 : ‖stdBasisE i i' 0‖ = 1 := by
   rw [@norm_eq_sqrt_re_inner ℝ (E i i')]
-  change √(RCLike.re (bil.restrict (E i i') (stdBasisE i i' 0) (stdBasisE i i' 0))) = 1
+  change √((bil.restrict (E i i') (stdBasisE i i' 0) (stdBasisE i i' 0))) = 1
   rw [LinearMap.BilinForm.restrict_apply]
   simp
 
 @[simp]
 theorem norm_stdBasisE_1 : ‖stdBasisE i i' 1‖ = 1 := by
   rw [@norm_eq_sqrt_re_inner ℝ (E i i')]
-  change √(RCLike.re (bil.restrict (E i i') (stdBasisE i i' 1) (stdBasisE i i' 1))) = 1
+  change √((bil.restrict (E i i') (stdBasisE i i' 1) (stdBasisE i i' 1))) = 1
   rw [LinearMap.BilinForm.restrict_apply]
   simp
 
 @[simp]
-theorem inner_stdBasisE_0_1 :
-  inner ℝ (stdBasisE i i' 0) (stdBasisE i i' 1) = -cos (π / M.M i i') := by
-  change bil.restrict (E i i') (stdBasisE i i' 0) (stdBasisE i i' 1)
-    = -cos (π / ↑(M.M i i'))
-  simp
+theorem inner_stdBasisE_0_1 : ⟪stdBasisE i i' 0, stdBasisE i i' 1⟫ = -cos (π / M.M i i') := by
+  simp [inner]
 
 theorem oangle_stdBasisE : ∃ (o : Orientation ℝ (E i i') (Fin 2)),
   o.oangle (stdBasisE i i' 0) (stdBasisE i i' 1) = (π - π / M.M i i' : ℝ) := by
@@ -528,7 +525,7 @@ theorem geomRepAux_i_restrict_eq_reflect :
   congr 3
   change (bil (stdBasis i)) x.val = bil.restrict (E i i') (stdBasisE i i' 0) x
   rw [LinearMap.BilinForm.restrict_apply, stdBasisE_0]
-  simp
+  rfl
 
 theorem geomRepAux_i'_restrict_eq_reflect :
   (geomRepAux i').restrict (geomRepAux_E_right i i') = reflect (norm_stdBasisE_1 i i') := by
@@ -541,7 +538,7 @@ theorem geomRepAux_i'_restrict_eq_reflect :
   congr 3
   change bil (stdBasis i') x.val = bil.restrict (E i i') (stdBasisE i i' 1) x
   rw [LinearMap.BilinForm.restrict_apply, stdBasisE_1]
-  simp
+  rfl
 
 theorem geomRepAux_2_restrict_eq_rotate : ∃ (o : Orientation ℝ (E i i') (Fin 2)),
   (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
@@ -555,10 +552,8 @@ theorem geomRepAux_2_restrict_eq_rotate : ∃ (o : Orientation ℝ (E i i') (Fin
   conv in 2 • -Angle.coe (π - π / M.M i i') =>
     rw [Real.Angle.coe_sub, smul_neg, smul_sub, neg_sub, ←Real.Angle.coe_nsmul]
     simp
-  ext
-  simp only [SemilinearEquivClass.semilinearEquiv_apply, LinearIsometryEquiv.coe_toLinearEquiv]
-  congr 5
-  ring
+    rw [mul_div]
+  rfl
 
 theorem order_geomRepAux_2_eq :
   orderOf (geomRepAux i * geomRepAux i') = M i i' := by
@@ -578,20 +573,16 @@ theorem order_geomRepAux_2_eq :
   constructor
   · rw [order_geomRepAux_2_eq_order_restrict, ho]
     ext x : 1
-    simp only [Module.End.one_apply]
-    rw [Module.End.pow_apply]
-    simp only [LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv]
-    rw [←rot_pow, h2.1]
-    simp
+    rw [Module.End.one_apply, Module.End.pow_apply, LinearEquiv.coe_coe,
+      LinearIsometryEquiv.coe_toLinearEquiv, ←rot_pow, h2.1]
+    rfl
   · intro m hm1 hm2 h3
     apply h2.2 m hm1 hm2
     rw [order_geomRepAux_2_eq_order_restrict, ho] at h3
     ext x : 1
     have : ((o.rotation ↑(2 * π / ↑(M.M i i'))).toLinearEquiv.toLinearMap ^ m) x = x := by
       simp_all only [ge_iff_le, LinearEquiv.coe_toLinearMap_mul, ne_eq, Module.End.one_apply]
-    rw [Module.End.pow_apply] at this
-    simp only [LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv] at this
-    simp only [LinearIsometryEquiv.coe_one, id_eq]
+    rw [Module.End.pow_apply, LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv] at this
     nth_rw 2 [←this]
     apply rot_pow
 
@@ -615,9 +606,8 @@ theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
       apply geomRepAux_involutive i
   | Or.inr (Or.inr h) =>
       haveI : Fact (M i i' ≥ 2) := { out := h }
-      have h2 := order_geomRepAux_2_eq i i'
-      rw [orderOf_eq_iff (by grind)] at h2
-      grind
+      rw [←order_geomRepAux_2_eq i i']
+      apply pow_orderOf_eq_one
 
 /-- The geometric representation -/
 def geomRep : W →* (V W ≃ₗ[ℝ] V W) := cs.lift ⟨geomRepAux, geomRepAux_liftable⟩
@@ -635,8 +625,7 @@ theorem orderOf_simple_mul_simple (i i' : B W) : orderOf (cs.simple i * cs.simpl
     grind
   match h with
   | Or.inl h =>
-      rw [h]
-      rw [orderOf_eq_zero_iff']
+      rw [h, orderOf_eq_zero_iff']
       intro n hn
       apply_fun geomRep
       rw [map_pow, map_mul, map_one, geomRep_simple, geomRep_simple]

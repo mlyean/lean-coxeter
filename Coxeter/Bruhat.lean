@@ -305,7 +305,7 @@ theorem subword_property' {u w : W} :
     have ⟨μ, hμ⟩ := exists_reduced_subword_of_le ω h
     exists μ, ω
   · intro ⟨μ, ω, h⟩
-    exact le_of_reduced_subword μ ω h
+    exact le_of_reduced_subword _ _ h
 
 private noncomputable def chooseReducedSubword {w : W} (ω : ReducedWord w) :
   Set.Iic w → {μ : List (B W) | μ <+ ω} := fun ⟨_, hx⟩ =>
@@ -385,7 +385,7 @@ theorem cover_iff {u w : W} : u ⋖ w ↔ u ≤ w ∧ cs.length w = cs.length u 
     · rw [lt_iff_le_and_length_lt, h.2]
       exact ⟨h.1, Nat.le_refl _⟩
     · intro z hz1 hz2
-      apply_fun cs.length at hz1 hz2 using (@strictMono_length W _)
+      apply_fun cs.length at hz1 hz2 using @strictMono_length W _
       lia
 
 /-- Bjorner--Brenti Theorem 2.2.6 -/
@@ -520,18 +520,15 @@ instance : IsDirectedOrder W where
           have hlt : cs.simple i * u < u := by
             rwa [reflection_mul_lt_iff (cs.isReflection_simple i)]
           have ⟨x, hx1, hx2⟩ := ih (cs.simple i * u) hlt w
+          rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
           by_cases h2 : cs.IsLeftDescent x i
           · exists x
-            rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
             have h3 := (lifting_property hx1 h2 hi).2
             rw [simple_mul_simple_cancel_left] at h3
             exact ⟨h3, hx2⟩
           · exists cs.simple i * x
-            have h3 : x ≤ cs.simple i * x := by
-              apply le_of_lt
-              rwa [lt_simple_mul_iff]
+            have h3 : x ≤ cs.simple i * x := le_of_lt ((lt_simple_mul_iff i x).mpr h2)
             rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
-            rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
             have h4 := (lifting_property (le_trans hx1 h3) h2 hi).2
             rw [simple_mul_simple_cancel_left] at h4
             exact ⟨h4, le_trans hx2 h3⟩
@@ -599,7 +596,7 @@ theorem length_le_length_w₀ (w : W) : cs.length w ≤ cs.length (w₀ : W) := 
 theorem eq_w₀_of_length_ge {x : W} (h : cs.length x ≥ cs.length (w₀ : W)) : x = w₀ := by
   by_contra! h2
   replace h2 : x < w₀ := Ne.lt_top h2
-  apply_fun cs.length at h2 using (@strictMono_length W _)
+  apply_fun cs.length at h2 using @strictMono_length W _
   exact not_le_of_gt h2 h
 
 theorem eq_w₀_of_length_eq {x : W} (h : cs.length x = cs.length (w₀ : W)) : x = w₀ :=
