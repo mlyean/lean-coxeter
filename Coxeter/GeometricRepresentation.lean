@@ -295,10 +295,9 @@ theorem restrict_geomRepAux_mul (i i' : B W) :
 
 section infinite_order
 
-variable (i i' : B W) (h : M i i' = 0)
-include h
+variable (i i' : B W)
 
-theorem geomRepAux_2_add_of_order_zero (n : ℕ) :
+theorem geomRepAux_2_add_of_order_zero (h : M i i' = 0) (n : ℕ) :
   ((geomRepAux i * geomRepAux i') ^ n) (stdBasis i)
   = (2 * n) • (stdBasis i + stdBasis i') + stdBasis i := by
   generalize hu : stdBasis i + stdBasis i' = u
@@ -357,7 +356,7 @@ def e : ({i, i'} : Set (B W)) ≃ Fin 2 where
   right_inv
   | 0 => by simp
   | 1 => by
-      simp only [Fin.isValue, ite_eq_right_iff, zero_ne_one, imp_false]
+      simp only [ite_eq_right_iff, zero_ne_one, imp_false]
       rw [←ne_eq]
       symm
       apply i_ne_i'

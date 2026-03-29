@@ -6,8 +6,8 @@ import Mathlib.LinearAlgebra.QuadraticForm.Basic
 /-!
 # Bilinear forms
 
-This file removes the `Fintype` and `DecidableEq` hypotheses on `BilinForm.toMatrix` and
-`Matrix.toBilin` that are present in mathlib's implementation.
+This file relates bilinar forms and matrices, and proves properties about real vector spaces with
+positive definite symmetric bilinear forms.
 
 -/
 
@@ -17,6 +17,7 @@ variable {R : Type*} [CommSemiring R]
 variable {M : Type*} [AddCommMonoid M] [Module R M]
 variable {ι : Type*} (b : Module.Basis ι R M)
 
+/-- Omits the `Fintype` and `DecidableEq` hypotheses from mathlib's version -/
 noncomputable def LinearMap.BilinForm.toMatrix :
   LinearMap.BilinForm R M ≃ₗ[R] Matrix ι ι R where
   toFun B i j := B (b i) (b j)
@@ -41,6 +42,7 @@ noncomputable def LinearMap.BilinForm.toMatrix :
     ext i j
     simp
 
+/-- Omits the `Fintype` and `DecidableEq` hypotheses from mathlib's version -/
 noncomputable def Matrix.toBilin : Matrix ι ι R ≃ₗ[R] LinearMap.BilinForm R M :=
   (LinearMap.BilinForm.toMatrix b).symm
 
@@ -50,6 +52,8 @@ theorem Matrix.toBilin_single (B : Matrix ι ι R) (i j : ι) : toBilin b B (b i
 
 section real
 
+/-! ### Positive definite symmetric bilinear forms on real vector spaces -/
+
 open Real
 
 variable {V : Type*} [AddCommGroup V] [Module ℝ V]
@@ -57,6 +61,8 @@ variable {V : Type*} [AddCommGroup V] [Module ℝ V]
 def Orthonormal {ι : Type*} (B : LinearMap.BilinForm ℝ V) (v : ι → V) :=
   (∀ (i : ι), B (v i) (v i) = 1) ∧ LinearMap.IsOrthoᵢ B v
 
+/-- A positive definite symmetric bilinear form on a finite dimensional real vector space has an
+orthonormal basis. -/
 theorem exists_orthonormal_basis [FiniteDimensional ℝ V] (B : LinearMap.BilinForm ℝ V)
   (hB1 : B.IsSymm) (hB2 : B.IsNonneg) (hB3 : B.Nondegenerate) :
   ∃ (v : Module.Basis (Fin (Module.finrank ℝ V)) ℝ V), Orthonormal B v := by
@@ -94,6 +100,9 @@ theorem exists_orthonormal_basis [FiniteDimensional ℝ V] (B : LinearMap.BilinF
 
 variable {W : Submodule ℝ V} [FiniteDimensional ℝ W]
 
+/-- If $V$ is an arbitrary real vector space equipped with a positive definite symmetric
+bilinar form and $W$ is a finite dimensional subspace, then $V$ is a sum of $W$ and its
+orthogonal complement. -/
 theorem sup_orthogonal_eq_top (B : LinearMap.BilinForm ℝ V)
   (hB1 : B.IsSymm) (hB2 : (B.restrict W).IsNonneg) (hB3 : (B.restrict W).Nondegenerate) :
   W ⊔ W.orthogonalBilin B = ⊤ := by
