@@ -82,8 +82,7 @@ instance : PartialOrder W where
       intro h3
       subst h3
       exact h2 h
-  le_antisymm := by
-    intro u w h1 h2
+  le_antisymm u w h1 h2 := by
     by_contra! h3
     apply lt_irrefl (cs.length u)
     exact lt_of_lt_of_le (length_lt_of_lt ⟨h1, h3⟩) (length_le_of_le h2)
@@ -132,8 +131,7 @@ theorem lt_mul_reflection_iff {t : W} (ht : cs.IsReflection t) (w : W) :
 
 theorem mul_reflection_lt_iff {t : W} (ht : cs.IsReflection t) (w : W) :
   w * t < w ↔ cs.length (w * t) < cs.length w := by
-  have h : w * t = (w * t * w⁻¹) * w := by group
-  rw [h]
+  rw [show w * t = (w * t * w⁻¹) * w by group]
   apply reflection_mul_lt_iff
   rwa [isReflection_conj_iff]
 
@@ -252,14 +250,13 @@ theorem exists_reduced_subword_of_le {u w : W} (ω : ReducedWord w) (h : u ≤ w
   | rfl => exists ω
   | step v w _ h1 h2 ih =>
       generalize h3 : w * v⁻¹ = t at h1
-      rw [mul_inv_eq_iff_eq_mul] at h3
+      rw [←inv_inj, mul_inv_rev, inv_inv, h1.inv, mul_inv_eq_iff_eq_mul] at h3
+      rw [h3] at h2
       have h4 : cs.IsLeftInversion (cs.wordProd ω) t := by
         refine ⟨h1, ?_⟩
-        rw [ω.wordProd_eq]
-        nth_rw 1 [h3]
-        rwa [←mul_assoc, h1.mul_self, one_mul]
+        rwa [ω.wordProd_eq]
       have ⟨i, _, h5⟩ := strong_exchange h4
-      nth_rw 1 [ω.wordProd_eq, h3, ←mul_assoc, h1.mul_self, one_mul] at h5
+      rw [ω.wordProd_eq, ←h3] at h5
       have ⟨ω', h6⟩ := exists_reduced_subword' h5
       have ⟨μ, h7⟩ := ih ω'
       exists μ
@@ -480,12 +477,12 @@ theorem local_configuration₂ {i i' : B W} {w : W}
   by_cases h3 : cs.IsLeftDescent (w * cs.simple i') i
   · right
     rw [mul_assoc]
-    have h4 := h.1
-    rw [lt_simple_mul_iff] at h4
-    have h5 := (lifting_property (le_of_lt h2.1) h3 h4).1
+    replace h := h.1
+    rw [lt_simple_mul_iff] at h
+    have h5 := (lifting_property (le_of_lt h2.1) h3 h).1
     apply eq_of_le_of_length_eq h5
     rw [isLeftDescent_iff] at h3
-    rw [cover_iff] at h h2
+    rw [cover_iff] at h2
     lia
   · left
     have h4 : w * cs.simple i' < cs.simple i * (w * cs.simple i') := by
