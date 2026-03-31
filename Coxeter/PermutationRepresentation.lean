@@ -75,17 +75,17 @@ theorem permRepAux_nil : permRepAux ([] : List (B W)) = id := by
 
 theorem permRepAux_cons (i : B W) (ω : List (B W)) :
   permRepAux (i :: ω) = permRepAux [i] ∘ permRepAux ω := by
-  ext ⟨t, ε⟩
+  ext ⟨⟨t, _⟩, ε⟩
   rw [comp_apply]
   unfold permRepAux
   dsimp
   congr 1
   · congr 1
-    change MulAut.conj (cs.wordProd (i :: ω)) t.val
-      = MulAut.conj (cs.wordProd [i]) (MulAut.conj (cs.wordProd ω) t.val)
+    change MulAut.conj (cs.wordProd (i :: ω)) t
+      = MulAut.conj (cs.wordProd [i]) (MulAut.conj (cs.wordProd ω) t)
     rw [wordProd_singleton, wordProd_cons, map_mul, MulAut.mul_apply]
-  · rw [add_assoc, reverse_cons, reverse_singleton, add_right_inj, etaAux_append]
-    simp only [wordProd_reverse, inv_inv]
+  · rw [add_assoc, reverse_cons, reverse_singleton, add_right_inj, etaAux_append, wordProd_reverse,
+      inv_inv]
 
 theorem permRepAux_append (ω₁ ω₂ : List (B W)) :
   permRepAux (ω₁ ++ ω₂) = permRepAux ω₁ ∘ permRepAux ω₂ := by
@@ -121,14 +121,12 @@ theorem permRepAux_alternatingWord (i i' : B W) :
       rw [lt_inf_iff] at h
       simp only [get_eq_getElem, getElem_take, getElem_drop]
       rw [cs.getElem_leftInvSeq_alternatingWord _ _ _ _ h.2,
-        cs.getElem_leftInvSeq_alternatingWord _ _ _ _
-          (by rw [two_mul]; exact add_lt_add_right h.1 p)]
-      have h2 : 2 * (p + n) + 1 = (2 * p) + (2 * n + 1) := by linarith
+        cs.getElem_leftInvSeq_alternatingWord _ _ _ _ (by lia)]
+      have h2 : 2 * (p + n) + 1 = (2 * p) + (2 * n + 1) := by ring
       rw [h2]
       nth_rw 2 [alternatingWord_even_add]
       rw [wordProd_append, left_eq_mul, prod_alternatingWord_eq_mul_pow]
-      unfold p
-      simp
+      simp [p]
 
 theorem permRepAux_singleton_involutive (i : B W) : Involutive (permRepAux [i]) := by
   suffices h : permRepAux [i] ∘ permRepAux [i] = id from congr_fun h
@@ -154,16 +152,15 @@ theorem permRepAux_iterate (i i' : B W) (k : ℕ) :
 
 theorem permRepAux_liftable : (@M W).IsLiftable permRepAux_equiv := by
   intro i i'
-  ext r
-  rw [Equiv.Perm.coe_one, Equiv.Perm.coe_pow, Equiv.Perm.coe_mul]
-  change ((permRepAux [i]) ∘ (permRepAux [i']))^[M i i'] r = id r
+  rw [←Equiv.coe_inj]
+  change ((permRepAux [i]) ∘ (permRepAux [i']))^[M i i'] = id
   rw [←permRepAux_cons, permRepAux_iterate i i' (M i i'), permRepAux_alternatingWord]
 
 /-- Bjorner--Brenti Theorem 1.3.2 (i): extension -/
 def permRep : W →* Equiv.Perm (RootSet W) := cs.lift ⟨permRepAux_equiv, permRepAux_liftable⟩
 
 open Classical in
-def η (w t : W) : ZMod 2 := count t (cs.leftInvSeq (choose (cs.wordProd_surjective w)))
+def η (w t : W) : ZMod 2 := count t (cs.leftInvSeq (cs.wordProd_surjective w).choose)
 
 end construction
 
@@ -181,23 +178,18 @@ open Classical in
 theorem eta_spec (ω : List (B W)) (t : W) :
   η (cs.wordProd ω) t = count t (cs.leftInvSeq ω) := by
   by_cases ht : cs.IsReflection t
-  · have h : permRep (cs.wordProd (Classical.choose
-      (cs.wordProd_surjective (cs.wordProd ω))).reverse) (⟨t, ht⟩, 0)
-      = permRep (cs.wordProd ω.reverse) (⟨t, ht⟩, 0) := by
+  · have h : permRep (cs.wordProd ((cs.wordProd_surjective (cs.wordProd ω))).choose.reverse)
+      (⟨t, ht⟩, 0) = permRep (cs.wordProd ω.reverse) (⟨t, ht⟩, 0) := by
       congr 2
       rw [wordProd_reverse, wordProd_reverse, inv_inj]
-      exact choose_spec (cs.wordProd_surjective (cs.wordProd ω))
+      exact (cs.wordProd_surjective (cs.wordProd ω)).choose_spec
     rw [permRep_wordProd_eq_permRepAux, permRep_wordProd_eq_permRepAux] at h
-    have h2 := congr_arg Prod.snd h
-    unfold permRepAux at h2
-    simp only [etaAux, reverse_reverse, zero_add] at h2
-    exact h2
+    apply_fun Prod.snd at h
+    simp only [permRepAux, etaAux, reverse_reverse, zero_add] at h
+    exact h
   · unfold η
-    congr 1
-    trans 0
-    on_goal 2 => symm
+    rw [count_eq_zero.mpr, count_eq_zero.mpr]
     all_goals
-      rw [count_eq_zero]
       intro h
       exact ht (cs.isReflection_of_mem_leftInvSeq _ h)
 
@@ -212,16 +204,14 @@ theorem eta_conj (i : B W) (t : W) :
   η (cs.simple i) (cs.simple i * t * (cs.simple i)⁻¹) = η (cs.simple i) t := by
   classical
   nth_rw 1 4 [←wordProd_singleton]
-  rw [eta_spec, eta_spec, leftInvSeq]
-  dsimp
-  rw [count_singleton, count_singleton]
+  rw [eta_spec, eta_spec, leftInvSeq, leftInvSeq_nil, map_nil, count_singleton, count_singleton]
   congr 2
   rw [beq_iff_eq, beq_iff_eq, eq_iff_iff, eq_mul_inv_iff_mul_eq, ←inv_mul_eq_iff_eq_mul,
     inv_mul_cancel_left]
 
 theorem permRep_eq (w : W) (r : RootSet W) : permRep w r
   = ⟨⟨MulAut.conj w r.1.val, r.1.prop.conj _⟩, r.2 + η w⁻¹ r.1.val⟩ := by
-  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word w
+  have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word w
   subst hω2
   rw [permRep_wordProd_eq_permRepAux, ←wordProd_reverse, eta_spec]
   rfl
@@ -235,17 +225,16 @@ theorem permRep_inj : Injective (@permRep W _) := by
   classical
   rw [injective_iff_map_eq_one]
   intro w hw
-  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w⁻¹
+  have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w⁻¹
   rw [inv_eq_iff_eq_inv] at hω2
   subst hω2
   rw [inv_eq_one, ←cs.length_eq_zero_iff, hω1]
   cases ω with
   | nil => rfl
   | cons i is =>
-      have h : count (cs.simple i) (cs.leftInvSeq (i :: is)) = 1 :=
-        count_eq_one_of_mem hω1.nodup_leftInvSeq (Mem.head _)
-      have h2 := congr_arg Prod.snd (permRep_inv_eq (cs.wordProd (i :: is))
-        ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩)
+      have h := count_eq_one_of_mem hω1.nodup_leftInvSeq (Mem.head _)
+      have h2 := permRep_inv_eq (cs.wordProd (i :: is)) ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩
+      apply_fun Prod.snd at h2
       rw [hw, Equiv.Perm.coe_one, id_eq, zero_add, eta_spec, h] at h2
       dsimp at h2
       contradiction
@@ -256,19 +245,18 @@ theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :
   revert t ε
   apply ReflectionSet.induction
   · simp [permRep_eq]
-  · intro t i ih ε
+  · intro ⟨t, ht⟩ i ih ε
     calc
-      permRep (cs.simple i * t.val * (cs.simple i)⁻¹)
-        (⟨cs.simple i * t.val * (cs.simple i)⁻¹, t.prop.conj _⟩, ε)
-        = permRep (cs.simple i) (permRep t.val (permRep (cs.simple i)⁻¹
-          (⟨cs.simple i * t.val * (cs.simple i)⁻¹, t.prop.conj _⟩, ε))) := by simp
-      _ = permRep (cs.simple i) (permRep t.val ((t, ε + η (cs.simple i) t.val))) := ?_
-      _ = permRep (cs.simple i) ((t, ε + η (cs.simple i) t.val + 1)) := by rw [ih]
-      _ = (⟨cs.simple i * t.val * (cs.simple i)⁻¹, _⟩, ε + 1) := ?_
+      permRep (cs.simple i * t * (cs.simple i)⁻¹)
+        (⟨cs.simple i * t * (cs.simple i)⁻¹, ht.conj _⟩, ε)
+        = permRep (cs.simple i) (permRep t (permRep (cs.simple i)⁻¹
+          (⟨cs.simple i * t * (cs.simple i)⁻¹, ht.conj _⟩, ε))) := by simp
+      _ = permRep (cs.simple i) (permRep t ((⟨t, ht⟩, ε + η (cs.simple i) t))) := ?_
+      _ = permRep (cs.simple i) ((⟨t, ht⟩, ε + η (cs.simple i) t + 1)) := by rw [ih]
+      _ = (⟨cs.simple i * t * (cs.simple i)⁻¹, _⟩, ε + 1) := ?_
     · rw [permRep_inv_eq, eta_conj]
       dsimp
       group
-      rfl
     · rw [permRep_eq]
       dsimp
       congr 1
@@ -277,7 +265,7 @@ theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :
 
 theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInversion w t := by
   classical
-  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w
+  have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w
   subst hω2
   rw [eta_spec] at h
   have h2 : 0 < count t (cs.leftInvSeq ω) := by
@@ -285,11 +273,8 @@ theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInve
     intro heq
     rw [heq] at h
     contradiction
-  rw [count_pos_iff, mem_iff_get] at h2
-  let ⟨i, hi⟩ := h2
   apply cs.isLeftInversion_of_mem_leftInvSeq hω1
-  rw [←hi]
-  apply List.getElem_mem
+  rwa [count_pos_iff] at h2
 
 theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
   ¬ cs.IsLeftInversion w t := by
