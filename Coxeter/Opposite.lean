@@ -34,13 +34,14 @@ theorem wordProd_op (ω : List (B W)) :
 
 theorem length_op (w : W) : cs.length (op w) = cs.length w := by
   apply eq_of_le_of_ge
-  · have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word w
-    rw [←hω1, hω2]
+  · have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
+    rw [hω2, hω1]
     nth_rw 1 [←reverse_reverse ω, ←wordProd_op, ←length_reverse]
     apply cs.length_wordProd_le
-  · have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word (op w)
+  · have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced (op w)
+    rw [hω2, hω1]
     rw [wordProd_op, op_inj] at hω2
-    rw [←hω1, hω2, wordProd_reverse, length_inv]
+    rw [hω2, wordProd_reverse, length_inv]
     apply cs.length_wordProd_le
 
 theorem isLeftDescent_op_iff (w : W) (i : B W) :

@@ -192,7 +192,7 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
     | Or.inl h2 =>
         rw [h2]
         simp only [ne_eq,  not_true_eq_false, iff_false]
-        push_neg
+        push Not
         exists ⟨cos (π / M i i') • stdBasis i + 1 • stdBasis i', ?_⟩
         · rw [mem_E_iff]
           exists cos (π / M i i'), 1

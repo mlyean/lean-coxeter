@@ -100,7 +100,7 @@ theorem eq_of_le_of_length_eq {u w : W} (h : u ≤ w) (h2 : cs.length u = cs.len
 instance : OrderBot W where
   bot := 1
   bot_le w := by
-    have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w
+    have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
     subst hω2
     induction ω with
     | nil => rw [wordProd_nil]
@@ -408,7 +408,7 @@ noncomputable instance : GradeMinOrder ℕ W where
 theorem lifting_property {u w : W} {i : B W}
   (h1 : u ≤ w) (h2 : cs.IsLeftDescent w i) (h3 : ¬ cs.IsLeftDescent u i) :
   u ≤ cs.simple i * w ∧ cs.simple i * u ≤ w := by
-  have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' (cs.simple i * w)
+  have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced (cs.simple i * w)
   have h4 : cs.IsReduced (i :: ω) := by
     rwa [IsReduced_cons hω1, ←hω2, ←isLeftDescent_iff_not_isLeftDescent_mul]
   rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hω2
@@ -592,7 +592,7 @@ theorem length_le_length_w₀ (w : W) : cs.length w ≤ cs.length (w₀ : W) := 
 
 theorem eq_w₀_of_length_ge {x : W} (h : cs.length x ≥ cs.length (w₀ : W)) : x = w₀ := by
   by_contra! h2
-  replace h2 : x < w₀ := Ne.lt_top h2
+  apply Ne.lt_top at h2
   apply_fun cs.length at h2 using @strictMono_length W _
   exact not_le_of_gt h2 h
 
@@ -613,30 +613,32 @@ theorem w₀_sq : (w₀ : W) ^ 2 = 1 := by
 
 /-- Bjorner--Brenti Proposition 2.3.2 (ii) -/
 theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - cs.length w := by
-  apply le_antisymm _ (cs.length_mul_ge_length_sub_length' w w₀)
-  have hle : cs.length w ≤ cs.length w₀ := length_le_length_w₀ w
-  generalize hk : cs.length w = k at hle
-  revert w
-  induction hle using Nat.decreasingInduction with
-  | self =>
-      intro w hw
-      apply eq_w₀_of_length_eq at hw
-      rw [hw, w₀_mul_self, length_one]
-      apply Nat.zero_le
-  | of_succ k hk ih =>
-      intro w hw
-      subst hw
-      have ⟨i, hi⟩ : ∃ x, ¬cs.IsLeftDescent w x := by
-        rw [←not_forall, all_isLeftDescent_iff]
-        intro h
-        rwa [h, lt_self_iff_false] at hk
-      rw [not_isLeftDescent_iff] at hi
-      specialize ih (cs.simple i * w) hi
-      rw [mul_assoc] at ih
-      trans cs.length (cs.simple i * (w * w₀)) + 1
-      · have h := cs.length_mul_le (cs.simple i) (cs.simple i * (w * w₀))
-        rwa [simple_mul_simple_cancel_left, length_simple, add_comm] at h
-      · lia
+  apply le_antisymm _ _
+  · have hle : cs.length w ≤ cs.length w₀ := length_le_length_w₀ w
+    generalize hk : cs.length w = k at hle
+    revert w
+    induction hle using Nat.decreasingInduction with
+    | self =>
+        intro w hw
+        apply eq_w₀_of_length_eq at hw
+        rw [hw, w₀_mul_self, length_one]
+        apply Nat.zero_le
+    | of_succ k hk ih =>
+        intro w hw
+        subst hw
+        have ⟨i, hi⟩ : ∃ x, ¬cs.IsLeftDescent w x := by
+          rw [←not_forall, all_isLeftDescent_iff]
+          intro h
+          rwa [h, lt_self_iff_false] at hk
+        rw [not_isLeftDescent_iff] at hi
+        specialize ih (cs.simple i * w) hi
+        rw [mul_assoc] at ih
+        trans cs.length (cs.simple i * (w * w₀)) + 1
+        · have h := cs.length_mul_le (cs.simple i) (cs.simple i * (w * w₀))
+          rwa [simple_mul_simple_cancel_left, length_simple, add_comm] at h
+        · lia
+  · rw [Nat.sub_le_iff_le_add]
+    apply cs.length_le_length_mul_add_left
 
 /-- Bjorner--Brenti Proposition 2.3.2 (iii) -/
 theorem isLeftInversion_mul_w₀_iff {t : W} (ht : cs.IsReflection t) (w : W) :

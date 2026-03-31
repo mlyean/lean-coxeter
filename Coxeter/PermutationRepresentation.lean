@@ -211,7 +211,7 @@ theorem eta_conj (i : B W) (t : W) :
 
 theorem permRep_eq (w : W) (r : RootSet W) : permRep w r
   = ⟨⟨MulAut.conj w r.1.val, r.1.prop.conj _⟩, r.2 + η w⁻¹ r.1.val⟩ := by
-  have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word w
+  have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
   subst hω2
   rw [permRep_wordProd_eq_permRepAux, ←wordProd_reverse, eta_spec]
   rfl
@@ -225,7 +225,7 @@ theorem permRep_inj : Injective (@permRep W _) := by
   classical
   rw [injective_iff_map_eq_one]
   intro w hw
-  have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w⁻¹
+  have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w⁻¹
   rw [inv_eq_iff_eq_inv] at hω2
   subst hω2
   rw [inv_eq_one, ←cs.length_eq_zero_iff, hω1]
@@ -265,7 +265,7 @@ theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :
 
 theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInversion w t := by
   classical
-  have ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w
+  have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
   subst hω2
   rw [eta_spec] at h
   have h2 : 0 < count t (cs.leftInvSeq ω) := by

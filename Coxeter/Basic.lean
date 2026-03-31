@@ -58,7 +58,7 @@ instance {w : W} : CoeOut (ReducedWord w) (List (B W)) where
   coe := Subtype.val
 
 instance {w : W} : Nonempty (ReducedWord w) :=
-  ⟨(Classical.indefiniteDescription _ (cs.exists_reduced_word' w))⟩
+  ⟨(Classical.indefiniteDescription _ (cs.exists_isReduced w))⟩
 
 namespace ReducedWord
 

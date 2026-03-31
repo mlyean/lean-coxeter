@@ -64,7 +64,7 @@ def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
     Equiv.subtypeEquivRight (isLeftInversion_iff_mem_leftInvSeq hω)
 
 instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
-  have ⟨ω, h1, h2⟩ := cs.exists_reduced_word' w
+  have ⟨ω, h1, h2⟩ := cs.exists_isReduced w
   have h3 := equiv_IsLeftInversion ω h1
   rw [←h2] at h3
   haveI : Finite {x // x ∈ cs.leftInvSeq ω} := (cs.leftInvSeq ω).finite_toSet
@@ -74,7 +74,7 @@ instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
 theorem card_of_isLeftInversion (w : W) :
   Nat.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
   classical
-  let ⟨ω, hω1, hω2⟩ := cs.exists_reduced_word' w
+  let ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
   subst hω2
   rw [hω1, Nat.card_congr (equiv_IsLeftInversion ω hω1),
     Nat.subtype_card (cs.leftInvSeq ω).toFinset (fun _ => List.mem_toFinset),
