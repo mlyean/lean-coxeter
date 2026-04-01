@@ -94,8 +94,7 @@ theorem permRepAux_append (ω₁ ω₂ : List (B W)) :
       rw [permRepAux_nil]
       rfl
   | cons i is ih =>
-      rw [cons_append, permRepAux_cons, ih]
-      nth_rw 2 [permRepAux_cons]
+      rw [cons_append, permRepAux_cons, ih, permRepAux_cons i is]
       rfl
 
 theorem permRepAux_alternatingWord (i i' : B W) :
@@ -216,8 +215,8 @@ theorem permRep_eq (w : W) (r : RootSet W) : permRep w r
   rw [permRep_wordProd_eq_permRepAux, ←wordProd_reverse, eta_spec]
   rfl
 
-theorem permRep_inv_eq (w : W) (r : RootSet W) : permRep w⁻¹ r
-  = ⟨⟨MulAut.conj w⁻¹ r.1.val, r.1.prop.conj _⟩, r.2 + η w r.1.val⟩ := by
+theorem permRep_inv_eq (w : W) (r : RootSet W) :
+  permRep w⁻¹ r = ⟨⟨MulAut.conj w⁻¹ r.1.val, r.1.prop.conj _⟩, r.2 + η w r.1.val⟩ := by
   rw [permRep_eq, inv_inv]
 
 /-- Bjorner--Brenti Theorem 1.3.2 (i): injectivity -/
@@ -232,11 +231,11 @@ theorem permRep_inj : Injective (@permRep W _) := by
   cases ω with
   | nil => rfl
   | cons i is =>
-      have h := count_eq_one_of_mem hω1.nodup_leftInvSeq (Mem.head _)
-      have h2 := permRep_inv_eq (cs.wordProd (i :: is)) ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩
-      apply_fun Prod.snd at h2
-      rw [hw, Equiv.Perm.coe_one, id_eq, zero_add, eta_spec, h] at h2
-      dsimp at h2
+      have h := permRep_inv_eq (cs.wordProd (i :: is)) ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩
+      apply_fun Prod.snd at h
+      rw [hw, Equiv.Perm.coe_one, id_eq, zero_add, eta_spec,
+        count_eq_one_of_mem hω1.nodup_leftInvSeq (Mem.head _)] at h
+      dsimp at h
       contradiction
 
 /-- Bjorner--Brenti Theorem 1.3.2 (ii) -/
@@ -268,13 +267,11 @@ theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInve
   have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
   subst hω2
   rw [eta_spec] at h
-  have h2 : 0 < count t (cs.leftInvSeq ω) := by
-    rw [pos_iff_ne_zero]
-    intro heq
-    rw [heq] at h
-    contradiction
   apply cs.isLeftInversion_of_mem_leftInvSeq hω1
-  rwa [count_pos_iff] at h2
+  rw [←count_pos_iff, pos_iff_ne_zero]
+  intro heq
+  rw [heq] at h
+  contradiction
 
 theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
   ¬ cs.IsLeftInversion w t := by
@@ -288,19 +285,17 @@ theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
     permRep_inv_eq, permRep_reflection ⟨t, ht⟩, h, zero_add, Eq.comm] at h3
 
 theorem eta_eq_one_iff {t w : W} : η w t = 1 ↔ cs.IsLeftInversion w t := by
-  generalize h : η w t = a
-  match a with
+  match h : η w t with
   | 0 =>
       simp only [zero_ne_one, false_iff]
-      apply not_isLeftInversion_of_eta_eq_zero h
+      exact not_isLeftInversion_of_eta_eq_zero h
   | 1 =>
       simp only [true_iff]
-      apply isLeftInversion_of_eta_eq_one h
+      exact isLeftInversion_of_eta_eq_one h
 
 theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
-  trans ¬ η w t = 1
-  · unfold ZMod
-    grind
-  · rw [not_iff_not, eta_eq_one_iff]
+  rw [←eta_eq_one_iff.not]
+  unfold ZMod
+  grind
 
 end Coxeter

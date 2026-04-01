@@ -34,26 +34,22 @@ theorem mem_leftInvSeq_of_isLeftInversion
   rw [←count_pos_iff, pos_iff_ne_zero]
   intro heq
   rw [←eta_eq_one_iff, eta_spec, heq] at h
-  trivial
+  contradiction
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
 theorem isLeftInversion_iff_mem_leftInvSeq {ω : List (B W)} (hω : cs.IsReduced ω) (t : W) :
-  cs.IsLeftInversion (cs.wordProd ω) t ↔ t ∈ cs.leftInvSeq ω := by
-  constructor
-  · apply mem_leftInvSeq_of_isLeftInversion
-  · exact cs.isLeftInversion_of_mem_leftInvSeq hω
+  cs.IsLeftInversion (cs.wordProd ω) t ↔ t ∈ cs.leftInvSeq ω :=
+  ⟨mem_leftInvSeq_of_isLeftInversion, cs.isLeftInversion_of_mem_leftInvSeq hω⟩
 
 /-- Bjorner--Brenti Theorem 1.4.3 -/
 theorem strong_exchange {ω : List (B W)} {t : W} (h : cs.IsLeftInversion (cs.wordProd ω) t) :
   ∃ i < ω.length, t * cs.wordProd ω = cs.wordProd (ω.eraseIdx i) := by
-  have h2 := mem_leftInvSeq_of_isLeftInversion h
-  rw [mem_iff_get] at h2
-  let ⟨i, hi⟩ := h2
+  apply mem_leftInvSeq_of_isLeftInversion at h
+  rw [mem_iff_get] at h
+  obtain ⟨i, hi⟩ := h
   exists i
-  constructor
-  · rw [←cs.length_leftInvSeq ω]
-    exact i.prop
-  · rw [←hi, ←getD_leftInvSeq_mul_wordProd, getD_eq_get]
+  rw [←cs.length_leftInvSeq ω, ←hi, ←getD_leftInvSeq_mul_wordProd, getD_eq_get]
+  exact ⟨i.prop, rfl⟩
 
 theorem exchange_property {ω : List (B W)} {i : B W} (h : cs.IsLeftDescent (cs.wordProd ω) i) :
   ∃ j < ω.length, cs.simple i * cs.wordProd ω = cs.wordProd (ω.eraseIdx j) :=
@@ -65,10 +61,9 @@ def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
 
 instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
   have ⟨ω, h1, h2⟩ := cs.exists_isReduced w
-  have h3 := equiv_IsLeftInversion ω h1
-  rw [←h2] at h3
-  haveI : Finite {x // x ∈ cs.leftInvSeq ω} := (cs.leftInvSeq ω).finite_toSet
-  exact Finite.of_equiv _ h3.symm
+  rw [h2]
+  haveI : Finite {x // x ∈ cs.leftInvSeq ω} := List.finite_toSet _
+  exact Finite.of_equiv _ (equiv_IsLeftInversion ω h1).symm
 
 /-- Bjorner--Brenti Corollary 1.4.5 -/
 theorem card_of_isLeftInversion (w : W) :
@@ -86,10 +81,10 @@ theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
   induction ω with
   | nil =>
       absurd hω
-      exact IsReduced_nil
+      exact isReduced_nil
   | cons k ks ih =>
       by_cases h : cs.IsReduced ks
-      · have ⟨j, h2, h3⟩ := exchange_property ((not_IsReduced_cons h k).mp hω)
+      · have ⟨j, h2, h3⟩ := exchange_property ((not_isReduced_cons h k).mp hω)
         exists 0, j + 1
         refine ⟨Nat.zero_lt_succ j, ?_, ?_⟩
         · rw [length_cons]
@@ -133,7 +128,7 @@ open MulOpposite
 
 theorem strong_exchange_right {ω : List (B W)} {t : W} (h : cs.IsRightInversion (cs.wordProd ω) t) :
   ∃ i < ω.length, cs.wordProd ω * t = cs.wordProd (ω.eraseIdx i) := by
-  let ⟨i, hi1, hi2⟩ := @strong_exchange Wᵐᵒᵖ _ ω.reverse (op t) ?_
+  have ⟨i, hi1, hi2⟩ := @strong_exchange Wᵐᵒᵖ _ ω.reverse (op t) ?_
   · exists ω.length - i - 1
     rw [length_reverse] at hi1
     rw [wordProd_op, ←op_mul, reverse_reverse, wordProd_op, op_inj, reverse_eraseIdx hi1,

@@ -74,7 +74,7 @@ theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis
         · norm_num
         · norm_num
           have := M.off_diagonal i i' h
-          grind
+          lia
 
 def geomRepAux (i : B W) : V W ≃ₗ[ℝ] V W where
   toFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
