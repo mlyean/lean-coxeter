@@ -189,8 +189,7 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
   (bil.restrict (E i i')).Nondegenerate ↔ M i i' ≠ 0 := by
   unfold LinearMap.BilinForm.Nondegenerate
   rw [LinearMap.BilinForm.nondegenerate_iff']
-  · have h2 : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by
-      grind
+  · have h2 : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
     match h2 with
     | Or.inl h2 =>
         rw [h2]
@@ -284,8 +283,7 @@ theorem geomRepAux_E_2 (i i' : B W) : ∀ z ∈ E i i', (geomRepAux i * geomRepA
 theorem restrict_geomRepAux_mul (i i' : B W) :
   (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
   = (geomRepAux i).restrict (geomRepAux_E_left i i')
-    ∘ₗ (geomRepAux i').restrict (geomRepAux_E_right i i') := by
-  trivial
+    ∘ₗ (geomRepAux i').restrict (geomRepAux_E_right i i') := by rfl
 
 section infinite_order
 
@@ -394,7 +392,7 @@ theorem E_sup_orthogonal :
   apply sup_orthogonal_eq_top _ bil_isSymm (bil_restrict_E_nonneg i i')
   rw [bil_restrict_E_nondegenerate_iff i i' (i_ne_i' i i')]
   have := (inferInstance : Fact (M i i' ≥ 2)).out
-  grind
+  lia
 
 theorem order_geomRepAux_2_eq_order_restrict (m : ℕ) :
   (geomRepAux i * geomRepAux i') ^ m = 1
@@ -448,10 +446,9 @@ instance : InnerProductSpace.Core ℝ (E i i') where
     change bil.restrict (E i i') x x = 0 at h
     have h3 : (bil.restrict (E i i')).Nondegenerate := by
       rw [bil_restrict_E_nondegenerate_iff]
-      · grind
+      · lia
       · intro h3
-        subst h3
-        simp at h2
+        simp [h3] at h2
     unfold LinearMap.BilinForm.Nondegenerate at h3
     rw [LinearMap.BilinForm.nondegenerate_iff] at h3
     · specialize h3 x
@@ -498,8 +495,7 @@ theorem oangle_stdBasisE : ∃ (o : Orientation ℝ (E i i') (Fin 2)),
       exists o
   | inr h2 =>
       exists -o
-      rw [Orientation.oangle_neg_orientation_eq_neg, h2]
-      simp
+      rw [Orientation.oangle_neg_orientation_eq_neg, h2, neg_neg]
 
 theorem geomRepAux_i_restrict_eq_reflect :
   (geomRepAux i).restrict (geomRepAux_E_left i i') = reflect (norm_stdBasisE_0 i i') := by
@@ -535,8 +531,7 @@ theorem geomRepAux_2_restrict_eq_rotate : ∃ (o : Orientation ℝ (E i i') (Fin
   exists o
   rw [restrict_geomRepAux_mul, geomRepAux_i_restrict_eq_reflect, geomRepAux_i'_restrict_eq_reflect]
   simp only [Fin.isValue, LinearEquiv.comp_coe, LinearEquiv.toLinearMap_inj]
-  rw [reflect_reflect o, Orientation.oangle_rev, ho]
-  rw [←mul_div]
+  rw [reflect_reflect o, Orientation.oangle_rev, ho, ←mul_div]
   conv in 2 • -Angle.coe (π - π / M i i') =>
     rw [Angle.coe_sub, smul_neg, smul_sub, neg_sub, ←Angle.coe_nsmul]
     simp
@@ -545,10 +540,10 @@ theorem geomRepAux_2_restrict_eq_rotate : ∃ (o : Orientation ℝ (E i i') (Fin
 theorem order_geomRepAux_2_eq :
   orderOf (geomRepAux i * geomRepAux i') = M i i' := by
   have h := (inferInstance : Fact (M i i' ≥ 2)).out
-  rw [orderOf_eq_iff (by grind)]
+  rw [orderOf_eq_iff (by lia)]
   have ⟨o, ho⟩ := geomRepAux_2_restrict_eq_rotate i i'
-  have h2 := order_rotation_two_pi_div o (M i i') (by grind)
-  rw [orderOf_eq_iff (by grind)] at h2
+  have h2 := order_rotation_two_pi_div o (M i i') (by lia)
+  rw [orderOf_eq_iff (by lia)] at h2
   have rot_pow : ∀ (m : ℕ) (x : E i i'), (o.rotation (Angle.coe (2 * π / M i i')) ^ m) x
     = (⇑(o.rotation (Angle.coe (2 * π / M i i'))))^[m] x := by
     intro m x
@@ -577,8 +572,7 @@ end finite_order
 
 theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
   intro i i'
-  have h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by
-    grind
+  have h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
   match h with
   | Or.inl h =>
       rw [h]
@@ -608,8 +602,7 @@ theorem geomRep_simple_apply (i : B W) (x : V W) :
   rfl
 
 theorem orderOf_simple_mul_simple (i i' : B W) : orderOf (cs.simple i * cs.simple i') = M i i' := by
-  have h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by
-    grind
+  have h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
   match h with
   | Or.inl h =>
       rw [h, orderOf_eq_zero_iff']

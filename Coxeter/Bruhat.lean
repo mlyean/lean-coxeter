@@ -238,10 +238,9 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
   let ν : ReducedWord v := ⟨ν', ?_, rfl⟩
   · refine ⟨hν2, ?_, ν, hν1⟩
     rwa [←ν.length_eq]
-  · apply eq_of_le_of_ge
-    · apply length_wordProd_le
-    · rw [hν3, μ.length_eq, ←μ.wordProd_eq]
-      exact length_lt_of_lt hν2
+  · apply eq_of_le_of_ge (length_wordProd_le _ _)
+    rw [hν3, μ.length_eq, ←μ.wordProd_eq]
+    exact length_lt_of_lt hν2
 
 theorem exists_reduced_subword_of_le {u w : W} (ω : ReducedWord w) (h : u ≤ w) :
   ∃ (μ : ReducedWord u), μ.val <+ ω.val := by
@@ -330,7 +329,7 @@ theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
 noncomputable instance : LocallyFiniteOrder W := LocallyFiniteOrder.ofFiniteIcc finite_Icc
 
 /-- Bjorner--Brenti Corollary 2.2.4 -/
-theorem card_Icc_le (u w : W) : Finset.card (Finset.Icc u w) ≤ 2 ^ cs.length w := by
+theorem card_Icc_le (u w : W) : (Finset.Icc u w).card ≤ 2 ^ cs.length w := by
   classical
   have ω : ReducedWord w := Classical.ofNonempty
   let f : Finset.Icc u w → ω.val.sublists.toFinset :=
@@ -411,59 +410,49 @@ theorem lifting_property {u w : W} {i : B W}
   rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hω2
   have ⟨⟨μ, hμ1, hμ2⟩, hsub⟩ := exists_reduced_subword_of_le ⟨i :: ω, h4, hω2⟩ h1
   dsimp at hsub
-  by_cases hu : u = 1
-  · subst hu
-    constructor
-    · exact bot_le
-    · rw [mul_one, hω2]
-      apply le_of_reduced_subword ⟨[i], ⟨_, _⟩⟩ ⟨i :: ω, ⟨h4, rfl⟩⟩
-      · exact Sublist.cons₂ _ (nil_sublist _)
-      · apply isReduced_singleton
-      · rw [wordProd_singleton]
-  · match μ, hsub with
-    | [], _ =>
-        absurd hu
-        rwa [wordProd_nil] at hμ2
-    | j :: μ, Sublist.cons _ hsub =>
-        constructor
-        · apply le_of_reduced_subword ⟨j :: μ, hμ1, hμ2⟩ ⟨ω, hω1, _⟩ hsub
-          rw [hω2, wordProd_cons, simple_mul_simple_cancel_left]
-        · apply le_of_reduced_subword ⟨i :: j :: μ, _, _⟩ ⟨i :: ω, h4, hω2⟩
-          · exact Sublist.cons₂ _ hsub
-          · rwa [isReduced_cons hμ1, ←hμ2]
-          · rw [wordProd_cons, hμ2]
-    | i :: μ, Sublist.cons₂ _ hsub =>
-        absurd h3
-        rw [←isLeftInversion_simple_iff_isLeftDescent, hμ2]
-        apply cs.isLeftInversion_of_mem_leftInvSeq hμ1
-        exact mem_cons_self
+  match μ, hsub with
+  | [], _ =>
+      rw [hμ2, wordProd_nil, mul_one]
+      refine ⟨bot_le, le_of_reduced_subword ⟨[i], ⟨isReduced_singleton i, ?_⟩⟩ ⟨i :: ω, ⟨h4, hω2⟩⟩
+        (Sublist.cons₂ _ (nil_sublist _))⟩
+      rw [wordProd_singleton]
+  | j :: μ, Sublist.cons _ hsub =>
+      refine ⟨le_of_reduced_subword ⟨j :: μ, hμ1, hμ2⟩ ⟨ω, hω1, ?_⟩ hsub,
+        le_of_reduced_subword ⟨i :: j :: μ, ?_, ?_⟩ ⟨i :: ω, h4, hω2⟩ (Sublist.cons₂ _ hsub)⟩
+      · rw [hω2, wordProd_cons, simple_mul_simple_cancel_left]
+      · rwa [isReduced_cons hμ1, ←hμ2]
+      · rw [wordProd_cons, hμ2]
+  | i :: μ, Sublist.cons₂ _ hsub =>
+      have hμ3 : cs.IsReduced μ := hμ1.drop 1
+      rw [isReduced_cons hμ3] at hμ1
+      rw [hμ2, wordProd_cons, ←isLeftDescent_iff_not_isLeftDescent_mul] at h3
+      contradiction
 
 /-- Bjorner--Brenti Corollary 2.2.8 (i) -/
 theorem local_configuration {i : B W} {t w : W}
   (h : cs.simple i ≠ t) (h2 : w ⋖ cs.simple i * w) (h3 : w ⋖ t * w) :
   cs.simple i * w ⋖ cs.simple i * t * w ∧ t * w ⋖ cs.simple i * t * w := by
-  cases mul_reflection_lt_or_gt (t * w) (cs.isReflection_simple i) with
-  | inl h4 =>
-      absurd h
-      rw [←mul_left_inj w]
-      rw [simple_mul_lt_iff] at h4
-      apply eq_of_le_of_length_eq
-      · apply (lifting_property (le_of_lt h3.1) h4 _).2
-        rw [←lt_simple_mul_iff]
-        exact h2.1
-      · rw [length_cover h2, length_cover h3]
-  | inr h4 =>
-      have h4' : cs.length (cs.simple i * (t * w)) = cs.length (t * w) + 1 := by
-        rwa [gt_iff_lt, lt_simple_mul_iff, not_isLeftDescent_iff] at h4
-      have h5 : cs.IsLeftDescent (cs.simple i * (t * w)) i := by
-        rw [isLeftDescent_iff, simple_mul_simple_cancel_left, h4']
-      have h6 : ¬ cs.IsLeftDescent w i := by
-        rw [←lt_simple_mul_iff]
-        exact h2.1
-      have h7 := (lifting_property (le_of_lt (lt_trans h3.1 h4)) h5 h6).2
-      rw [cover_iff, cover_iff, mul_assoc]
-      refine ⟨⟨h7, ?_⟩, ⟨le_of_lt h4, h4'⟩⟩
-      rw [h4', length_cover h2, length_cover h3]
+  have h4 : ¬ cs.IsLeftDescent (t * w) i := by
+    intro h4
+    apply h
+    rw [←mul_left_inj w]
+    apply eq_of_le_of_length_eq
+    · apply (lifting_property (le_of_lt h3.1) h4 _).2
+      rw [←lt_simple_mul_iff]
+      exact h2.1
+    · rw [length_cover h2, length_cover h3]
+  have h5 : cs.length (cs.simple i * (t * w)) = cs.length (t * w) + 1 := by
+    rwa [not_isLeftDescent_iff] at h4
+  have h6 : cs.IsLeftDescent (cs.simple i * (t * w)) i := by
+    rw [isLeftDescent_iff, simple_mul_simple_cancel_left, h5]
+  have h7 : ¬ cs.IsLeftDescent w i := by
+    rw [←lt_simple_mul_iff]
+    exact h2.1
+  rw [←lt_simple_mul_iff] at h4
+  have h8 := (lifting_property (le_of_lt (lt_trans h3.1 h4)) h6 h7).2
+  rw [cover_iff, cover_iff, mul_assoc]
+  refine ⟨⟨h8, ?_⟩, ⟨le_of_lt h4, h5⟩⟩
+  rw [h5, length_cover h2, length_cover h3]
 
 /-- Bjorner--Brenti Corollary 2.2.8 (ii) -/
 theorem local_configuration₂ {i i' : B W} {w : W}
@@ -578,20 +567,14 @@ noncomputable instance : OrderTop W where
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) continued -/
 theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) ↔ x = w₀ := by
   rw [isTop_iff_all_isLeftDescent]
-  constructor
-  · intro h
-    exact top_unique (h ⊤)
-  · intro h w
-    rw [h]
-    exact le_top
+  exact isTop_iff_eq_top
 
 theorem length_le_length_w₀ (w : W) : cs.length w ≤ cs.length (w₀ : W) := monotone_length le_top
 
 theorem eq_w₀_of_length_ge {x : W} (h : cs.length x ≥ cs.length (w₀ : W)) : x = w₀ := by
-  by_contra! h2
-  apply Ne.lt_top at h2
-  apply_fun cs.length at h2 using @strictMono_length W _
-  exact not_le_of_gt h2 h
+  apply eq_of_le_of_not_lt le_top
+  intro h2
+  exact not_lt_of_ge h (strictMono_length h2)
 
 theorem eq_w₀_of_length_eq {x : W} (h : cs.length x = cs.length (w₀ : W)) : x = w₀ :=
   eq_w₀_of_length_ge (ge_of_eq h)
@@ -613,20 +596,17 @@ theorem length_mul_w₀ (w : W) : cs.length (w * w₀) = cs.length (w₀ : W) - 
   apply le_antisymm _ _
   · have hle : cs.length w ≤ cs.length w₀ := length_le_length_w₀ w
     generalize hk : cs.length w = k at hle
-    revert w
-    induction hle using Nat.decreasingInduction with
+    induction hle using Nat.decreasingInduction generalizing w with
     | self =>
-        intro w hw
-        apply eq_w₀_of_length_eq at hw
-        rw [hw, w₀_mul_self, length_one]
+        apply eq_w₀_of_length_eq at hk
+        rw [hk, w₀_mul_self, length_one]
         apply Nat.zero_le
-    | of_succ k hk ih =>
-        intro w hw
-        subst hw
+    | of_succ k hk_lt ih =>
+        subst hk
         have ⟨i, hi⟩ : ∃ x, ¬cs.IsLeftDescent w x := by
           rw [←not_forall, all_isLeftDescent_iff]
-          intro h
-          rwa [h, lt_self_iff_false] at hk
+          apply_fun cs.length
+          exact ne_of_lt hk_lt
         rw [not_isLeftDescent_iff] at hi
         specialize ih (cs.simple i * w) hi
         rw [mul_assoc] at ih
@@ -682,6 +662,9 @@ theorem antitone_mul_w₀ : Antitone (Equiv.mulRight (w₀ : W)) := by
       have := length_le_length_w₀ w
       lia
 
+theorem strictAnti_mul_w₀ : StrictAnti (Equiv.mulRight (w₀ : W)) :=
+  antitone_mul_w₀.strictAnti_of_injective (Equiv.injective _)
+
 theorem antitone_w₀_mul : Antitone (Equiv.mulLeft (w₀ : W)) := by
   intro u w h
   dsimp
@@ -689,6 +672,9 @@ theorem antitone_w₀_mul : Antitone (Equiv.mulLeft (w₀ : W)) := by
   apply monotone_inv
   rw [mul_inv_rev, mul_inv_rev, inv_w₀]
   exact antitone_mul_w₀ (monotone_inv h)
+
+theorem strictAnti_w₀_mul : StrictAnti (Equiv.mulLeft (w₀ : W)) :=
+  antitone_w₀_mul.strictAnti_of_injective (Equiv.injective _)
 
 /-- Bjorner--Brenti Proposition 2.3.4 (ii) -/
 theorem monotone_conj_w₀ : Monotone (MulAut.conj (w₀ : W)) := by
