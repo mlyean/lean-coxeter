@@ -1,5 +1,7 @@
-import Mathlib.Geometry.Euclidean.Angle.Oriented.Rotation
-import Mathlib.LinearAlgebra.Reflection
+module
+
+public import Mathlib.Geometry.Euclidean.Angle.Oriented.Rotation
+public import Mathlib.LinearAlgebra.Reflection
 
 /-!
 # Two dimensional Euclidean spaces
@@ -9,8 +11,9 @@ This file proves that the composition of two reflections is a rotation.
 ## Main statements
 
 * `Coxeter.reflect_reflect`
-
 -/
+
+@[expose] public section
 
 namespace Coxeter
 

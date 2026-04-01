@@ -4,7 +4,6 @@ We formalize in Lean some results on Coxeter groups, following the textbooks [[1
 
 * [Basic.lean](Coxeter/Basic.lean)
     * Basic definitions and lemmas
-* [Opposite.lean](Coxeter/Opposite.lean)
     * The opposite of a Coxeter group
 * [PermutationRepresentation.lean](Coxeter/PermutationRepresentation.lean)
     * Construction of the permutation repersentation

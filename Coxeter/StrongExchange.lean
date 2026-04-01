@@ -1,5 +1,6 @@
-import Coxeter.PermutationRepresentation
-import Coxeter.Opposite
+module
+
+public import Coxeter.PermutationRepresentation
 
 /-!
 # Strong exchange
@@ -17,8 +18,9 @@ This file proves the strong exchange and related properties of Coxeter groups.
 ## References
 
 * [bjorner2005] A. Björner and F. Brenti, *Combinatorics of Coxeter Groups*
-
 -/
+
+@[expose] public section
 
 namespace Coxeter
 

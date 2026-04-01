@@ -1,6 +1,7 @@
-import Coxeter.Basic
-import Coxeter.Bruhat
-import Coxeter.Opposite
-import Coxeter.PermutationRepresentation
-import Coxeter.StrongExchange
-import Coxeter.GeometricRepresentation
+module
+
+public import Coxeter.Basic
+public import Coxeter.Bruhat
+public import Coxeter.PermutationRepresentation
+public import Coxeter.StrongExchange
+public import Coxeter.GeometricRepresentation

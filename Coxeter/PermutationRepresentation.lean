@@ -1,4 +1,6 @@
-import Coxeter.Basic
+module
+
+public import Coxeter.Basic
 
 /-!
 # Permutation representation of Coxeter groups
@@ -21,8 +23,9 @@ This file defines the permutation representation of a Coxeter group.
 ## References
 
 * [bjorner2005] A. Björner and F. Brenti, *Combinatorics of Coxeter Groups*
-
 -/
+
+@[expose] public section
 
 namespace Coxeter
 
@@ -120,9 +123,8 @@ theorem permRepAux_alternatingWord (i i' : B W) :
       rw [lt_inf_iff] at h
       simp only [get_eq_getElem, getElem_take, getElem_drop]
       rw [cs.getElem_leftInvSeq_alternatingWord _ _ _ _ h.2,
-        cs.getElem_leftInvSeq_alternatingWord _ _ _ _ (by lia)]
-      have h2 : 2 * (p + n) + 1 = (2 * p) + (2 * n + 1) := by ring
-      rw [h2]
+        cs.getElem_leftInvSeq_alternatingWord _ _ _ _ (by lia),
+        show 2 * (p + n) + 1 = (2 * p) + (2 * n + 1) by ring]
       nth_rw 2 [alternatingWord_even_add]
       rw [wordProd_append, left_eq_mul, prod_alternatingWord_eq_mul_pow]
       simp [p]

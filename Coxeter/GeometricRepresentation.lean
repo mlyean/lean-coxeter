@@ -1,6 +1,8 @@
-import Coxeter.Basic
-import Coxeter.LinearAlgebra.BilinearForm
-import Coxeter.LinearAlgebra.TwoDim
+module
+
+public import Coxeter.Basic
+public import Coxeter.LinearAlgebra.BilinearForm
+public import Coxeter.LinearAlgebra.TwoDim
 
 /-!
 # Geometric representation of Coxeter groups
@@ -23,8 +25,9 @@ This file defines the geometric representation of a Coxeter group.
 ## References
 
 * [bourbaki2007] N. Bourbaki, *Groupes et algèbres de Lie*
-
 -/
+
+@[expose] public section
 
 namespace Coxeter
 

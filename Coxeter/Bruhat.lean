@@ -1,5 +1,7 @@
-import Mathlib.Order.Grade
-import Coxeter.StrongExchange
+module
+
+public import Mathlib.Order.Grade
+public import Coxeter.StrongExchange
 
 /-!
 # Bruhat order
@@ -21,8 +23,9 @@ This file defines the Bruhat order.
 ## References
 
 * [bjorner2005] A. Björner and F. Brenti, *Combinatorics of Coxeter Groups*
-
 -/
+
+@[expose] public section
 
 namespace Coxeter
 
