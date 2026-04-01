@@ -69,7 +69,7 @@ instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
 theorem card_of_isLeftInversion (w : W) :
   Nat.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
   classical
-  let ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
+  have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
   subst hω2
   rw [hω1, Nat.card_congr (equiv_IsLeftInversion ω hω1),
     Nat.subtype_card (cs.leftInvSeq ω).toFinset (fun _ => List.mem_toFinset),
@@ -104,8 +104,8 @@ theorem exists_reduced_subword (ω : List (B W)) :
   | ind ω ih =>
       by_cases h : cs.IsReduced ω
       · exists ω
-      · let ⟨i, j, _, _, h2⟩ := deletion_property h
-        let ⟨ω', h3, h4, h5⟩ := ih ((ω.eraseIdx j).eraseIdx i) (by grind)
+      · have ⟨i, j, _, _, h2⟩ := deletion_property h
+        have ⟨ω', h3, h4, h5⟩ := ih ((ω.eraseIdx j).eraseIdx i) (by grind)
         exists ω'
         refine ⟨?_, h4, ?_⟩
         · calc

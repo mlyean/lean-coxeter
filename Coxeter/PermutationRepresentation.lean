@@ -8,7 +8,7 @@ This file defines the permutation representation of a Coxeter group.
 ## Main definitions
 
 * `Coxeter.ReflectionSet`
-* `Coxeter.RootSet`
+* `Coxeter.AbstractRootSet`
 * `Coxeter.permRep`
 * `Coxeter.η`
 
@@ -30,23 +30,23 @@ open Function List CoxeterSystem CoxeterGroup
 
 def ReflectionSet (W : Type*) [CoxeterGroup W] : Type _ := {t : W // cs.IsReflection t}
 
-def RootSet (W : Type*) [CoxeterGroup W] : Type _ := ReflectionSet W × ZMod 2
+def AbstractRootSet (W : Type*) [CoxeterGroup W] : Type _ := ReflectionSet W × ZMod 2
 
 variable {W : Type*} [CoxeterGroup W]
 
 /-- Induction principle for reflections -/
 theorem ReflectionSet.induction {P : ReflectionSet W → Prop}
-  (sh : ∀ (i : B W), P (⟨cs.simple i, cs.isReflection_simple i⟩))
-  (ih : ∀ (t : ReflectionSet W) (i : B W),
+  (simple : ∀ (i : B W), P (⟨cs.simple i, cs.isReflection_simple i⟩))
+  (mul : ∀ (t : ReflectionSet W) (i : B W),
     P t → P (⟨(cs.simple i) * t.val * (cs.simple i)⁻¹, t.prop.conj (cs.simple i)⟩)) :
   ∀ (t : ReflectionSet W), P t := by
   intro ⟨t, w, i, hi⟩
   subst hi
   apply cs.simple_induction_left w
   · simp only [one_mul, inv_one, mul_one]
-    exact sh i
+    exact simple i
   · intro w j h
-    apply Eq.subst _ (ih _ j h)
+    apply Eq.subst _ (mul _ j h)
     group
 
 noncomputable section construction
@@ -65,7 +65,7 @@ theorem etaAux_append (μ ω : List (B W)) (t : W) :
   simp only [comp_apply, MulAut.conj_apply, beq_eq_beq]
   rw [mul_inv_eq_iff_eq_mul, mul_assoc, eq_inv_mul_iff_mul_eq]
 
-def permRepAux (ω : List (B W)) (r : RootSet W) : RootSet W :=
+def permRepAux (ω : List (B W)) (r : AbstractRootSet W) : AbstractRootSet W :=
   ⟨⟨MulAut.conj (cs.wordProd ω) r.1.val, r.1.prop.conj _⟩, r.2 + etaAux ω.reverse r.1.val⟩
 
 theorem permRepAux_nil : permRepAux ([] : List (B W)) = id := by
@@ -133,7 +133,7 @@ theorem permRepAux_singleton_involutive (i : B W) : Involutive (permRepAux [i]) 
   have h := permRepAux_alternatingWord i i
   rwa [CoxeterMatrix.diagonal] at h
 
-def permRepAux_equiv (i : B W) : Equiv.Perm (RootSet W) := {
+def permRepAux_equiv (i : B W) : Equiv.Perm (AbstractRootSet W) := {
   toFun := permRepAux [i]
   invFun := permRepAux [i]
   left_inv := permRepAux_singleton_involutive i
@@ -156,12 +156,14 @@ theorem permRepAux_liftable : (@M W).IsLiftable permRepAux_equiv := by
   rw [←permRepAux_cons, permRepAux_iterate i i' (M i i'), permRepAux_alternatingWord]
 
 /-- Bjorner--Brenti Theorem 1.3.2 (i): extension -/
-def permRep : W →* Equiv.Perm (RootSet W) := cs.lift ⟨permRepAux_equiv, permRepAux_liftable⟩
+def permRep : W →* Equiv.Perm (AbstractRootSet W) := cs.lift ⟨permRepAux_equiv, permRepAux_liftable⟩
 
 open Classical in
-def η (w t : W) : ZMod 2 := count t (cs.leftInvSeq (cs.wordProd_surjective w).choose)
+def eta (w t : W) : ZMod 2 := count t (cs.leftInvSeq (cs.wordProd_surjective w).choose)
 
 end construction
+
+local notation "η" => eta
 
 theorem permRep_wordProd_eq_permRepAux (ω : List (B W)) :
   permRep (cs.wordProd ω) = permRepAux ω := by
@@ -186,7 +188,7 @@ theorem eta_spec (ω : List (B W)) (t : W) :
     apply_fun Prod.snd at h
     simp only [permRepAux, etaAux, reverse_reverse, zero_add] at h
     exact h
-  · unfold η
+  · unfold eta
     rw [count_eq_zero.mpr, count_eq_zero.mpr]
     all_goals
       intro h
@@ -208,14 +210,14 @@ theorem eta_conj (i : B W) (t : W) :
   rw [beq_iff_eq, beq_iff_eq, eq_iff_iff, eq_mul_inv_iff_mul_eq, ←inv_mul_eq_iff_eq_mul,
     inv_mul_cancel_left]
 
-theorem permRep_eq (w : W) (r : RootSet W) : permRep w r
+theorem permRep_eq (w : W) (r : AbstractRootSet W) : permRep w r
   = ⟨⟨MulAut.conj w r.1.val, r.1.prop.conj _⟩, r.2 + η w⁻¹ r.1.val⟩ := by
   have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
   subst hω2
   rw [permRep_wordProd_eq_permRepAux, ←wordProd_reverse, eta_spec]
   rfl
 
-theorem permRep_inv_eq (w : W) (r : RootSet W) :
+theorem permRep_inv_eq (w : W) (r : AbstractRootSet W) :
   permRep w⁻¹ r = ⟨⟨MulAut.conj w⁻¹ r.1.val, r.1.prop.conj _⟩, r.2 + η w r.1.val⟩ := by
   rw [permRep_eq, inv_inv]
 
