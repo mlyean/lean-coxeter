@@ -127,8 +127,7 @@ theorem reflection_mul_lt_iff {t : W} (ht : cs.IsReflection t) (w : W) :
 
 theorem lt_mul_reflection_iff {t : W} (ht : cs.IsReflection t) (w : W) :
   w < w * t ↔ cs.length w < cs.length (w * t) := by
-  have h : w * t = (w * t * w⁻¹) * w := by group
-  rw [h]
+  rw [show w * t = (w * t * w⁻¹) * w by group]
   apply lt_reflection_mul_iff
   rwa [isReflection_conj_iff]
 
