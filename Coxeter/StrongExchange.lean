@@ -112,8 +112,8 @@ theorem exists_reduced_subword (ω : List (B W)) :
         refine ⟨?_, h4, ?_⟩
         · calc
             ω' <+ (ω.eraseIdx j).eraseIdx i := h3
-            _ <+ (ω.eraseIdx j) := eraseIdx_sublist _ _
-            _ <+ ω := eraseIdx_sublist _ _
+            _ <+ (ω.eraseIdx j) := eraseIdx_sublist ..
+            _ <+ ω := eraseIdx_sublist ..
         · rw [h2, h5]
 
 theorem exists_reduced_subword' {w : W} {ω : List (B W)} (h : w = cs.wordProd ω) :
