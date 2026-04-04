@@ -2,6 +2,7 @@ module
 
 public import Mathlib.Order.Grade
 public import Coxeter.StrongExchange
+public import Coxeter.Order.Directed
 
 /-!
 # Bruhat order
@@ -17,7 +18,6 @@ This file defines the Bruhat order.
 
 * `Coxeter.subword_property`
 * `Coxeter.lifting_property`
-* `Coxeter.exists_cover_of_lt`
 * `Coxeter.length_mul_w₀`
 
 ## References
@@ -343,9 +343,8 @@ theorem card_Icc_le (u w : W) : (Finset.Icc u w).card ≤ 2 ^ cs.length w := by
     rw [Subtype.mk.injEq, Subtype.val_inj] at h
     apply chooseReducedSubword_inj ω at h
     rwa [Subtype.mk.injEq, Subtype.val_inj] at h
-  rw [←ω.length_eq]
-  have hle := le_trans (Finset.card_le_card_of_injective hf_inj) (toFinset_card_le _)
-  rwa [length_sublists] at hle
+  rw [←ω.length_eq, ←length_sublists]
+  exact (Finset.card_le_card_of_injective hf_inj).trans (toFinset_card_le _)
 
 /-- Bjorner--Brenti Corollary 2.2.5 -/
 theorem monotone_inv : Monotone (@Inv.inv W _) := by
@@ -430,10 +429,9 @@ theorem lifting_property {u w : W} {i : B W}
       · rwa [isReduced_cons hμ1, ←hμ2]
       · rw [wordProd_cons, hμ2]
   | i :: μ, Sublist.cons₂ _ hsub =>
-      have hμ3 : cs.IsReduced μ := hμ1.drop 1
-      rw [isReduced_cons hμ3] at hμ1
-      rw [hμ2, wordProd_cons, ←isLeftDescent_iff_not_isLeftDescent_mul] at h3
-      contradiction
+      absurd hμ1
+      rwa [not_isReduced_cons, isLeftDescent_iff_not_isLeftDescent_mul, ←wordProd_cons, ←hμ2]
+      exact hμ1.drop 1
 
 /-- Bjorner--Brenti Corollary 2.2.8 (i) -/
 theorem local_configuration {i : B W} {t w : W}
@@ -444,20 +442,18 @@ theorem local_configuration {i : B W} {t w : W}
     apply h
     rw [←mul_left_inj w]
     apply eq_of_le_of_length_eq
-    · apply (lifting_property h3.1.le h4 _).2
-      rwa [covBy_simple_mul_self_iff] at h2
+    · rw [covBy_simple_mul_self_iff] at h2
+      exact (lifting_property h3.1.le h4 h2).2
     · rw [←length_cover h2, ←length_cover h3]
   have h5 : cs.length (cs.simple i * (t * w)) = cs.length (t * w) + 1 := by
     rwa [not_isLeftDescent_iff] at h4
-  have h6 : cs.IsLeftDescent (cs.simple i * (t * w)) i := by
-    rw [isLeftDescent_iff, simple_mul_simple_cancel_left, h5]
-  have h7 : ¬ cs.IsLeftDescent w i := by
-    rw [←lt_simple_mul_self_iff]
-    exact h2.1
   rw [←lt_simple_mul_self_iff] at h4
-  have h8 := (lifting_property ((h3.1.trans h4).le) h6 h7).2
+  have h6 : cs.simple i * w ≤ cs.simple i * (t * w) := by
+    rw [covBy_simple_mul_self_iff] at h2
+    rw [←cs.not_isLeftDescent_iff, cs.isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h5
+    exact (lifting_property ((h3.1.trans h4).le) h5 h2).2
   rw [covBy_iff, covBy_iff, mul_assoc]
-  refine ⟨⟨h8, ?_⟩, ⟨h4.le, h5.symm⟩⟩
+  refine ⟨⟨h6, ?_⟩, ⟨h4.le, h5.symm⟩⟩
   rw [h5, ←length_cover h2, length_cover h3]
 
 /-- Bjorner--Brenti Corollary 2.2.8 (ii) -/
@@ -469,12 +465,11 @@ theorem local_configuration₂ {i i' : B W} {w : W}
   by_cases h3 : cs.IsLeftDescent (w * cs.simple i') i
   · right
     rw [mul_assoc]
-    replace h := h.1
-    rw [lt_simple_mul_self_iff] at h
-    have h5 := (lifting_property h2.1.le h3 h).1
+    rw [covBy_simple_mul_self_iff] at h
+    rw [covBy_iff] at h2
+    have h5 := (lifting_property h2.1 h3 h).1
     apply eq_of_le_of_length_eq h5
     rw [isLeftDescent_iff] at h3
-    rw [covBy_iff] at h2
     lia
   · left
     have h4 : w * cs.simple i' < cs.simple i * (w * cs.simple i') := by
@@ -501,10 +496,8 @@ instance : IsDirectedOrder W where
         intro w
         by_cases h : u = 1
         · exists w
-          constructor
-          · rw [h]
-            exact bot_le
-          · apply le_refl
+          rw [h]
+          exact ⟨bot_le, le_refl _⟩
         · have ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
           have hlt : cs.simple i * u < u := by
             rwa [simple_mul_lt_self_iff]
@@ -518,9 +511,9 @@ instance : IsDirectedOrder W where
           · exists cs.simple i * x
             have h3 : x ≤ cs.simple i * x := ((lt_simple_mul_self_iff i x).mpr h2).le
             rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
-            have h4 := (lifting_property (le_trans hx1 h3) h2 hi).2
+            have h4 := (lifting_property (hx1.trans h3) h2 hi).2
             rw [simple_mul_simple_cancel_left] at h4
-            exact ⟨h4, le_trans hx2 h3⟩
+            exact ⟨h4, hx2.trans h3⟩
 
 section finite
 
@@ -545,7 +538,7 @@ theorem isTop_iff_all_isLeftDescent {x : W} : (∀ (i : B W), cs.IsLeftDescent x
     rw [mul_ne_right]
     apply simple_ne_one
 
-instance [OrderTop W] : Finite W := by
+theorem finite_of_orderTop [OrderTop W] : Finite W := by
   apply Finite.of_finite_univ (Set.Finite.ofFinset (Finset.Icc ⊥ ⊤) _)
   simp
 
@@ -556,19 +549,14 @@ theorem finite_of_exists_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeft
     top := x
     le_top := isTop_iff_all_isLeftDescent.mp h
   }
-  infer_instance
+  exact finite_of_orderTop
 
 variable [Finite W]
 
-noncomputable def w₀ : W := (Set.finite_univ.exists_maximal Set.univ_nonempty).choose
-
 /-- Bjorner--Brenti Proposition 2.3.1 (i) -/
-noncomputable instance : OrderTop W where
-  top := w₀
-  le_top := by
-    apply IsMax.isTop
-    intro w
-    exact (Set.finite_univ.exists_maximal Set.univ_nonempty).choose_spec.2 (Set.mem_univ w)
+noncomputable instance : OrderTop W := inferInstance
+
+noncomputable def w₀ : W := ⊤
 
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) continued -/
 theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) ↔ x = w₀ := by
@@ -632,11 +620,10 @@ theorem isLeftInversion_mul_w₀_iff {t : W} (ht : cs.IsReflection t) (w : W) :
     tsub_lt_tsub_iff_left_of_le_of_le (length_le_length_w₀ _) (length_le_length_w₀ _)]
 
 theorem isLeftInversion_w₀_iff (t : W) : cs.IsLeftInversion w₀ t ↔ cs.IsReflection t := by
-  constructor
-  · exact And.left
-  · intro ht
-    rw [←one_mul w₀, isLeftInversion_mul_w₀_iff ht]
-    apply not_isLeftInversion_one
+  refine ⟨And.left, ?_⟩
+  intro ht
+  rw [←one_mul w₀, isLeftInversion_mul_w₀_iff ht]
+  apply not_isLeftInversion_one
 
 instance : Finite (ReflectionSet W) := Subtype.finite
 

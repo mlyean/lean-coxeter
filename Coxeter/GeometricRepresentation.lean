@@ -173,8 +173,9 @@ theorem bil_restrict_E_isSymm (i i' : B W) : (bil.restrict (E i i')).IsSymm := b
 
 theorem bil_restrict_E_nonneg (i i' : B W) : (bil.restrict (E i i')).IsNonneg := by
   rw [LinearMap.BilinForm.isNonneg_def]
-  intro z
-  have ⟨x, y, h⟩ := (mem_E_iff i i' z).mp z.prop
+  intro ⟨z, hz⟩
+  rw [mem_E_iff] at hz
+  obtain ⟨x, y, h⟩ := hz
   simp only [LinearMap.BilinForm.restrict_apply, LinearMap.domRestrict_apply]
   rw [h, bil_restrict_E_diag]
   positivity
@@ -217,7 +218,7 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
         apply lt_of_le_of_ne
         · exact (bil_restrict_E_nonneg i i').nonneg ⟨z, hz1⟩
         · rw [mem_E_iff] at hz1
-          have ⟨x, y, h⟩ := hz1
+          obtain ⟨x, y, h⟩ := hz1
           rw [h, bil_restrict_E_diag]
           intro h3
           symm at h3
@@ -258,7 +259,7 @@ theorem geomRepAux_E_perp_right (i i' : B W) :
 theorem geomRepAux_E_left (i i' : B W) : ∀ z ∈ E i i', geomRepAux i z ∈ E i i' := by
   intro z hz
   rw [mem_E_iff] at hz
-  have ⟨x, y, h⟩ := hz
+  obtain ⟨x, y, h⟩ := hz
   rw [h]
   simp only [map_add, map_smul]
   apply add_mem <;> apply Submodule.smul_mem

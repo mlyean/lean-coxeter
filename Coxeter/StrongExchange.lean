@@ -86,35 +86,33 @@ theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
       exact isReduced_nil
   | cons k ks ih =>
       by_cases h : cs.IsReduced ks
-      · have ⟨j, h2, h3⟩ := exchange_property ((not_isReduced_cons h k).mp hω)
+      · rw [not_isReduced_cons h k] at hω
+        have ⟨j, h2, h3⟩ := exchange_property hω
         exists 0, j + 1
-        refine ⟨Nat.zero_lt_succ j, ?_, ?_⟩
-        · rw [length_cons]
-          exact add_lt_add_left h2 1
-        · rwa [eraseIdx_cons_succ, eraseIdx_zero, tail_cons, wordProd_cons]
+        rw [length_cons, eraseIdx_cons_succ, eraseIdx_zero, tail_cons, wordProd_cons,
+          Nat.succ_lt_succ_iff]
+        exact ⟨Nat.zero_lt_succ j, h2, h3⟩
       · have ⟨i, j, h2, h3, h4⟩ := ih h
         exists i + 1, j + 1
-        refine ⟨add_lt_add_left h2 1, ?_, ?_⟩
-        · rw [length_cons]
-          exact add_lt_add_left h3 1
-        · rw [eraseIdx_cons_succ, eraseIdx_cons_succ, wordProd_cons, wordProd_cons, h4]
+        rw [length_cons, eraseIdx_cons_succ, eraseIdx_cons_succ, wordProd_cons, wordProd_cons, h4,
+          Nat.succ_lt_succ_iff, Nat.succ_lt_succ_iff]
+        exact ⟨h2, h3, rfl⟩
 
 /-- Bjorner--Brenti Corollary 1.4.8 (i) -/
 theorem exists_reduced_subword (ω : List (B W)) :
   ∃ (ω' : List (B W)), ω' <+ ω ∧ cs.IsReduced ω' ∧ cs.wordProd ω = cs.wordProd ω' := by
-  induction ω using Nat.strongRecMeasure length with
-  | ind ω ih =>
-      by_cases h : cs.IsReduced ω
-      · exists ω
-      · have ⟨i, j, _, _, h2⟩ := deletion_property h
-        have ⟨ω', h3, h4, h5⟩ := ih ((ω.eraseIdx j).eraseIdx i) (by grind)
-        exists ω'
-        refine ⟨?_, h4, ?_⟩
-        · calc
-            ω' <+ (ω.eraseIdx j).eraseIdx i := h3
-            _ <+ (ω.eraseIdx j) := eraseIdx_sublist ..
-            _ <+ ω := eraseIdx_sublist ..
-        · rw [h2, h5]
+  induction ω using Nat.strongRecMeasure length with | ind ω ih =>
+  by_cases h : cs.IsReduced ω
+  · exists ω
+  · have ⟨i, j, _, _, h2⟩ := deletion_property h
+    have ⟨ω', h3, h4, h5⟩ := ih ((ω.eraseIdx j).eraseIdx i) (by grind)
+    exists ω'
+    rw [h2, h5]
+    refine ⟨?_, h4, rfl⟩
+    calc
+      ω' <+ (ω.eraseIdx j).eraseIdx i := h3
+      _ <+ (ω.eraseIdx j) := eraseIdx_sublist ..
+      _ <+ ω := eraseIdx_sublist ..
 
 theorem exists_reduced_subword' {w : W} {ω : List (B W)} (h : w = cs.wordProd ω) :
   ∃ (ω' : ReducedWord w), ω'.val <+ ω := by

@@ -270,11 +270,10 @@ theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInve
   classical
   have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
   subst hω2
-  rw [eta_spec] at h
   apply cs.isLeftInversion_of_mem_leftInvSeq hω1
-  rw [←count_pos_iff, pos_iff_ne_zero]
-  intro heq
-  rw [heq] at h
+  by_contra! h2
+  rw [←count_eq_zero] at h2
+  rw [eta_spec, h2] at h
   contradiction
 
 theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
@@ -282,8 +281,7 @@ theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
   intro h2
   have ht := h2.1
   rw [←ht.not_isLeftInversion_mul_right_iff] at h2
-  apply h2
-  apply isLeftInversion_of_eta_eq_one
+  refine h2 (isLeftInversion_of_eta_eq_one ?_)
   have h3 := congr_arg Prod.snd (permRep_inv_eq (t * w) (⟨t, ht⟩, 0))
   rwa [zero_add, mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, ht.inv,
     permRep_inv_eq, permRep_reflection ⟨t, ht⟩, h, zero_add, Eq.comm] at h3
@@ -298,7 +296,7 @@ theorem eta_eq_one_iff {t w : W} : η w t = 1 ↔ cs.IsLeftInversion w t := by
       exact isLeftInversion_of_eta_eq_one h
 
 theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
-  rw [←eta_eq_one_iff.not]
+  rw [←eta_eq_one_iff]
   unfold ZMod
   grind
 
