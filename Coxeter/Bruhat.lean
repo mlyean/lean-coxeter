@@ -46,23 +46,28 @@ private theorem length_le_of_le {u w : W} (h : u ≤ w) : cs.length u ≤ cs.len
   | rfl => rfl
   | step _ _ _ _ h3 ih => exact ih.trans h3.le
 
+theorem eq_of_le_of_length_ge {u w : W} (h : u ≤ w) (h2 : cs.length u ≥ cs.length w) : u = w := by
+  cases h with
+  | rfl => rfl
+  | step v w h1 h2' h3 =>
+      apply length_le_of_le at h1
+      lia
+
+theorem eq_of_le_of_length_eq {u w : W} (h : u ≤ w) (h2 : cs.length u = cs.length w) : u = w :=
+  eq_of_le_of_length_ge h (ge_of_eq h2)
+
 def lt (u w : W) : Prop := u ≤ w ∧ u ≠ w
 
 instance : LT W where
   lt := lt
 
 theorem lt_iff_le_and_length_lt (u w : W) : u < w ↔ u ≤ w ∧ cs.length u < cs.length w := by
-  change (u ≤ w ∧ u ≠ w) ↔ u ≤ w ∧ cs.length u < cs.length w
-  rw [and_congr_right_iff]
+  change (u ≤ w ∧ ¬ u = w) ↔ u ≤ w ∧ cs.length u < cs.length w
+  rw [and_congr_right_iff, not_iff_comm, not_lt]
   intro h
-  cases h with
-  | rfl => simp
-  | step v w h1 h2 h3 =>
-      constructor
-      · intro
-        exact lt_of_le_of_lt (length_le_of_le h1) h3
-      · intro h h4
-        rwa [h4, lt_self_iff_false] at h
+  refine ⟨eq_of_le_of_length_ge h, ?_⟩
+  intro h2
+  rw [h2]
 
 private theorem length_lt_of_lt {u w : W} (h : u < w) : cs.length u < cs.length w := by
   rw [lt_iff_le_and_length_lt] at h
@@ -75,44 +80,18 @@ instance : PartialOrder W where
     | rfl => tauto
     | step v w _ h1 h2 ih => exact le.step u v w ih h1 h2
   lt_iff_le_not_ge u w := by
-    rw [lt_iff_le_and_length_lt, and_congr_right_iff]
+    rw [lt_iff_le_and_length_lt, and_congr_right_iff, iff_not_comm, not_lt]
     intro h
-    constructor
-    · intro h2 h3
-      apply not_le_of_gt h2 (length_le_of_le h3)
-    · intro h2
-      apply length_lt_of_lt ⟨h, _⟩
-      intro h3
-      subst h3
-      exact h2 h
+    refine ⟨length_le_of_le, ?_⟩
+    intro h2
+    rw [eq_of_le_of_length_ge h h2]
+    apply le.rfl
   le_antisymm u w h1 h2 := by
-    by_contra! h3
-    apply lt_irrefl (cs.length u)
-    exact lt_of_lt_of_le (length_lt_of_lt ⟨h1, h3⟩) (length_le_of_le h2)
+    exact eq_of_le_of_length_eq h1 (eq_of_le_of_ge (length_le_of_le h1) (length_le_of_le h2))
 
 theorem monotone_length : Monotone (@cs W).length := by apply length_le_of_le
 
 theorem strictMono_length : StrictMono (@cs W).length := by apply length_lt_of_lt
-
-theorem eq_of_le_of_length_eq {u w : W} (h : u ≤ w) (h2 : cs.length u = cs.length w) : u = w := by
-  apply eq_of_le_of_not_lt h
-  intro h3
-  apply strictMono_length at h3
-  rwa [h2, lt_self_iff_false] at h3
-
-instance : OrderBot W where
-  bot := 1
-  bot_le w := by
-    have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
-    subst hω2
-    induction ω with
-    | nil => rw [wordProd_nil]
-    | cons i is ih =>
-        have h' : cs.IsReduced is := hω1.drop 1
-        apply le.step 1 _ _ (ih h')
-        · rw [wordProd_cons, mul_inv_cancel_right]
-          apply cs.isReflection_simple
-        · rw [hω1, h', length_cons, Nat.lt_succ_iff]
 
 theorem reflection_mul_lt_self_iff {t : W} (ht : cs.IsReflection t) (w : W) :
   t * w < w ↔ cs.IsLeftInversion w t := by
@@ -166,6 +145,18 @@ theorem mul_reflection_lt_or_gt_self (w : W) {t : W} (ht : cs.IsReflection t) :
   w * t < w ∨ w * t > w := by
   rw [mul_reflection_lt_self_iff ht, gt_iff_lt, lt_self_mul_reflection_iff ht]
   apply Classical.em
+
+instance : OrderBot W where
+  bot := 1
+  bot_le w := by
+    have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
+    subst hω2
+    induction ω with
+    | nil => rw [wordProd_nil]
+    | cons i is ih =>
+        have h' : cs.IsReduced is := hω1.drop 1
+        apply le_trans (ih h') (le_of_lt _)
+        rwa [wordProd_cons, lt_simple_mul_self_iff, ←isReduced_cons h']
 
 private theorem reduced_subword_extend_aux (α μ ω : List (B W))
   (hμ : cs.IsReduced (α ++ μ)) (hω : cs.IsReduced (α ++ ω)) (hsub : μ <+ ω) (hneq : μ ≠ ω) :
@@ -438,12 +429,11 @@ theorem local_configuration {i : B W} {t w : W}
   (h : cs.simple i ≠ t) (h2 : w ⋖ cs.simple i * w) (h3 : w ⋖ t * w) :
   cs.simple i * w ⋖ cs.simple i * t * w ∧ t * w ⋖ cs.simple i * t * w := by
   have h4 : ¬ cs.IsLeftDescent (t * w) i := by
-    intro h4
-    apply h
+    contrapose h
     rw [←mul_left_inj w]
     apply eq_of_le_of_length_eq
     · rw [covBy_simple_mul_self_iff] at h2
-      exact (lifting_property h3.1.le h4 h2).2
+      exact (lifting_property h3.1.le h h2).2
     · rw [←length_cover h2, ←length_cover h3]
   have h5 : cs.length (cs.simple i * (t * w)) = cs.length (t * w) + 1 := by
     rwa [not_isLeftDescent_iff] at h4

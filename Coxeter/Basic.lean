@@ -30,11 +30,9 @@ variable {α : Type*}
 
 theorem drop_eraseIdx (l : List α) (i j : ℕ) :
   (drop i l).eraseIdx j = drop i (l.eraseIdx (i + j)) := by
-  revert l
-  induction i with
+  induction i generalizing l with
   | zero => simp
   | succ i ih =>
-      intro l
       cases l with
       | nil => simp
       | cons =>
@@ -100,11 +98,9 @@ theorem tail_alternatingWord (i j : (B W)) (p : ℕ) :
 
 theorem drop_alternatingWord (i j : (B W)) (p q : ℕ) :
   drop p (alternatingWord i j (p + q)) = alternatingWord i j q := by
-  revert q
-  induction p with
+  induction p generalizing q with
   | zero => simp
   | succ p ih =>
-      intro q
       rw [←tail_drop, add_assoc]
       nth_rw 2 [add_comm]
       rw [ih (q + 1)]
@@ -112,11 +108,9 @@ theorem drop_alternatingWord (i j : (B W)) (p q : ℕ) :
 
 theorem alternatingWord_even_add (i i' : B W) (k m : ℕ) :
   alternatingWord i i' (2 * k + m) = alternatingWord i i' m ++ alternatingWord i i' (2 * k) := by
-  revert i i'
-  induction m with
+  induction m generalizing i i' with
   | zero => simp [alternatingWord]
   | succ n ih =>
-      intro i i'
       rw [←add_assoc, alternatingWord_succ, alternatingWord_succ, ih]
       simp only [concat_eq_append, append_assoc, cons_append, nil_append, append_cancel_left_eq]
       rw [←concat_eq_append, ←alternatingWord_succ, alternatingWord_succ']
@@ -226,13 +220,9 @@ theorem isReflection_op_iff (t : W) :
   cs.IsReflection (op t) ↔ cs.IsReflection t := by
   unfold IsReflection
   constructor
-  · intro ⟨w, i, hi⟩
-    cases w with
-    | h w =>
-        rw [simple_op, ←op_inv, ←op_mul, ←op_mul, ←mul_assoc, op_inj] at hi
-        exists w⁻¹, i
-        rw [inv_inv]
-        exact hi
+  · intro ⟨⟨w⟩, i, hi⟩
+    exists w⁻¹, i
+    rwa [inv_inv, ←op_inj, op_mul, op_mul, ←simple_op, ←mul_assoc]
   · intro ⟨w, i, hi⟩
     exists op w⁻¹, i
     rw [simple_op, ←op_inv, ←op_mul, ←op_mul, inv_inv, ←mul_assoc, hi]
