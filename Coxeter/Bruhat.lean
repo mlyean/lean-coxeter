@@ -69,10 +69,6 @@ theorem lt_iff_le_and_length_lt (u w : W) : u < w ↔ u ≤ w ∧ cs.length u < 
   intro h2
   rw [h2]
 
-private theorem length_lt_of_lt {u w : W} (h : u < w) : cs.length u < cs.length w := by
-  rw [lt_iff_le_and_length_lt] at h
-  exact h.2
-
 instance : PartialOrder W where
   le_refl := le.rfl
   le_trans u v w huv hvw := by
@@ -91,7 +87,9 @@ instance : PartialOrder W where
 
 theorem monotone_length : Monotone (@cs W).length := by apply length_le_of_le
 
-theorem strictMono_length : StrictMono (@cs W).length := by apply length_lt_of_lt
+theorem strictMono_length : StrictMono (@cs W).length := by
+  intro u w h
+  exact ((lt_iff_le_and_length_lt u w).mp h).2
 
 theorem reflection_mul_lt_self_iff {t : W} (ht : cs.IsReflection t) (w : W) :
   t * w < w ↔ cs.IsLeftInversion w t := by
@@ -234,7 +232,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
     rwa [←ν.length_eq]
   · apply eq_of_le_of_ge (length_wordProd_le ..)
     rw [hν3, μ.length_eq, ←μ.wordProd_eq]
-    exact length_lt_of_lt hν2
+    exact strictMono_length hν2
 
 theorem exists_reduced_subword_of_le {u w : W} (ω : ReducedWord w) (h : u ≤ w) :
   ∃ (μ : ReducedWord u), μ.val <+ ω.val := by
