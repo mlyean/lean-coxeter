@@ -141,7 +141,7 @@ theorem bil_restrict_E_diag (i i' : B W) (x y : ℝ) :
     ring
 
 theorem bil_restrict_E_isSymm (i i' : B W) : (bil.restrict (E i i')).IsSymm := by
-  apply LinearMap.BilinForm.IsSymm.restrict bil_isSymm
+  apply bil_isSymm.restrict
 
 theorem bil_restrict_E_nonneg (i i' : B W) : (bil.restrict (E i i')).IsNonneg := by
   rw [LinearMap.BilinForm.isNonneg_def]
@@ -230,17 +230,9 @@ theorem geomRepAux_E_perp_right (i i' : B W) :
 theorem geomRepAux_E_left (i i' : B W) : Set.MapsTo (geomRepAux i) (E i i') (E i i') := by
   suffices h : Submodule.map (geomRepAux i).toLinearMap (E i i') ≤ E i i'
     from Set.mapsTo_iff_image_subset.mpr h
-  nth_rw 1 [E_eq_span, LinearMap.map_span_le]
-  simp only [Set.mem_insert_iff, Set.mem_singleton_iff, LinearEquiv.coe_coe, forall_eq_or_imp,
-    geomRepAux_stdBasis, neg_mem_iff, forall_eq]
-  constructor
-  · rw [mem_E_iff]
-    exists 1, 0
-    simp
-  · rw [geomRepAux_apply, mem_E_iff]
-    simp only [bil_eq, mul_neg, neg_smul, sub_neg_eq_add]
-    exists 2 * cos (π / M i i'), 1
-    match_scalars <;> ring
+  rw [E_eq_span, LinearMap.map_span_le]
+  simp only [LinearEquiv.coe_coe, geomRepAux_apply]
+  aesop
 
 theorem geomRepAux_E_right (i i' : B W) : Set.MapsTo (geomRepAux i') (E i i') (E i i') := by
   rw [E_symm]
@@ -287,8 +279,7 @@ theorem geomRepAux_2_add_of_order_zero (h : M i i' = 0) (n : ℕ) :
       CharP.cast_eq_zero, div_zero, cos_zero]
     match_scalars <;> ring
   suffices ((geomRepAux i * geomRepAux i') ^ n) (stdBasis i) = (2 * n) • u + stdBasis i ∧
-    ((geomRepAux i * geomRepAux i') ^ n) u = u by
-    exact this.1
+    ((geomRepAux i * geomRepAux i') ^ n) u = u from this.1
   induction n with
   | zero => simp
   | succ n ih =>
