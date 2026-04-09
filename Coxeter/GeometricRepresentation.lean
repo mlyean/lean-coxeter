@@ -113,43 +113,15 @@ theorem geomRepAux_stdBasis (i : B W) :
 
 def E (i i' : B W) : Submodule ℝ (V W) := supported ℝ _ {i, i'}
 
+theorem E_eq_span (i i' : B W) : E i i' = Submodule.span ℝ {stdBasis i, stdBasis i'} := by
+  unfold E stdBasis
+  rw [supported_eq_span_single, Set.image_pair]
+  rfl
+
 theorem mem_E_iff (i i' : B W) (v : V W)
   : v ∈ E i i' ↔ ∃ (x y : ℝ), v = x • stdBasis i + y • stdBasis i' := by
-  unfold E stdBasis
-  simp only [coe_basisSingleOne, smul_single, smul_eq_mul, mul_one]
-  constructor
-  · intro h
-    by_cases h2 : i = i'
-    · subst h2
-      exists v i, 0
-      simp only [single_zero, add_zero]
-      ext j
-      by_cases h3 : j = i
-      · subst h3
-        simp
-      · simp only [ne_eq, h3, not_false_eq_true, single_eq_of_ne]
-        rw [mem_supported'] at h
-        apply h
-        simp [h3]
-    · exists v i, v i'
-      ext j
-      by_cases h3 : j = i
-      · subst h3
-        simp [h2]
-      · by_cases h4 : j = i'
-        · subst h4
-          simp [h2]
-        · simp only [coe_add, Pi.add_apply, ne_eq, h3, not_false_eq_true,
-            single_eq_of_ne, h4, add_zero]
-          rw [mem_supported'] at h
-          apply h
-          simp [h3, h4]
-  · intro ⟨x, y, h⟩
-    rw [h]
-    apply add_mem
-    all_goals
-    apply single_mem_supported
-    simp
+  rw [E_eq_span, Submodule.mem_span_pair]
+  tauto
 
 theorem E_symm (i i' : B W) : E i i' = E i' i := by
   unfold E
@@ -245,25 +217,24 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
 theorem geomRepAux_E_perp_left (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i z = z := by
   intro z hz
-  rw [geomRepAux_apply, sub_eq_self, hz (stdBasis i)]
-  · rw [mul_zero, zero_smul]
-  · rw [mem_E_iff]
-    exists 1, 0
-    simp
+  rw [geomRepAux_apply, sub_eq_self, hz (stdBasis i), mul_zero, zero_smul]
+  rw [mem_E_iff]
+  exists 1, 0
+  simp
 
 theorem geomRepAux_E_perp_right (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i' z = z := by
   rw [E_symm]
   apply geomRepAux_E_perp_left
 
-theorem geomRepAux_E_left (i i' : B W) : ∀ z ∈ E i i', geomRepAux i z ∈ E i i' := by
-  intro z hz
-  rw [mem_E_iff] at hz
-  obtain ⟨x, y, h⟩ := hz
-  rw [h]
-  simp only [map_add, map_smul]
-  apply add_mem <;> apply Submodule.smul_mem
-  · rw [geomRepAux_stdBasis, neg_mem_iff, mem_E_iff]
+theorem geomRepAux_E_left (i i' : B W) : Set.MapsTo (geomRepAux i) (E i i') (E i i') := by
+  suffices h : Submodule.map (geomRepAux i).toLinearMap (E i i') ≤ E i i'
+    from Set.mapsTo_iff_image_subset.mpr h
+  nth_rw 1 [E_eq_span, LinearMap.map_span_le]
+  simp only [Set.mem_insert_iff, Set.mem_singleton_iff, LinearEquiv.coe_coe, forall_eq_or_imp,
+    geomRepAux_stdBasis, neg_mem_iff, forall_eq]
+  constructor
+  · rw [mem_E_iff]
     exists 1, 0
     simp
   · rw [geomRepAux_apply, mem_E_iff]
@@ -271,15 +242,14 @@ theorem geomRepAux_E_left (i i' : B W) : ∀ z ∈ E i i', geomRepAux i z ∈ E 
     exists 2 * cos (π / M i i'), 1
     match_scalars <;> ring
 
-theorem geomRepAux_E_right (i i' : B W) : ∀ z ∈ E i i', geomRepAux i' z ∈ E i i' := by
+theorem geomRepAux_E_right (i i' : B W) : Set.MapsTo (geomRepAux i') (E i i') (E i i') := by
   rw [E_symm]
   apply geomRepAux_E_left
 
-theorem geomRepAux_E_2 (i i' : B W) : ∀ z ∈ E i i', (geomRepAux i * geomRepAux i') z ∈ E i i' := by
-  intro z hz
-  apply geomRepAux_E_left i i'
-  apply geomRepAux_E_right i i'
-  exact hz
+theorem geomRepAux_E_2 (i i' : B W)
+  : Set.MapsTo (geomRepAux i * geomRepAux i') (E i i') (E i i') := by
+  change Set.MapsTo (geomRepAux i ∘ geomRepAux i') (E i i') (E i i')
+  exact (geomRepAux_E_left i i').comp (geomRepAux_E_right i i')
 
 theorem restrict_geomRepAux_mul (i i' : B W) :
   (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
@@ -541,10 +511,9 @@ theorem geomRepAux_2_restrict_eq_rotate : ∃ (o : Orientation ℝ (E i i') (Fin
 theorem order_geomRepAux_2_eq :
   orderOf (geomRepAux i * geomRepAux i') = M i i' := by
   have h := (inferInstance : Fact (M i i' ≥ 2)).out
-  rw [orderOf_eq_iff (by lia)]
   have ⟨o, ho⟩ := geomRepAux_2_restrict_eq_rotate i i'
   have h2 := order_rotation_two_pi_div o (M i i') (by lia)
-  rw [orderOf_eq_iff (by lia)] at h2
+  rw [orderOf_eq_iff (by lia)] at h2 ⊢
   have rot_pow : ∀ (m : ℕ) (x : E i i'), (o.rotation (Angle.coe (2 * π / M i i')) ^ m) x
     = (⇑(o.rotation (Angle.coe (2 * π / M i i'))))^[m] x := by
     intro m x

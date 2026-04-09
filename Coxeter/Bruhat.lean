@@ -83,7 +83,7 @@ instance : PartialOrder W where
     rw [eq_of_le_of_length_ge h h2]
     apply le.rfl
   le_antisymm u w h1 h2 := by
-    exact eq_of_le_of_length_eq h1 (eq_of_le_of_ge (length_le_of_le h1) (length_le_of_le h2))
+    exact eq_of_le_of_length_ge h1 (length_le_of_le h2)
 
 theorem monotone_length : Monotone (@cs W).length := by apply length_le_of_le
 
@@ -223,7 +223,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
   on_goal 2 =>
     apply_fun cs.wordProd
     rwa [μ.wordProd_eq, ω.wordProd_eq]
-  simp only [nil_append] at hν1 hν2 hν3
+  rw [nil_append] at hν1 hν2 hν3
   rw [←μ.wordProd_eq, μ.prop.1]
   let v := cs.wordProd ν'
   exists v
@@ -479,29 +479,28 @@ theorem local_configuration₂ {i i' : B W} {w : W}
 /-- Bjorner--Brenti Proposition 2.2.9 -/
 instance : IsDirectedOrder W where
   directed u := by
-    induction u using WellFoundedLT.induction with
-    | ind u ih =>
-        intro w
-        by_cases h : u = 1
-        · exists w
-          rw [h]
-          exact ⟨bot_le, le_refl _⟩
-        · have ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
-          have hlt : cs.simple i * u < u := by
-            rwa [simple_mul_lt_self_iff]
-          have ⟨x, hx1, hx2⟩ := ih (cs.simple i * u) hlt w
-          rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
-          by_cases h2 : cs.IsLeftDescent x i
-          · exists x
-            have h3 := (lifting_property hx1 h2 hi).2
-            rw [simple_mul_simple_cancel_left] at h3
-            exact ⟨h3, hx2⟩
-          · exists cs.simple i * x
-            have h3 : x ≤ cs.simple i * x := ((lt_simple_mul_self_iff i x).mpr h2).le
-            rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
-            have h4 := (lifting_property (hx1.trans h3) h2 hi).2
-            rw [simple_mul_simple_cancel_left] at h4
-            exact ⟨h4, hx2.trans h3⟩
+    induction u using WellFoundedLT.induction with | ind u ih =>
+    intro w
+    by_cases h : u = 1
+    · exists w
+      rw [h]
+      exact ⟨bot_le, le_refl _⟩
+    · have ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
+      have hlt : cs.simple i * u < u := by
+        rwa [simple_mul_lt_self_iff]
+      have ⟨x, hx1, hx2⟩ := ih (cs.simple i * u) hlt w
+      rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
+      by_cases h2 : cs.IsLeftDescent x i
+      · exists x
+        have h3 := (lifting_property hx1 h2 hi).2
+        rw [simple_mul_simple_cancel_left] at h3
+        exact ⟨h3, hx2⟩
+      · exists cs.simple i * x
+        have h3 : x ≤ cs.simple i * x := ((lt_simple_mul_self_iff i x).mpr h2).le
+        rw [isLeftDescent_iff_not_isLeftDescent_mul, not_not] at h2
+        have h4 := (lifting_property (hx1.trans h3) h2 hi).2
+        rw [simple_mul_simple_cancel_left] at h4
+        exact ⟨h4, hx2.trans h3⟩
 
 section finite
 
@@ -510,16 +509,15 @@ section finite
 theorem isTop_iff_all_isLeftDescent {x : W} : (∀ (i : B W), cs.IsLeftDescent x i) ↔ IsTop x := by
   constructor
   · intro h u
-    induction u using WellFoundedLT.induction with
-    | ind u ih =>
-        by_cases h2 : u = 1
-        · rw [h2]
-          exact bot_le
-        · have ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h2
-          specialize ih _ ((simple_mul_lt_self_iff i u).mpr hi)
-          rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
-          have h3 := (lifting_property ih (h i) hi).2
-          rwa [simple_mul_simple_cancel_left] at h3
+    induction u using WellFoundedLT.induction with | ind u ih =>
+    by_cases h2 : u = 1
+    · subst h2
+      exact bot_le
+    · have ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h2
+      specialize ih _ ((simple_mul_lt_self_iff i u).mpr hi)
+      rw [isLeftDescent_iff_not_isLeftDescent_mul] at hi
+      have h3 := (lifting_property ih (h i) hi).2
+      rwa [simple_mul_simple_cancel_left] at h3
   · intro h i
     rw [←simple_mul_lt_self_iff]
     apply h.lt_of_ne
@@ -553,10 +551,8 @@ theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) �
 
 theorem length_le_length_w₀ (w : W) : cs.length w ≤ cs.length (w₀ : W) := monotone_length le_top
 
-theorem eq_w₀_of_length_ge {x : W} (h : cs.length x ≥ cs.length (w₀ : W)) : x = w₀ := by
-  apply eq_of_le_of_not_lt le_top
-  intro h2
-  exact not_lt_of_ge h (strictMono_length h2)
+theorem eq_w₀_of_length_ge {x : W} (h : cs.length x ≥ cs.length (w₀ : W)) : x = w₀ :=
+  eq_of_le_of_length_ge le_top h
 
 theorem eq_w₀_of_length_eq {x : W} (h : cs.length x = cs.length (w₀ : W)) : x = w₀ :=
   eq_w₀_of_length_ge (ge_of_eq h)

@@ -45,12 +45,13 @@ theorem ReflectionSet.induction {motive : ReflectionSet W → Prop}
   (t : ReflectionSet W) : motive t := by
   obtain ⟨t, w, i, hi⟩ := t
   subst hi
-  apply cs.simple_induction_left w
-  · simp only [one_mul, inv_one, mul_one]
-    exact simple i
-  · intro w j h
-    apply Eq.subst _ (conj _ j h)
-    group
+  induction w using (@cs W).simple_induction_left with
+  | one =>
+      simp only [one_mul, inv_one, mul_one]
+      exact simple i
+  | mul_simple_left w j h =>
+      apply Eq.subst _ (conj _ j h)
+      group
 
 noncomputable section construction
 
@@ -228,7 +229,7 @@ theorem permRep_inj : Injective (@permRep W _) := by
       apply_fun Prod.snd at h
       rw [hw, Equiv.Perm.coe_one, id_eq, zero_add, eta_spec,
         count_eq_one_of_mem hω1.nodup_leftInvSeq (Mem.head _)] at h
-      dsimp at h
+      change 0 = 1 at h
       contradiction
 
 /-- Bjorner--Brenti Theorem 1.3.2 (ii) -/
