@@ -1,7 +1,5 @@
 module
 
-public import Mathlib.Data.Finite.Defs
-public import Mathlib.Order.Directed
 public import Mathlib.Order.Preorder.Finite
 
 @[expose] public section
