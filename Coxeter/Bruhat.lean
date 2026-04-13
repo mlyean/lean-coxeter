@@ -41,7 +41,7 @@ inductive le : W → W → Prop
 instance : LE W where
   le := le
 
-private theorem length_le_of_le {u w : W} (h : u ≤ w) : cs.length u ≤ cs.length w := by
+theorem length_le_of_le {u w : W} (h : u ≤ w) : cs.length u ≤ cs.length w := by
   induction h with
   | rfl => rfl
   | step _ _ _ _ h3 ih => exact ih.trans h3.le
@@ -82,8 +82,7 @@ instance : PartialOrder W where
     intro h2
     rw [eq_of_le_of_length_ge h h2]
     apply le.rfl
-  le_antisymm u w h1 h2 := by
-    exact eq_of_le_of_length_ge h1 (length_le_of_le h2)
+  le_antisymm u w h1 h2 := eq_of_le_of_length_ge h1 (length_le_of_le h2)
 
 theorem monotone_length : Monotone (@cs W).length := by apply length_le_of_le
 

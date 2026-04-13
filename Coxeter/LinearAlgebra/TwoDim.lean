@@ -135,24 +135,15 @@ theorem rotation_pow (n : ℕ) (θ : Real.Angle) : (o.rotation θ) ^ n = o.rotat
       ext x
       simp
 
-theorem order_rotation_two_pi_div (m : ℕ) (hm : m ≠ 0) :
-  orderOf (o.rotation ((2 * π / m) : ℝ)) = m := by
-  rw [orderOf_eq_iff (by grind)]
+theorem addOrderOf_two_pi_div (m : ℕ) (hm : m > 0) : addOrderOf (Angle.coe (2 * π / m)) = m := by
+  rw [addOrderOf_eq_iff hm]
   constructor
-  · rw [rotation_pow, ←Real.Angle.coe_nsmul]
-    conv in m • (2 * π / ↑m) =>
-      simp
-      field_simp
+  · rw [←Real.Angle.coe_nsmul, nsmul_eq_mul]
+    field_simp
     simp
-    rfl
-  · intro k hk1 hk2
-    rw [rotation_pow]
-    intro h
-    replace h : o.rotation (k • (2 * π / m : ℝ)) = o.rotation 0 := by
-      rwa [Orientation.rotation_zero]
-    have h2 := rotation_inj o h
-    rw [←Real.Angle.coe_nsmul, Real.Angle.coe_eq_zero_iff] at h2
-    have ⟨r, hr⟩ := h2
+  · intro k hk1 hk2 h
+    rw [←Real.Angle.coe_nsmul, Real.Angle.coe_eq_zero_iff] at h
+    obtain ⟨r, hr⟩ := h
     simp at hr
     field_simp at hr
     change (r : ℝ) * ((m : ℤ) : ℝ) = ((k : ℤ) : ℝ) at hr
@@ -160,16 +151,27 @@ theorem order_rotation_two_pi_div (m : ℕ) (hm : m ≠ 0) :
     zify at hk1 hk2
     rw [←hr] at hk1 hk2
     qify at hk1 hk2
-    have : (m : ℚ) > 0 := by
-      grind
-    replace hk1 : r < 1 := by
-      have hr_lt_one : (r : ℚ) < 1 := by
-        simp_all only [mul_lt_iff_lt_one_left]
-      exact Rat.intCast_lt_intCast.mp hr_lt_one
-    replace hk2 : 0 < r := by
-      have : 0 < (r : ℚ) := by
-        simp_all only [mul_pos_iff_of_pos_right]
-      simp_all only [mul_pos_iff_of_pos_left, gt_iff_lt, Nat.cast_pos, Int.cast_pos]
+    have hm_pos : (m : ℚ) > 0 := by
+      positivity
+    rw [mul_lt_iff_lt_one_left hm_pos] at hk1
+    change (r : ℚ) < ((1 : ℤ) : ℚ) at hk1
+    rw [Rat.intCast_lt_intCast] at hk1
+    rw [mul_pos_iff_of_pos_right hm_pos, Int.cast_pos] at hk2
     lia
+
+theorem order_rotation_two_pi_div (m : ℕ) (hm : m > 0) :
+  orderOf (o.rotation ((2 * π / m) : ℝ)) = m := by
+  rw [orderOf_eq_iff hm]
+  have h := addOrderOf_two_pi_div m hm
+  rw [addOrderOf_eq_iff hm] at h
+  constructor
+  · rw [rotation_pow, h.1, Orientation.rotation_zero]
+    rfl
+  · intro k hk1 hk2
+    rw [rotation_pow]
+    intro h2
+    replace h2 : o.rotation (k • (2 * π / m : ℝ)) = o.rotation 0 := by
+      rwa [Orientation.rotation_zero]
+    exact h.2 k hk1 hk2 (rotation_inj o h2)
 
 end Coxeter
