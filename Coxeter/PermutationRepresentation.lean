@@ -55,14 +55,15 @@ theorem ReflectionSet.induction {motive : ReflectionSet W → Prop}
 
 noncomputable section construction
 
+/-! ### Construction of the permutation representation -/
+
 open Classical in
 def etaAux (ω : List (B W)) (t : W) : ZMod 2 := count t (cs.leftInvSeq ω)
 
 theorem etaAux_append (μ ω : List (B W)) (t : W) :
   etaAux (μ ++ ω) t = etaAux μ t + etaAux ω ((cs.wordProd μ)⁻¹ * t * cs.wordProd μ) := by
-  classical
   unfold etaAux
-  rw [leftInvSeq_append, count_append, Nat.cast_add, add_right_inj,
+  classical rw [leftInvSeq_append, count_append, Nat.cast_add, add_right_inj,
     count_eq_countP, count_eq_countP, countP_map]
   congr
   ext w
@@ -94,7 +95,6 @@ theorem permRepAux_cons (i : B W) (ω : List (B W)) :
 
 theorem permRepAux_alternatingWord (i i' : B W) :
   permRepAux (alternatingWord i i' (2 * M i i')) = id := by
-  classical
   ext r
   unfold permRepAux
   apply Prod.ext
@@ -104,8 +104,8 @@ theorem permRepAux_alternatingWord (i i' : B W) :
     let p := M i i'
     suffices h : take p (cs.leftInvSeq (alternatingWord i' i (2 * p)))
       = drop p (cs.leftInvSeq (alternatingWord i' i (2 * p))) by
-      rw [←take_append_drop p (cs.leftInvSeq (alternatingWord i' i (2 * p))), count_append,
-        h, ←two_mul]
+      classical rw [←take_append_drop p (cs.leftInvSeq (alternatingWord i' i (2 * p))),
+        count_append, h, ←two_mul]
       apply dvd_mul_right
     rw [ext_get_iff]
     simp only [length_take, length_drop, length_leftInvSeq, length_alternatingWord]
@@ -169,6 +169,8 @@ theorem permRep_wordProd_eq_permRepAux (ω : List (B W)) :
         permRep, lift_apply_simple]
       rfl
 
+/-! ### Properties of $η$ -/
+
 open Classical in
 theorem eta_spec (ω : List (B W)) (t : W) : η (cs.wordProd ω) t = count t (cs.leftInvSeq ω) := by
   by_cases ht : cs.IsReflection t
@@ -179,28 +181,73 @@ theorem eta_spec (ω : List (B W)) (t : W) : η (cs.wordProd ω) t = count t (cs
       exact (cs.wordProd_surjective (cs.wordProd ω)).choose_spec
     rw [permRep_wordProd_eq_permRepAux, permRep_wordProd_eq_permRepAux] at h
     apply_fun Prod.snd at h
-    simp only [permRepAux, etaAux, reverse_reverse, zero_add] at h
-    exact h
+    simp [permRepAux, etaAux] at h
+    assumption
   · unfold eta
     rw [count_eq_zero.mpr, count_eq_zero.mpr]
     all_goals
       contrapose ht
       exact cs.isReflection_of_mem_leftInvSeq _ ht
 
-@[simp]
-theorem eta_simple (i : B W) : η (cs.simple i) (cs.simple i) = 1 := by
-  classical
-  nth_rw 1 [←cs.wordProd_singleton i]
-  rw [eta_spec, leftInvSeq_singleton, count_singleton_self, Nat.cast_one]
+theorem eta_mul (u w t : W) : η (u * w) t = η u t + η w (u⁻¹ * t * u) := by
+  have ⟨μ, hμ⟩ := cs.wordProd_surjective u
+  have ⟨ω, hω⟩ := cs.wordProd_surjective w
+  subst hμ hω
+  rw [←wordProd_append, eta_spec, eta_spec, eta_spec]
+  apply etaAux_append
 
 @[simp]
-theorem eta_conj (i : B W) (t : W) :
-  η (cs.simple i) (cs.simple i * t * (cs.simple i)⁻¹) = η (cs.simple i) t := by
-  classical
-  nth_rw 1 4 [←wordProd_singleton]
-  rw [eta_spec, eta_spec, leftInvSeq_singleton, count_singleton, count_singleton]
-  congr 3
-  rw [beq_eq_beq, eq_mul_inv_iff_mul_eq, ←inv_mul_eq_iff_eq_mul, inv_mul_cancel_left]
+theorem eta_simple_self (i : B W) : η (cs.simple i) (cs.simple i) = 1 := by
+  nth_rw 1 [←cs.wordProd_singleton i]
+  classical rw [eta_spec, leftInvSeq_singleton, count_singleton_self, Nat.cast_one]
+
+theorem eta_reflection_self {t : W} (ht : cs.IsReflection t) : η t t = 1 := by
+  let t' : ReflectionSet W := ⟨t, ht⟩
+  change η t'.val t'.val = 1
+  induction t' using ReflectionSet.induction with
+  | simple i =>
+      apply eta_simple_self
+  | conj t i ih =>
+      dsimp
+      have h1 := (eta_mul (cs.simple i) (cs.simple i * t.val * (cs.simple i)⁻¹) t.val)
+      conv at h1 in cs.simple i * (cs.simple i * ↑t * (cs.simple i)⁻¹) =>
+        rw [mul_assoc, inv_simple, simple_mul_simple_cancel_left]
+      nth_rw 2 [inv_simple] at h1
+      nth_rw 6 [←inv_simple] at h1
+      have h2 := eta_mul t.val (cs.simple i) t.val
+      rw [inv_mul_cancel, one_mul, ih] at h2
+      rw [h2, add_comm, add_right_inj] at h1
+      exact h1.symm
+
+theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInversion w t := by
+  have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
+  subst hω2
+  apply cs.isLeftInversion_of_mem_leftInvSeq hω1
+  classical rw [eta_spec, hω1.nodup_leftInvSeq.count] at h
+  simp at h
+  assumption
+
+theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
+  ¬ cs.IsLeftInversion w t := by
+  wlog ht : cs.IsReflection t
+  · contrapose ht
+    exact ht.1
+  · rw [←ht.isLeftInversion_mul_right_iff]
+    apply isLeftInversion_of_eta_eq_one
+    rw [eta_mul]
+    simp [eta_reflection_self ht, h]
+
+theorem eta_eq_one_iff {t w : W} : η w t = 1 ↔ cs.IsLeftInversion w t := by
+  match h : η w t with
+  | 0 => simp [not_isLeftInversion_of_eta_eq_zero h]
+  | 1 => simp [isLeftInversion_of_eta_eq_one h]
+
+theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
+  rw [←eta_eq_one_iff]
+  unfold ZMod
+  grind
+
+/-! ### Properties of the permutation representation -/
 
 theorem permRep_eq (w : W) (r : AbstractRootSet W) : permRep w r
   = ⟨⟨MulAut.conj w r.1.val, r.1.prop.conj _⟩, r.2 + η w⁻¹ r.1.val⟩ := by
@@ -215,7 +262,6 @@ theorem permRep_inv_eq (w : W) (r : AbstractRootSet W) :
 
 /-- Bjorner--Brenti Theorem 1.3.2 (i): injectivity -/
 theorem permRep_inj : Injective (@permRep W _) := by
-  classical
   rw [injective_iff_map_eq_one]
   intro w hw
   have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w⁻¹
@@ -227,7 +273,7 @@ theorem permRep_inj : Injective (@permRep W _) := by
   | cons i is =>
       have h := permRep_inv_eq (cs.wordProd (i :: is)) ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩
       apply_fun Prod.snd at h
-      rw [hw, Equiv.Perm.coe_one, id_eq, zero_add, eta_spec,
+      classical rw [hw, Equiv.Perm.coe_one, id_eq, zero_add, eta_spec,
         count_eq_one_of_mem hω1.nodup_leftInvSeq (Mem.head _)] at h
       change 0 = 1 at h
       contradiction
@@ -235,59 +281,7 @@ theorem permRep_inj : Injective (@permRep W _) := by
 /-- Bjorner--Brenti Theorem 1.3.2 (ii) -/
 theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :
   permRep t.val (t, ε) = (t, ε + 1) := by
-  induction t using ReflectionSet.induction generalizing ε with
-  | simple i => simp [permRep_eq]
-  | conj t i ih =>
-      obtain ⟨t, ht⟩ := t
-      calc
-        permRep (cs.simple i * t * (cs.simple i)⁻¹)
-          (⟨cs.simple i * t * (cs.simple i)⁻¹, ht.conj _⟩, ε)
-          = permRep (cs.simple i) (permRep t (permRep (cs.simple i)⁻¹
-            (⟨cs.simple i * t * (cs.simple i)⁻¹, ht.conj _⟩, ε))) := by simp
-        _ = permRep (cs.simple i) (permRep t ((⟨t, ht⟩, ε + η (cs.simple i) t))) := ?_
-        _ = permRep (cs.simple i) ((⟨t, ht⟩, ε + η (cs.simple i) t + 1)) := by rw [ih]
-        _ = (⟨cs.simple i * t * (cs.simple i)⁻¹, _⟩, ε + 1) := ?_
-      · rw [permRep_inv_eq, eta_conj]
-        dsimp
-        group
-      · rw [permRep_eq]
-        dsimp
-        congr 1
-        rw [inv_simple]
-        grind
-
-theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInversion w t := by
-  classical
-  have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
-  subst hω2
-  apply cs.isLeftInversion_of_mem_leftInvSeq hω1
-  contrapose h
-  rw [←count_eq_zero] at h
-  rw [eta_spec, h]
-  trivial
-
-theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
-  ¬ cs.IsLeftInversion w t := by
-  intro h2
-  have ht := h2.1
-  rw [←ht.not_isLeftInversion_mul_right_iff] at h2
-  refine h2 (isLeftInversion_of_eta_eq_one ?_)
-  have h3 := congr_arg Prod.snd (permRep_inv_eq (t * w) (⟨t, ht⟩, 0))
-  rwa [zero_add, mul_inv_rev, map_mul, Equiv.Perm.coe_mul, comp_apply, ht.inv,
-    permRep_inv_eq, permRep_reflection ⟨t, ht⟩, h, zero_add, Eq.comm] at h3
-
-theorem eta_eq_one_iff {t w : W} : η w t = 1 ↔ cs.IsLeftInversion w t := by
-  match h : η w t with
-  | 0 =>
-      simp only [zero_ne_one, false_iff]
-      exact not_isLeftInversion_of_eta_eq_zero h
-  | 1 =>
-      simp only [true_iff]
-      exact isLeftInversion_of_eta_eq_one h
-
-theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
-  rw [←eta_eq_one_iff]
-  unfold ZMod
-  grind
+  rw [permRep_eq, t.prop.inv]
+  simp [eta_reflection_self t.prop]
 
 end Coxeter

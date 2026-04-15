@@ -30,13 +30,9 @@ variable {W : Type*} [CoxeterGroup W]
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) implies (c) -/
 theorem mem_leftInvSeq_of_isLeftInversion
-  {ω : List (B W)} {t : W} (h : cs.IsLeftInversion (cs.wordProd ω) t) :
-  t ∈ cs.leftInvSeq ω := by
-  classical
-  rw [←count_pos_iff, pos_iff_ne_zero]
-  intro heq
-  rw [←eta_eq_one_iff, eta_spec, heq] at h
-  contradiction
+  {ω : List (B W)} {t : W} (h : cs.IsLeftInversion (cs.wordProd ω) t) : t ∈ cs.leftInvSeq ω := by
+  contrapose h
+  classical rw [←eta_eq_zero_iff, eta_spec, List.count_eq_zero_of_not_mem h, Nat.cast_zero]
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
 theorem isLeftInversion_iff_mem_leftInvSeq {ω : List (B W)} (hω : cs.IsReduced ω) (t : W) :
@@ -70,10 +66,9 @@ instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
 /-- Bjorner--Brenti Corollary 1.4.5 -/
 theorem card_of_isLeftInversion (w : W) :
   Nat.card {t : W // cs.IsLeftInversion w t} = cs.length w := by
-  classical
   have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
   subst hω2
-  rw [hω1, Nat.card_congr (equiv_IsLeftInversion ω hω1),
+  classical rw [hω1, Nat.card_congr (equiv_IsLeftInversion ω hω1),
     Nat.subtype_card (cs.leftInvSeq ω).toFinset (fun _ => List.mem_toFinset),
     toFinset_card_of_nodup hω1.nodup_leftInvSeq, length_leftInvSeq]
 
