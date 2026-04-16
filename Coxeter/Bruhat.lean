@@ -206,7 +206,7 @@ private theorem reduced_subword_extend_aux (α μ ω : List (B W))
         refine ⟨by simpa, ?_, ?_⟩
         · rwa [←lt_reflection_mul_self_iff ht, h2] at h1
         · rw [length_append, length_append, length_cons, add_assoc]
-  | @cons₂ μ ω i hsub =>
+  | @cons_cons μ ω i hsub =>
       rw [append_cons] at hμ hω
       simp only [ne_eq, cons.injEq, true_and] at hneq
       have ⟨ν, hν1, hν2, hν3⟩ := ih ω (Nat.lt_succ_self _) (α ++ [i]) μ hμ hω hsub hneq
@@ -408,15 +408,15 @@ theorem lifting_property {u w : W} {i : B W}
   | [], _ =>
       rw [hμ2, wordProd_nil, mul_one]
       refine ⟨bot_le, le_of_reduced_subword ⟨[i], ⟨isReduced_singleton i, ?_⟩⟩ ⟨i :: ω, ⟨h4, hω2⟩⟩
-        (Sublist.cons₂ _ (nil_sublist _))⟩
+        (Sublist.cons_cons _ (nil_sublist _))⟩
       rw [wordProd_singleton]
   | j :: μ, Sublist.cons _ hsub =>
       refine ⟨le_of_reduced_subword ⟨j :: μ, hμ1, hμ2⟩ ⟨ω, hω1, ?_⟩ hsub,
-        le_of_reduced_subword ⟨i :: j :: μ, ?_, ?_⟩ ⟨i :: ω, h4, hω2⟩ (Sublist.cons₂ _ hsub)⟩
+        le_of_reduced_subword ⟨i :: j :: μ, ?_, ?_⟩ ⟨i :: ω, h4, hω2⟩ (Sublist.cons_cons _ hsub)⟩
       · rw [hω2, wordProd_cons, simple_mul_simple_cancel_left]
       · rwa [isReduced_cons hμ1, ←hμ2]
       · rw [wordProd_cons, hμ2]
-  | i :: μ, Sublist.cons₂ _ hsub =>
+  | i :: μ, Sublist.cons_cons _ hsub =>
       absurd hμ1
       rwa [not_isReduced_cons, isLeftDescent_iff_not_isLeftDescent_mul, ←wordProd_cons, ←hμ2]
       exact hμ1.drop 1

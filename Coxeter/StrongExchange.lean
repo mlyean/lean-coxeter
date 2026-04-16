@@ -128,7 +128,10 @@ theorem strong_exchange_right {ω : List (B W)} {t : W} (h : cs.IsRightInversion
     rw [length_reverse] at hi1
     rw [wordProd_op, ←op_mul, reverse_reverse, wordProd_op, op_inj, reverse_eraseIdx hi1,
       reverse_reverse] at hi2
-    exact ⟨by lia, hi2⟩
+    refine ⟨?_, hi2⟩
+    apply Nat.sub_one_lt_of_le
+    · rwa [Nat.sub_pos_iff_lt]
+    · apply Nat.sub_le
   · rwa [wordProd_op, isLeftInversion_op_iff, reverse_reverse]
 
 theorem exchange_property_right
