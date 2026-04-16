@@ -528,11 +528,11 @@ theorem finite_of_orderTop [OrderTop W] : Finite W := by
   simp
 
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) -/
-theorem finite_of_exists_all_isLeftDescent {x : W} (h : ∀ (i : B W), cs.IsLeftDescent x i) :
+theorem finite_of_exists_all_isLeftDescent (h : ∃ x : W, ∀ (i : B W), cs.IsLeftDescent x i) :
   Finite W := by
   haveI : OrderTop W := {
-    top := x
-    le_top := isTop_iff_all_isLeftDescent.mp h
+    top := h.choose
+    le_top := isTop_iff_all_isLeftDescent.mp h.choose_spec
   }
   exact finite_of_orderTop
 
@@ -548,7 +548,7 @@ theorem all_isLeftDescent_iff (x : W) : (∀ (i : B W), cs.IsLeftDescent x i) �
   rw [isTop_iff_all_isLeftDescent]
   exact isTop_iff_eq_top
 
-theorem length_le_length_w₀ (w : W) : cs.length w ≤ cs.length (w₀ : W) := monotone_length le_top
+theorem length_le_length_w₀ (x : W) : cs.length x ≤ cs.length (w₀ : W) := monotone_length le_top
 
 theorem eq_w₀_of_length_ge {x : W} (h : cs.length x ≥ cs.length (w₀ : W)) : x = w₀ :=
   eq_of_le_of_length_ge le_top h

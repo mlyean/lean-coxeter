@@ -32,7 +32,7 @@ variable {W : Type*} [CoxeterGroup W]
 theorem mem_leftInvSeq_of_isLeftInversion
   {ω : List (B W)} {t : W} (h : cs.IsLeftInversion (cs.wordProd ω) t) : t ∈ cs.leftInvSeq ω := by
   contrapose h
-  classical rw [←eta_eq_zero_iff, eta_spec, List.count_eq_zero_of_not_mem h, Nat.cast_zero]
+  classical rw [←eta_eq_zero_iff, eta_spec, count_eq_zero_of_not_mem h, Nat.cast_zero]
 
 /-- Bjorner--Brenti Corollary 1.4.4 (a) iff (c) -/
 theorem isLeftInversion_iff_mem_leftInvSeq {ω : List (B W)} (hω : cs.IsReduced ω) (t : W) :

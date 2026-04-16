@@ -106,10 +106,7 @@ theorem geomRepAux_involutive (i : B W) : Involutive (geomRepAux i) := (geomRepA
 
 theorem orderOf_geomRepAux_mul_geomRepAux₁ (i i' : B W) (h : M i i' = 1) :
   orderOf (geomRepAux i * geomRepAux i') = 1 := by
-  have h2 : i = i' := by
-    by_contra! h2
-    exact M.off_diagonal i i' h2 h
-  rw [h2, orderOf_eq_one_iff]
+  rw [(M.off_diagonal i i').mtr h, orderOf_eq_one_iff]
   apply LinearEquiv.ext
   intro x
   simp only [LinearEquiv.mul_apply, LinearEquiv.coe_one, id_eq]
@@ -324,7 +321,7 @@ section finite_order
 
 variable (i i' : B W) [Fact (M i i' ≥ 2)]
 
-theorem i_ne_i' : i ≠ i' := by
+theorem index_ne : i ≠ i' := by
   have h := (inferInstance : Fact (M i i' ≥ 2)).out
   intro heq
   subst heq
@@ -343,7 +340,7 @@ def e : ({i, i'} : Set (B W)) ≃ Fin 2 where
       simp only [ite_eq_right_iff, zero_ne_one, imp_false]
       rw [←ne_eq]
       symm
-      apply i_ne_i'
+      apply index_ne
 
 def stdBasisE : Module.Basis (Fin 2) ℝ (E i i') :=
   (Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')
@@ -382,7 +379,7 @@ instance : Fact (Module.finrank ℝ (E i i') = 2) where
 theorem E_sup_orthogonal :
   E i i' ⊔ (E i i').orthogonalBilin bil = ⊤ := by
   apply sup_orthogonal_eq_top _ bil_isSymm (bil_restrict_E_nonneg i i')
-  rw [bil_restrict_E_nondegenerate_iff i i' (i_ne_i' i i')]
+  rw [bil_restrict_E_nondegenerate_iff i i' (index_ne i i')]
   have := (inferInstance : Fact (M i i' ≥ 2)).out
   lia
 
@@ -565,14 +562,9 @@ theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
   have h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
   match h with
   | Or.inl h =>
-      rw [h]
-      rfl
+      rw [h, pow_zero]
   | Or.inr (Or.inl h) =>
-      rw [h]
-      have heq : i = i' := by
-        by_contra! h2
-        exact M.off_diagonal i i' h2 h
-      subst heq
+      rw [h, ←(M.off_diagonal i i').mtr h]
       ext : 1
       apply geomRepAux_involutive i
   | Or.inr (Or.inr h) =>
@@ -612,10 +604,8 @@ theorem orderOf_simple_mul_simple (i i' : B W) : orderOf (cs.simple i * cs.simpl
 
 theorem simple_inj : Injective ((@cs W).simple) := by
   intro i i' h
-  by_contra! h2
-  apply M.off_diagonal i i' h2
-  rw [←orderOf_simple_mul_simple, h]
-  simp
+  rw [←cs.inv_simple, inv_eq_iff_mul_eq_one, ←orderOf_eq_one_iff, orderOf_simple_mul_simple] at h
+  exact (M.off_diagonal i i').mtr h
 
 theorem finite_generating_set [Finite W] : Finite (B W) := Finite.of_injective _ simple_inj
 

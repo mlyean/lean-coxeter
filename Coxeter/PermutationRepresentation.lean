@@ -12,7 +12,7 @@ This file defines the permutation representation of a Coxeter group.
 * `Coxeter.ReflectionSet`
 * `Coxeter.AbstractRootSet`
 * `Coxeter.permRep`
-* `Coxeter.η`
+* `Coxeter.eta`
 
 ## Main statements
 
@@ -210,7 +210,7 @@ theorem eta_reflection_self {t : W} (ht : cs.IsReflection t) : η t t = 1 := by
   | conj t i ih =>
       dsimp
       have h1 := (eta_mul (cs.simple i) (cs.simple i * t.val * (cs.simple i)⁻¹) t.val)
-      conv at h1 in cs.simple i * (cs.simple i * ↑t * (cs.simple i)⁻¹) =>
+      conv at h1 in cs.simple i * (cs.simple i * t.val * (cs.simple i)⁻¹) =>
         rw [mul_assoc, inv_simple, simple_mul_simple_cancel_left]
       nth_rw 2 [inv_simple] at h1
       nth_rw 6 [←inv_simple] at h1
@@ -249,8 +249,8 @@ theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := 
 
 /-! ### Properties of the permutation representation -/
 
-theorem permRep_eq (w : W) (r : AbstractRootSet W) : permRep w r
-  = ⟨⟨MulAut.conj w r.1.val, r.1.prop.conj _⟩, r.2 + η w⁻¹ r.1.val⟩ := by
+theorem permRep_eq (w : W) (r : AbstractRootSet W) :
+  permRep w r = ⟨⟨MulAut.conj w r.1.val, r.1.prop.conj _⟩, r.2 + η w⁻¹ r.1.val⟩ := by
   have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
   subst hω2
   rw [permRep_wordProd_eq_permRepAux, ←wordProd_reverse, eta_spec]
@@ -267,9 +267,8 @@ theorem permRep_inj : Injective (@permRep W _) := by
   have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w⁻¹
   rw [inv_eq_iff_eq_inv] at hω2
   subst hω2
-  rw [inv_eq_one, ←cs.length_eq_zero_iff, hω1]
   cases ω with
-  | nil => rfl
+  | nil => simp
   | cons i is =>
       have h := permRep_inv_eq (cs.wordProd (i :: is)) ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩
       apply_fun Prod.snd at h
