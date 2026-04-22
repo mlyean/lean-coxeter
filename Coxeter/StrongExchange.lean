@@ -1,5 +1,6 @@
 module
 
+public import Mathlib.Data.List.Palindrome
 public import Coxeter.PermutationRepresentation
 
 /-!
@@ -114,6 +115,33 @@ theorem exists_reduced_subword' {w : W} {ω : List (B W)} (h : w = cs.wordProd �
   rw [h]
   have ⟨ω', _, h2, h3⟩ := exists_reduced_subword ω
   exists ⟨ω', h2, h3⟩
+
+theorem exists_palindromic_reducedWord_of_isReflection (t : W) (ht : cs.IsReflection t) :
+  ∃ (τ : ReducedWord t), List.Palindrome τ.val := by
+  have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced t
+  have h1 := eta_reflection_self ht
+  nth_rw 1 [hω2] at h1
+  rw [eta_eq_one_iff, isLeftInversion_iff_mem_leftInvSeq hω1, mem_iff_getElem] at h1
+  obtain ⟨k, hk1, hk2⟩ := h1
+  rw [length_leftInvSeq] at hk1
+  rw [cs.getElem_leftInvSeq _ _ hk1, ←wordProd_reverse, ←wordProd_singleton, ←wordProd_append,
+    ←wordProd_append] at hk2
+  have hk3 : cs.length t = 2 * k + 1 := by
+    rw [hω2, take_append_getElem] at hk2
+    nth_rw 3 [←take_append_drop (k + 1) ω] at hk2
+    rw [wordProd_append, wordProd_append, wordProd_reverse, mul_right_inj] at hk2
+    apply_fun cs.length at hk2
+    rw [length_inv, hω1.take k, hω1.drop (k + 1), length_take, length_drop, min_eq_left (by lia),
+      ←hω1, ←hω2] at hk2
+    rw [←hω1, ←hω2] at hk1
+    rw [eq_tsub_iff_add_eq_of_le (by lia)] at hk2
+    lia
+  let τ : ReducedWord t := ⟨take k ω ++ [ω[k]] ++ (take k ω).reverse, ?_, hk2.symm⟩
+  · exists τ
+    dsimp [τ]
+    rw [Palindrome.iff_reverse_eq, reverse_append, reverse_append, reverse_reverse,
+      reverse_singleton, append_assoc]
+  · grind [CoxeterSystem.IsReduced]
 
 section rightVariants
 
