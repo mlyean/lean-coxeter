@@ -83,21 +83,17 @@ def geomRepAux (i : B W) : V W ≃ₗ[ℝ] V W where
   toFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
   invFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
   map_add' := by
-    intro x y
-    rw [map_add]
-    match_scalars <;> ring
+    repeat intro
+    match_scalars <;> simp; ring
   map_smul' := by
-    intro r x
-    simp only [map_smul, smul_eq_mul, RingHom.id_apply]
-    match_scalars <;> ring
+    repeat intro
+    match_scalars <;> simp; ring
   left_inv := by
-    intro x
-    simp only [map_sub, map_smul, bil_diag, smul_eq_mul, mul_one]
-    match_scalars <;> ring
+    repeat intro
+    match_scalars <;> simp; ring
   right_inv := by
-    intro x
-    simp only [map_sub, map_smul, bil_diag, smul_eq_mul, mul_one]
-    match_scalars <;> ring
+    repeat intro
+    match_scalars <;> simp; ring
 
 theorem geomRepAux_apply (i : B W) (x : V W) :
   geomRepAux i x = x - (2 * bil (stdBasis i) x) • stdBasis i := rfl
@@ -179,14 +175,13 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
         exists ⟨cos (π / M i i') • stdBasis i + 1 • stdBasis i', ?_⟩
         · rw [mem_E_iff]
           exists cos (π / M i i'), 1
-          simp
-        · simp only [h2, CharP.cast_eq_zero, div_zero, cos_zero, one_smul, ne_eq,
-            Submodule.mk_eq_zero, LinearMap.BilinForm.restrict_apply, map_add,
-            LinearMap.domRestrict_apply, LinearMap.add_apply, bil_diag, bil_eq, add_neg_cancel,
-            M.symmetric i' i, neg_add_cancel, add_zero, Std.le_refl, and_true]
-          rw [←ne_eq, Finsupp.ne_iff]
-          exists i'
-          simp [stdBasis, h]
+          simp only [one_smul]
+        · constructor
+          · simp only [one_smul, ne_eq, Submodule.mk_eq_zero]
+            rw [←ne_eq, Finsupp.ne_iff]
+            exists i'
+            simp [stdBasis, h]
+          · simp [M.symmetric i' i, h2]
     | Or.inr (Or.inl h2) =>
         absurd h2
         exact M.off_diagonal i i' h
@@ -265,14 +260,10 @@ theorem geomRepAux_mul_geomRepAux_pow₀ (h : M i i' = 0) (n : ℕ) :
   = (2 * n) • (stdBasis i + stdBasis i') + stdBasis i := by
   generalize hu : stdBasis i + stdBasis i' = u
   have h1 : bil (stdBasis i) u = 0 := by
-    rw [←hu]
-    simp only [map_add, bil_diag, bil_eq]
-    rw [h]
+    rw [←hu, map_add, bil_diag, bil_eq, h]
     simp
   have h2 : bil (stdBasis i') u = 0 := by
-    rw [←hu]
-    simp only [map_add, bil_eq]
-    rw [M.symmetric i' i, h]
+    rw [←hu, map_add, bil_eq, M.symmetric i' i, h]
     simp
   have h3 : (geomRepAux i * geomRepAux i') u = u := by
     rw [LinearEquiv.mul_apply]
@@ -283,9 +274,7 @@ theorem geomRepAux_mul_geomRepAux_pow₀ (h : M i i' = 0) (n : ℕ) :
     simp only [geomRepAux_apply, bil_eq, mul_neg, neg_smul, sub_neg_eq_add, map_add,
       map_smul, smul_add]
     rw [M.symmetric i' i, h]
-    simp only [CoxeterMatrix.diagonal, Nat.cast_one, div_one, cos_pi, mul_neg, mul_one, neg_smul,
-      CharP.cast_eq_zero, div_zero, cos_zero]
-    match_scalars <;> ring
+    match_scalars <;> simp; ring
   suffices ((geomRepAux i * geomRepAux i') ^ n) (stdBasis i) = (2 * n) • u + stdBasis i ∧
     ((geomRepAux i * geomRepAux i') ^ n) u = u from this.1
   induction n with
