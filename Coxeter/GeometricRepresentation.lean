@@ -109,8 +109,7 @@ theorem orderOf_geomRepAux_mul_geomRepAux₁ (i i' : B W) (h : M i i' = 1) :
   apply geomRepAux_involutive
 
 @[simp]
-theorem geomRepAux_stdBasis (i : B W) :
-  geomRepAux i (stdBasis i) = -stdBasis i := by
+theorem geomRepAux_stdBasis (i : B W) : geomRepAux i (stdBasis i) = -stdBasis i := by
   rw [geomRepAux_apply, bil_diag]
   match_scalars
   norm_num
@@ -122,8 +121,8 @@ theorem E_eq_span (i i' : B W) : E i i' = Submodule.span ℝ {stdBasis i, stdBas
   rw [supported_eq_span_single, Set.image_pair]
   rfl
 
-theorem mem_E_iff (i i' : B W) (v : V W)
-  : v ∈ E i i' ↔ ∃ (x y : ℝ), v = x • stdBasis i + y • stdBasis i' := by
+theorem mem_E_iff (i i' : B W) (v : V W) :
+  v ∈ E i i' ↔ ∃ (x y : ℝ), v = x • stdBasis i + y • stdBasis i' := by
   rw [E_eq_span, Submodule.mem_span_pair]
   tauto
 
@@ -335,32 +334,26 @@ def stdBasisE : Module.Basis (Fin 2) ℝ (E i i') :=
   (Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')
 
 @[simp]
-theorem stdBasisE_0 : stdBasisE i i' 0 = stdBasis i := by
+theorem stdBasisE_0 : stdBasisE i i' 0 = stdBasis i :=
   calc
     (((Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')) 0).val
     = ((Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm) ((e i i').symm 0)).val
       := by rw [Module.Basis.reindex_apply]
-    _ = stdBasis i := ?_
-  rw [Module.Basis.map_apply]
-  unfold stdBasis e
-  simp
+    _ = stdBasis i := by rw [Module.Basis.map_apply]; simp [stdBasis, e]
 
 @[simp]
-theorem stdBasisE_1 : stdBasisE i i' 1 = stdBasis i' := by
+theorem stdBasisE_1 : stdBasisE i i' 1 = stdBasis i' :=
   calc
     (((Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')) 1).val
     = ((Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm) ((e i i').symm 1)).val
       := by rw [Module.Basis.reindex_apply]
-    _ = stdBasis i' := ?_
-  rw [Module.Basis.map_apply]
-  unfold stdBasis e
-  simp
+    _ = stdBasis i' := by rw [Module.Basis.map_apply]; simp [stdBasis, e]
 
 instance : FiniteDimensional ℝ (E i i') := (stdBasisE i i').finiteDimensional_of_finite
 
 theorem finrank_E_eq_two : Module.finrank ℝ (E i i') = 2 := by
   rw [Module.finrank_eq_card_basis (stdBasisE i i')]
-  simp
+  apply Fintype.card_fin
 
 instance : Fact (Module.finrank ℝ (E i i') = 2) where
   out := finrank_E_eq_two i i'
@@ -576,10 +569,8 @@ theorem orderOf_geomRep_simple_mul_simple (i i' : B W) :
   rw [map_mul, geomRep_simple, geomRep_simple]
   have h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
   match h with
-  | Or.inl h =>
-      rw [h, orderOf_geomRepAux_mul_geomRepAux₀ i i' h]
-  | Or.inr (Or.inl h) =>
-      rw [h, orderOf_geomRepAux_mul_geomRepAux₁ i i' h]
+  | Or.inl h => rw [h, orderOf_geomRepAux_mul_geomRepAux₀ i i' h]
+  | Or.inr (Or.inl h) => rw [h, orderOf_geomRepAux_mul_geomRepAux₁ i i' h]
   | Or.inr (Or.inr h) =>
       haveI : Fact (M i i' ≥ 2) := { out := h }
       exact orderOf_geomRepAux_mul_geomRepAux₂ i i'
