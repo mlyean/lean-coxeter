@@ -72,12 +72,10 @@ theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis
         norm_num
         positivity
     | inr h2 =>
-        apply div_le_div_of_nonneg_left
-        · positivity
-        · norm_num
-        · norm_num
-          have := M.off_diagonal i i' h
-          lia
+        apply M.off_diagonal i i' at h
+        gcongr
+        norm_num
+        lia
 
 def geomRepAux (i : B W) : V W ≃ₗ[ℝ] V W where
   toFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
@@ -220,8 +218,8 @@ theorem geomRepAux_E_perp_left (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i z = z := by
   intro z hz
   rw [geomRepAux_apply, sub_eq_self, hz (stdBasis i), mul_zero, zero_smul]
-  rw [mem_E_iff]
-  exists 1, 0
+  rw [E_eq_span]
+  apply Submodule.mem_span_of_mem
   simp
 
 theorem geomRepAux_E_perp_right (i i' : B W) :
