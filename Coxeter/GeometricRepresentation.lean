@@ -228,8 +228,8 @@ theorem geomRepAux_E_perp_right (i i' : B W) :
   apply geomRepAux_E_perp_left
 
 theorem geomRepAux_E_left (i i' : B W) : Set.MapsTo (geomRepAux i) (E i i') (E i i') := by
-  suffices h : Submodule.map (geomRepAux i).toLinearMap (E i i') ≤ E i i'
-    from Set.mapsTo_iff_image_subset.mpr h
+  rw [Set.mapsTo_iff_image_subset]
+  change Submodule.map (geomRepAux i).toLinearMap (E i i') ≤ E i i'
   rw [E_eq_span, LinearMap.map_span_le]
   simp only [LinearEquiv.coe_coe, geomRepAux_apply]
   aesop
@@ -356,8 +356,7 @@ theorem finrank_E_eq_two : Module.finrank ℝ (E i i') = 2 := by
 instance : Fact (Module.finrank ℝ (E i i') = 2) where
   out := finrank_E_eq_two i i'
 
-theorem E_sup_orthogonal :
-  E i i' ⊔ (E i i').orthogonalBilin bil = ⊤ := by
+theorem E_sup_orthogonal : E i i' ⊔ (E i i').orthogonalBilin bil = ⊤ := by
   apply sup_orthogonal_eq_top _ bil_isSymm (bil_restrict_E_nonneg i i')
   rw [bil_restrict_E_nondegenerate_iff i i' (index_ne i i')]
   have := (inferInstance : Fact (M i i' ≥ 2)).out
