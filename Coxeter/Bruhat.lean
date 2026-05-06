@@ -539,7 +539,7 @@ theorem finite_of_exists_all_isLeftDescent (h : ∃ x : W, ∀ (i : B W), cs.IsL
 variable [Finite W]
 
 /-- Bjorner--Brenti Proposition 2.3.1 (i) -/
-noncomputable instance : OrderTop W := inferInstance
+noncomputable instance : OrderTop W := orderTop_ofFiniteDirectedOrder
 
 noncomputable def w₀ : W := ⊤
 
