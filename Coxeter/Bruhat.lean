@@ -1,8 +1,8 @@
 module
 
 public import Mathlib.Order.Grade
-public import Coxeter.StrongExchange
 public import Coxeter.Order.Directed
+public import Coxeter.StrongExchange
 
 /-!
 # Bruhat order
@@ -306,10 +306,7 @@ theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
   have ω : ReducedWord w := Classical.ofNonempty
   let f : Set.Icc u w → {μ : List (B W) | μ <+ ω} := @Set.restrict₂ _
     (fun _ => {μ : List (B W) | μ <+ ω}) _ _ Set.Icc_subset_Iic_self (chooseReducedSubword ω)
-  haveI : Finite {x | x <+ ω.val} := by
-    have h := ω.val.sublists.finite_toSet
-    simp only [mem_sublists] at h
-    exact h
+  haveI : Finite {x | x <+ ω.val} := finite_sublist _
   apply Finite.of_injective f
   intro x y h
   apply chooseReducedSubword_inj ω at h

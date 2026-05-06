@@ -2,6 +2,7 @@ module
 
 public import Mathlib.Data.List.Palindrome
 public import Coxeter.PermutationRepresentation
+public import Coxeter.Data.List.Lemmas
 
 /-!
 # Strong exchange
