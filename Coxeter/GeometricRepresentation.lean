@@ -163,53 +163,49 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
   (bil.restrict (E i i')).Nondegenerate ↔ M i i' ≠ 0 := by
   unfold LinearMap.BilinForm.Nondegenerate
   rw [LinearMap.BilinForm.nondegenerate_iff']
-  · have h2 : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
-    match h2 with
-    | Or.inl h2 =>
-        rw [h2]
-        simp only [ne_eq,  not_true_eq_false, iff_false]
-        push Not
-        exists ⟨cos (π / M i i') • stdBasis i + 1 • stdBasis i', ?_⟩
-        · rw [mem_E_iff]
-          exists cos (π / M i i'), 1
-          simp only [one_smul]
-        · constructor
-          · simp only [one_smul, ne_eq, Submodule.mk_eq_zero]
-            rw [←ne_eq, Finsupp.ne_iff]
-            exists i'
-            simp [stdBasis, h]
-          · simp [M.symmetric i' i, h2]
-    | Or.inr (Or.inl h2) =>
-        absurd h2
-        exact M.off_diagonal i i' h
-    | Or.inr (Or.inr h2) =>
-        have : M i i' ≠ 0 := by lia
-        simp only [ne_eq, LinearMap.BilinForm.restrict_apply, LinearMap.domRestrict_apply,
-          Subtype.forall, Submodule.mk_eq_zero, this, not_false_eq_true, iff_true]
-        intro z hz1 hz2
-        apply lt_of_le_of_ne
-        · exact (bil_restrict_E_nonneg i i').nonneg ⟨z, hz1⟩
-        · rw [mem_E_iff] at hz1
-          obtain ⟨x, y, h⟩ := hz1
-          rw [h, bil_restrict_E_diag]
-          intro h3
-          symm at h3
-          rw [sq, sq, mul_self_add_mul_self_eq_zero] at h3
-          replace ⟨h3, h4⟩ := h3
-          have h5 : sin (π / M i i') ≠ 0 := by
-            apply ne_of_gt
-            apply sin_pos_of_pos_of_lt_pi
+  · rcases (show M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 by lia) with h2 | h2 | h2
+    · rw [h2]
+      simp only [ne_eq,  not_true_eq_false, iff_false]
+      push Not
+      exists ⟨cos (π / M i i') • stdBasis i + 1 • stdBasis i', ?_⟩
+      · rw [mem_E_iff]
+        exists cos (π / M i i'), 1
+        simp only [one_smul]
+      · constructor
+        · simp only [one_smul, ne_eq, Submodule.mk_eq_zero]
+          rw [←ne_eq, Finsupp.ne_iff]
+          exists i'
+          simp [stdBasis, h]
+        · simp [M.symmetric i' i, h2]
+    · absurd h2
+      exact M.off_diagonal i i' h
+    · have : M i i' ≠ 0 := by lia
+      simp only [ne_eq, LinearMap.BilinForm.restrict_apply, LinearMap.domRestrict_apply,
+        Subtype.forall, Submodule.mk_eq_zero, this, not_false_eq_true, iff_true]
+      intro z hz1 hz2
+      apply lt_of_le_of_ne
+      · exact (bil_restrict_E_nonneg i i').nonneg ⟨z, hz1⟩
+      · rw [mem_E_iff] at hz1
+        obtain ⟨x, y, h⟩ := hz1
+        rw [h, bil_restrict_E_diag]
+        intro h3
+        symm at h3
+        rw [sq, sq, mul_self_add_mul_self_eq_zero] at h3
+        replace ⟨h3, h4⟩ := h3
+        have h5 : sin (π / M i i') ≠ 0 := by
+          apply ne_of_gt
+          apply sin_pos_of_pos_of_lt_pi
+          · positivity
+          · apply div_lt_self
             · positivity
-            · apply div_lt_self
-              · positivity
-              · norm_num
-                exact h2
-          rw [mul_eq_zero_iff_right h5] at h4
-          subst h4
-          rw [zero_mul, sub_zero] at h3
-          subst h3
-          rw [zero_smul, zero_smul, add_zero] at h
-          contradiction
+            · norm_num
+              exact h2
+        rw [mul_eq_zero_iff_right h5] at h4
+        subst h4
+        rw [zero_mul, sub_zero] at h3
+        subst h3
+        rw [zero_smul, zero_smul, add_zero] at h
+        contradiction
   · exact (bil_restrict_E_nonneg i i').nonneg
   · rw [←LinearMap.BilinForm.isSymm_iff]
     exact bil_restrict_E_isSymm i i'
@@ -538,18 +534,14 @@ end finite_order
 
 theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
   intro i i'
-  have h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
-  match h with
-  | Or.inl h =>
-      rw [h, pow_zero]
-  | Or.inr (Or.inl h) =>
-      rw [h, ←(M.off_diagonal i i').mtr h]
-      ext : 1
-      apply geomRepAux_involutive i
-  | Or.inr (Or.inr h) =>
-      haveI : Fact (M i i' ≥ 2) := { out := h }
-      rw [←orderOf_geomRepAux_mul_geomRepAux₂ i i']
-      apply pow_orderOf_eq_one
+  rcases (show M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 by lia) with h | h | h
+  · rw [h, pow_zero]
+  · rw [h, ←(M.off_diagonal i i').mtr h]
+    ext : 1
+    apply geomRepAux_involutive i
+  · haveI : Fact (M i i' ≥ 2) := { out := h }
+    rw [←orderOf_geomRepAux_mul_geomRepAux₂ i i']
+    apply pow_orderOf_eq_one
 
 /-- The geometric representation -/
 def geomRep : W →* (V W ≃ₗ[ℝ] V W) := cs.lift ⟨geomRepAux, geomRepAux_liftable⟩
@@ -564,13 +556,11 @@ theorem geomRep_simple_apply (i : B W) (x : V W) :
 theorem orderOf_geomRep_simple_mul_simple (i i' : B W) :
   orderOf (geomRep (cs.simple i * cs.simple i')) = M i i' := by
   rw [map_mul, geomRep_simple, geomRep_simple]
-  have h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
-  match h with
-  | Or.inl h => rw [h, orderOf_geomRepAux_mul_geomRepAux₀ i i' h]
-  | Or.inr (Or.inl h) => rw [h, orderOf_geomRepAux_mul_geomRepAux₁ i i' h]
-  | Or.inr (Or.inr h) =>
-      haveI : Fact (M i i' ≥ 2) := { out := h }
-      exact orderOf_geomRepAux_mul_geomRepAux₂ i i'
+  rcases (show M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 by lia) with h | h | h
+  · rw [h, orderOf_geomRepAux_mul_geomRepAux₀ i i' h]
+  · rw [h, orderOf_geomRepAux_mul_geomRepAux₁ i i' h]
+  · haveI : Fact (M i i' ≥ 2) := { out := h }
+    exact orderOf_geomRepAux_mul_geomRepAux₂ i i'
 
 theorem orderOf_simple_mul_simple (i i' : B W) : orderOf (cs.simple i * cs.simple i') = M i i' := by
   apply dvd_antisymm

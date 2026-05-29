@@ -167,39 +167,36 @@ private theorem reduced_subword_extend_aux (α μ ω : List (B W))
       have ht : cs.IsReflection t := (cs.isReflection_simple i).conj _
       by_cases! h1 : cs.IsLeftInversion (cs.wordProd (α ++ μ)) t
       · rw [isLeftInversion_iff_mem_leftInvSeq hμ, leftInvSeq_append, mem_append, mem_map] at h1
-        cases h1 with
-        | inl h1 =>
-            absurd h1
-            rw [append_cons] at hω
-            apply isReduced_of_append_left at hω
-            replace hω := hω.nodup_leftInvSeq
-            rw [←concat_eq_append, leftInvSeq_concat, nodup_concat] at hω
-            exact hω.1
-        | inr h1 =>
-            obtain ⟨w, hw1, hw2⟩ := h1
-            rw [MulAut.conj_apply, mul_left_inj, mul_right_inj] at hw2
-            subst hw2
-            rw [←isLeftInversion_iff_mem_leftInvSeq (isReduced_of_append_right hμ),
-              isLeftInversion_simple_iff_isLeftDescent] at hw1
-            have ⟨j, hj1, hj2⟩ := exchange_property hw1
-            rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hj2
-            have h : cs.IsReduced (α ++ i :: μ.eraseIdx j) := by
-              unfold CoxeterSystem.IsReduced
-              rw [wordProd_append, ←hj2, ←wordProd_append, hμ, length_append, length_append,
-                length_cons, length_eraseIdx_of_lt hj1]
-              lia
-            rw [append_cons] at h hω
-            have ⟨ν, hν1, hν2, hν3⟩ := ih ω (Nat.lt_succ_self _) (α ++ [i]) (μ.eraseIdx j) h hω
-              (Sublist.trans (eraseIdx_sublist ..) hsub) ?_
-            · rw [←append_cons] at hν1 hν2 hν3
-              rw [wordProd_append, ←hj2, ←wordProd_append] at hν2
-              rw [length_append, length_cons, length_eraseIdx_add_one hj1] at hν3
-              rw [length_append]
-              exists ν
-            · apply_fun length
-              rw [length_eraseIdx_of_lt hj1]
-              replace hsub := hsub.length_le
-              lia
+        rcases h1 with h1 | ⟨w, hw1, hw2⟩
+        · absurd h1
+          rw [append_cons] at hω
+          apply isReduced_of_append_left at hω
+          replace hω := hω.nodup_leftInvSeq
+          rw [←concat_eq_append, leftInvSeq_concat, nodup_concat] at hω
+          exact hω.1
+        · rw [MulAut.conj_apply, mul_left_inj, mul_right_inj] at hw2
+          subst hw2
+          rw [←isLeftInversion_iff_mem_leftInvSeq (isReduced_of_append_right hμ),
+            isLeftInversion_simple_iff_isLeftDescent] at hw1
+          have ⟨j, hj1, hj2⟩ := exchange_property hw1
+          rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hj2
+          have h : cs.IsReduced (α ++ i :: μ.eraseIdx j) := by
+            unfold CoxeterSystem.IsReduced
+            rw [wordProd_append, ←hj2, ←wordProd_append, hμ, length_append, length_append,
+              length_cons, length_eraseIdx_of_lt hj1]
+            lia
+          rw [append_cons] at h hω
+          have ⟨ν, hν1, hν2, hν3⟩ := ih ω (Nat.lt_succ_self _) (α ++ [i]) (μ.eraseIdx j) h hω
+            (Sublist.trans (eraseIdx_sublist ..) hsub) ?_
+          · rw [←append_cons] at hν1 hν2 hν3
+            rw [wordProd_append, ←hj2, ←wordProd_append] at hν2
+            rw [length_append, length_cons, length_eraseIdx_add_one hj1] at hν3
+            rw [length_append]
+            exists ν
+          · apply_fun length
+            rw [length_eraseIdx_of_lt hj1]
+            replace hsub := hsub.length_le
+            lia
       · exists α ++ i :: μ
         have h2 : t * cs.wordProd (α ++ μ) = cs.wordProd (α ++ i :: μ) := by
           rw [wordProd_append, wordProd_append, mul_inv_mul_mul_cancel, wordProd_cons, mul_assoc]
