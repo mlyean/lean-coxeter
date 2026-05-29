@@ -554,7 +554,7 @@ theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
 /-- The geometric representation -/
 def geomRep : W →* (V W ≃ₗ[ℝ] V W) := cs.lift ⟨geomRepAux, geomRepAux_liftable⟩
 
-theorem geomRep_simple (i : B W) : geomRep (cs.simple i) = geomRepAux i := cs.lift_apply_simple _ i
+theorem geomRep_simple (i : B W) : geomRep (cs.simple i) = geomRepAux i := cs.lift_apply_simple ..
 
 theorem geomRep_simple_apply (i : B W) (x : V W) :
   geomRep (cs.simple i) x = x - (2 * bil (stdBasis i) x) • stdBasis i := by
@@ -580,9 +580,9 @@ theorem orderOf_simple_mul_simple (i i' : B W) : orderOf (cs.simple i * cs.simpl
     apply orderOf_map_dvd
 
 theorem simple_inj : Injective ((@cs W).simple) := by
-  intro i i' h
-  rw [←cs.inv_simple, inv_eq_iff_mul_eq_one, ←orderOf_eq_one_iff, orderOf_simple_mul_simple] at h
-  exact (M.off_diagonal i i').mtr h
+  intro i i'
+  rw [←cs.inv_simple, inv_eq_iff_mul_eq_one, ←orderOf_eq_one_iff, orderOf_simple_mul_simple]
+  exact (M.off_diagonal i i').mtr
 
 theorem finite_generating_set [Finite W] : Finite (B W) := Finite.of_injective _ simple_inj
 

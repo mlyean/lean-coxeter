@@ -130,22 +130,23 @@ section
 
 def ReducedWord (w : W) := {ω : List (B W) // cs.IsReduced ω ∧ w = cs.wordProd ω}
 
-instance {w : W} : CoeOut (ReducedWord w) (List (B W)) where
+variable {w : W}
+
+instance : CoeOut (ReducedWord w) (List (B W)) where
   coe := Subtype.val
 
-instance {w : W} : Nonempty (ReducedWord w) :=
-  ⟨(Classical.indefiniteDescription _ (cs.exists_isReduced w))⟩
+instance : Nonempty (ReducedWord w) := ⟨(Classical.indefiniteDescription _ (cs.exists_isReduced w))⟩
 
 namespace ReducedWord
 
 @[simp]
-def reverse {w : W} (ω : ReducedWord w) : ReducedWord w⁻¹ :=
+def reverse (ω : ReducedWord w) : ReducedWord w⁻¹ :=
   ⟨ω.val.reverse, ω.prop.1.reverse, (congr_arg Inv.inv ω.prop.2).trans (cs.wordProd_reverse _).symm⟩
 
-theorem length_eq {w : W} (ω : ReducedWord w) : ω.val.length = cs.length w := by
+theorem length_eq (ω : ReducedWord w) : ω.val.length = cs.length w := by
   rw [←ω.2.1, ←ω.2.2]
 
-theorem wordProd_eq {w : W} (ω : ReducedWord w) : cs.wordProd ω = w := ω.2.2.symm
+theorem wordProd_eq (ω : ReducedWord w) : cs.wordProd ω = w := ω.2.2.symm
 
 end ReducedWord
 
@@ -169,8 +170,7 @@ theorem simple_op (i : B W) : (@cs Wᵐᵒᵖ).simple i = op (cs.simple i) := by
   change (op (cs.simple i))⁻¹ = op (cs.simple i)
   rw [←op_inv, inv_simple]
 
-theorem wordProd_op (ω : List (B W)) :
-  (@cs Wᵐᵒᵖ).wordProd ω = op (cs.wordProd ω.reverse) := by
+theorem wordProd_op (ω : List (B W)) : (@cs Wᵐᵒᵖ).wordProd ω = op (cs.wordProd ω.reverse) := by
   induction ω with
   | nil => rfl
   | cons i is hi =>
