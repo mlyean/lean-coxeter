@@ -144,7 +144,7 @@ theorem sup_orthogonal_eq_top (B : LinearMap.BilinForm ℝ V)
   rw [sub_eq_zero]
   symm
   unfold u
-  simp only [AddSubmonoidClass.coe_finset_sum, SetLike.val_smul, map_sum, map_smul,
+  simp only [AddSubmonoidClass.coe_finsetSum, SetLike.val_smul, map_sum, map_smul,
     LinearMap.coe_sum, Finset.sum_apply, LinearMap.smul_apply, smul_eq_mul]
   change ∑ j, B x (v j) * B (v j) (v i) = B x (v i)
   have : ∀ (i j : Fin (Module.finrank ℝ W)), (B x (v j)) * B (v j) (v i)
