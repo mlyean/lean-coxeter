@@ -253,18 +253,21 @@ theorem T_one : T (1 : W) = 1 := by
   simp [hnil]
 
 omit mat in
-/-- A single elementary braid move (`Coxeter.BraidMove`) between two words doesn't change the
-`T_simple`-product, since it's exactly the braid relation `T_simple_braid`. -/
+/-- A single elementary braid move (`Coxeter.BraidMove`)
+between two words doesn't change the `T_simple`-product,
+since it's exactly the braid relation `T_simple_braid`. -/
 theorem BraidMove.T_simple_prod_eq {ω ω' : List (B W)} (h : BraidMove ω ω') :
     (ω.map T_simple).prod = (ω'.map T_simple).prod := by
   obtain ⟨i, i', α, β, hω, hω'⟩ := h
   rw [hω, hω']
   simp only [List.map_append, List.prod_append, T_simple_braid]
 
-/-- `T w` doesn't depend on the choice of reduced word: it equals the `T_simple`-product along
-*any* reduced word for `w`, not just the one used in the definition. This is where Matsumoto's
-theorem (`Coxeter.eqvGen_braidMove_of_reduced`) is actually used: any two reduced words for `w`
-are connected by a chain of braid moves, each of which preserves the `T_simple`-product
+/-- `T w` doesn't depend on the choice of reduced word:
+it equals the `T_simple`-product along
+*any* reduced word for `w`, not just the one used in the definition.
+This is where Matsumoto's theorem (`Coxeter.eqvGen_braidMove_of_reduced`) is actually used
+any two reduced words for `w` are connected by a chain of braid moves
+each of which preserves the `T_simple`-product
 (`BraidMove.T_simple_prod_eq`). -/
 theorem T_eq_of_reducedWord {w : W} (ω : ReducedWord w) :
     T w = (ω.val.map T_simple).prod := by
@@ -435,10 +438,10 @@ theorem heckeLengthFiltration_mul_mem {m n : ℕ} {x y : HeckeAlgebra W}
   | smul_left r x y hx hy ih => rw [smul_mul_assoc]; exact Submodule.smul_mem _ r ih
   | smul_right r x y hx hy ih => rw [mul_smul_comm]; exact Submodule.smul_mem _ r ih
 
-/-- The length filtration on `HeckeAlgebra W`, bundled as a `Coxeter.Filtration`:
+/-- The length filtration on `HeckeAlgebra W`,
+bundled as a `Coxeter.Filtration`:
 this unlocks the general associated graded machinery
-(`Coxeter.Filtration.AssociatedGraded`, its `Ring`/`Algebra (HeckeRing W)` structure)
-for free. -/
+(`Coxeter.Filtration.AssociatedGraded`, its `Ring`/`Algebra (HeckeRing W)` structure) for free. -/
 noncomputable def heckeLengthCoxeterFiltration : Filtration (HeckeRing W) (HeckeAlgebra W) where
   carrier := heckeLengthFiltration
   mono := heckeLengthFiltration_mono
@@ -453,14 +456,17 @@ variable {W : Type*} [CoxeterGroup W]
 
 open TensorProduct
 
-/-- `HeckeRingOne` as a `HeckeRing W`-algebra, by restricting scalars along the ring homomorphism
+/-- `HeckeRingOne` as a `HeckeRing W`-algebra,
+by restricting scalars along the ring homomorphism
 `heckeRingOneHom : HeckeRing W →+* HeckeRingOne`. -/
 noncomputable instance : Algebra (HeckeRing W) HeckeRingOne :=
   (heckeRingOneHom.toAlgHom.toRingHom : HeckeRing W →+* HeckeRingOne).toAlgebra
 
-/-- The classical single-parameter Iwahori–Hecke algebra: the base change of the multiparameter
-`HeckeAlgebra W` along `heckeRingOneHom : HeckeRing W → HeckeRingOne`. As a `HeckeRingOne`-algebra
-(not just a `HeckeRing W`-module), via `Algebra.TensorProduct.rightAlgebra`. -/
+/-- The classical single-parameter Iwahori–Hecke algebra:
+the base change of the multiparameter
+`HeckeAlgebra W` along `heckeRingOneHom : HeckeRing W → HeckeRingOne`.
+As a `HeckeRingOne`-algebra (not just a `HeckeRing W`-module),
+via `Algebra.TensorProduct.rightAlgebra`. -/
 abbrev HeckeAlgebraOne (W : Type*) [CoxeterGroup W] : Type _ :=
   HeckeAlgebra W ⊗[HeckeRing W] HeckeRingOne
 
@@ -468,10 +474,8 @@ noncomputable instance : Algebra HeckeRingOne (HeckeAlgebraOne W) :=
   Algebra.TensorProduct.rightAlgebra
 
 
-/-- The base-change map `HeckeAlgebra W → HeckeAlgebraOne W`, `a ↦ a ⊗ₜ 1`, is surjective: since
-`heckeRingOneHom_surjective` says `HeckeRing W → HeckeRingOne` is already surjective, every pure
-tensor `a ⊗ₜ s` is hit (writing `s = heckeRingOneHom r` gives `a ⊗ₜ s = (r • a) ⊗ₜ 1`), and a
-general element of the tensor product is a finite sum of pure tensors. -/
+/-- The base-change map `HeckeAlgebra W → HeckeAlgebraOne W`,
+`a ↦ a ⊗ₜ 1`, is surjective -/
 theorem heckeAlgebraOne_includeLeft_surjective [Nonempty (B W)] :
     Function.Surjective (Algebra.TensorProduct.includeLeft :
       HeckeAlgebra W →ₐ[HeckeRing W] HeckeAlgebraOne W) :=
@@ -479,9 +483,10 @@ theorem heckeAlgebraOne_includeLeft_surjective [Nonempty (B W)] :
 
 section QOneSpecialization
 
-/-- The **`q = 1` specialization**: evaluating the classical single-parameter Hecke ring
-`HeckeRingOne = ℤ[v, v⁻¹]` at `v = 1` (so `q_i = v_i^2 = 1` too, once composed with
-`heckeRingOneHom`). -/
+/-- The **`q = 1` specialization**
+evaluating the classical single-parameter Hecke ring
+`HeckeRingOne = ℤ[v, v⁻¹]` at `v = 1`
+(so `q_i = v_i^2 = 1` too, once composed with `heckeRingOneHom`). -/
 noncomputable def qOneHom : HeckeRingOne →+* ℤ :=
   LaurentPolynomial.eval₂ (RingHom.id ℤ) (1 : ℤˣ)
 
@@ -491,7 +496,8 @@ theorem qOneHom_surjective : Function.Surjective qOneHom :=
 theorem qOneHom_T (n : ℤ) : qOneHom (LaurentPolynomial.T n) = 1 := by
   simp [qOneHom, LaurentPolynomial.eval₂_T]
 
-/-- The composite `HeckeRing W → HeckeRingOne → ℤ → ℤ[W]`, `v_i ↦ 1` for every `i`: the ring
+/-- The composite `HeckeRing W → HeckeRingOne → ℤ → ℤ[W]`
+`v_i ↦ 1` for every `i`: the ring
 homomorphism making `MonoidAlgebra ℤ W` a `HeckeRing W`-algebra for the `q = 1` specialization. -/
 noncomputable def qOneRingHom : HeckeRing W →+* MonoidAlgebra ℤ W :=
   (algebraMap ℤ (MonoidAlgebra ℤ W)).comp (qOneHom.comp heckeRingOneHom.toAlgHom.toRingHom)
@@ -500,7 +506,8 @@ theorem qOneRingHom_heckeQ (i : B W) : qOneRingHom (heckeQ i) = 1 := by
   simp [qOneRingHom, heckeQ, map_mul, heckeRingOneHom_heckeV, qOneHom_T,
     MonoidAlgebra.one_def]
 
-/-- The scalar augmentation on the multiparameter Hecke ring, evaluating every `v_i` at `1`. -/
+/-- The scalar augmentation on the multiparameter Hecke ring
+evaluating every `v_i` at `1`. -/
 noncomputable def qOneScalarHom : HeckeRing W →+* ℤ :=
   qOneHom.comp heckeRingOneHom.toAlgHom.toRingHom
 
@@ -508,9 +515,8 @@ noncomputable def qOneScalarHom : HeckeRing W →+* ℤ :=
 theorem qOneScalarHom_heckeQ (i : B W) : qOneScalarHom (heckeQ i) = 1 := by
   simp [qOneScalarHom, heckeQ, map_mul, heckeRingOneHom_heckeV, qOneHom_T]
 
-/-- The image of `qOneRingHom` is central (it factors through `ℤ`), so it defines a genuine
-`HeckeRing W`-algebra structure on `MonoidAlgebra ℤ W`, even though the latter is generally
-noncommutative. -/
+/-- The image of `qOneRingHom` is central
+because it factors through `ℤ` -/
 noncomputable instance : Algebra (HeckeRing W) (MonoidAlgebra ℤ W) :=
   qOneRingHom.toAlgebra' fun c x => Algebra.commutes (qOneHom (heckeRingOneHom c)) x
 
@@ -523,8 +529,9 @@ theorem algebraMap_heckeQ (i : B W) :
     algebraMap (HeckeRing W) (MonoidAlgebra ℤ W) (heckeQ i) = 1 :=
   qOneRingHom_heckeQ i
 
-/-- The `HeckeRing W`-algebra homomorphism from the free algebra on the simple reflections to
-`ℤ[W]`, sending each generator `T_i` to the group element `s_i`. -/
+/-- The `HeckeRing W`-algebra homomorphism
+from the free algebra on the simple reflections to `ℤ[W]`
+sending each generator `T_i` to the group element `s_i`. -/
 noncomputable def qOneFreeAlgHom :
     FreeAlgebra (HeckeRing W) (B W) →ₐ[HeckeRing W] MonoidAlgebra ℤ W :=
   FreeAlgebra.lift (HeckeRing W) (fun i => MonoidAlgebra.single (cs.simple i) (1 : ℤ))
@@ -554,7 +561,8 @@ theorem qOneFreeAlgHom_respects_rel : ∀ ⦃x y⦄, HeckeRel W x y →
   | braid i i' =>
       rw [qOneFreeAlgHom_wordProd, qOneFreeAlgHom_wordProd, wordProd_braidWord_eq]
 
-/-- The `HeckeRing W`-algebra homomorphism `HeckeAlgebra W → ℤ[W]` induced by `qOneFreeAlgHom`
+/-- The `HeckeRing W`-algebra homomorphism `HeckeAlgebra W → ℤ[W]`
+induced by `qOneFreeAlgHom`
 via the universal property of `RingQuot`, sending `T_i ↦ s_i`. -/
 noncomputable def qOneAlgHom0 : HeckeAlgebra W →ₐ[HeckeRing W] MonoidAlgebra ℤ W :=
   RingQuot.liftAlgHom (HeckeRing W) ⟨qOneFreeAlgHom, qOneFreeAlgHom_respects_rel⟩
@@ -588,7 +596,8 @@ theorem qOneAlgHom0_surjective : Function.Surjective (qOneAlgHom0 (W := W)) := b
         rw [heq]
         exact qOneFreeAlgHom_surjective)
 
-/-- `HeckeRingOne` maps into `ℤ[W]` as a `HeckeRing W`-algebra homomorphism, via `qOneHom`. -/
+/-- `HeckeRingOne` maps into `ℤ[W]`
+as a `HeckeRing W`-algebra homomorphism, via `qOneHom`. -/
 noncomputable def qOneRingHomOne : HeckeRingOne →ₐ[HeckeRing W] MonoidAlgebra ℤ W where
   toRingHom := (algebraMap ℤ (MonoidAlgebra ℤ W)).comp qOneHom
   commutes' _ := rfl
@@ -598,8 +607,9 @@ theorem qOneAlgHom0_commute (x : HeckeAlgebra W) (y : HeckeRingOne) :
   (Algebra.commutes (qOneHom y) (qOneAlgHom0 x)).symm
 
 /-- At `q = 1`, the quadratic relation `T_i ^ 2 = (q_i - 1) • T_i + q_i • 1` degenerates to
-`T_i ^ 2 = 1`, exactly the defining relation `s_i ^ 2 = 1` of the group `W`; the braid relations
-carry over unchanged (`qOneFreeAlgHom_respects_rel`). So the single-parameter Hecke algebra
+`T_i ^ 2 = 1`, exactly the defining relation `s_i ^ 2 = 1` of the group `W`
+the braid relations carry over unchanged (`qOneFreeAlgHom_respects_rel`).
+So the single-parameter Hecke algebra
 `HeckeAlgebraOne W`, further specialized along `qOneHom` (`v ↦ 1`), collapses onto the integral
 group algebra `MonoidAlgebra ℤ W`, via the ℤ-algebra homomorphism sending `T_w ⊗ₜ 1 ↦
 Finsupp.single w 1`. -/
@@ -616,16 +626,16 @@ theorem qOneAlgHom_surjective : Function.Surjective (qOneAlgHom (W := W)) := by
       (a ⊗ₜ[HeckeRing W] 1) = c
     rw [Algebra.TensorProduct.lift_tmul, map_one, mul_one, ha]⟩
 
-/-- At `q = 1`, the simple Hecke generator maps to the corresponding group-algebra basis
-element. -/
+/-- At `q = 1`, the simple Hecke generator maps to
+the corresponding group-algebra basis element. -/
 theorem qOneAlgHom0_T_simple (i : B W) :
     qOneAlgHom0 (T_simple i) = MonoidAlgebra.single (cs.simple i) (1 : ℤ) := by
   simp [qOneAlgHom0, T_simple,
     RingQuot.liftAlgHom_mkAlgHom_apply (HeckeRing W) qOneFreeAlgHom
       qOneFreeAlgHom_respects_rel (FreeAlgebra.ι (HeckeRing W) i)]
 
-/-- At `q = 1`, the Hecke word product along any word maps to the corresponding group-algebra
-basis element. -/
+/-- At `q = 1`, the Hecke word product along any word maps to
+the corresponding group-algebra basis element. -/
 theorem qOneAlgHom0_T_prod (l : List (B W)) :
     qOneAlgHom0 ((l.map T_simple).prod) = MonoidAlgebra.single (cs.wordProd l) (1 : ℤ) := by
   induction l with
@@ -733,9 +743,9 @@ theorem T_simple_action_apply (i : B W) (w : W) :
   change Finsupp.lift _ _ _ _ (Finsupp.single w (1 : HeckeRing W)) = _
   rw [Finsupp.lift_apply, Finsupp.sum_single_index (by simp), one_smul]
 
-/-- The action `T_simple_action` satisfies the Hecke quadratic relation, by the same case-split
-calculation as `T_mul_T_simple_of_rightDescent` (mirrored here directly on `module_actedOn W`,
-since `{T_w}` isn't known to be a basis yet). -/
+/-- The action `T_simple_action` satisfies the Hecke quadratic relation,
+by the same case-split calculation as `T_mul_T_simple_of_rightDescent`
+(mirrored here directly on `module_actedOn W`, since `{T_w}` isn't known to be a basis yet). -/
 theorem T_simple_action_sq (i : B W) :
     T_simple_action i * T_simple_action i
       = (heckeQ i - 1) • T_simple_action i
@@ -759,16 +769,17 @@ theorem T_simple_action_sq (i : B W) :
     rw [T_simple_action_apply]
     simp only [hw, if_true, cs.simple_mul_simple_cancel_right]
 
-/-- The action `T_simple_action` satisfies the Hecke braid relation: deferred, comparable in
-difficulty to Matsumoto's theorem (see the module `TODO`). -/
+/-- The action `T_simple_action` satisfies the Hecke braid relation:
+deferred, comparable in difficulty to Matsumoto's theorem (see the module `TODO`). -/
 theorem T_simple_action_braid (i i' : B W) :
     ((braidWord M i i').map T_simple_action).prod
       = ((braidWord M i' i).map T_simple_action).prod :=
   sorry
 
-/-- The `HeckeRing W`-algebra homomorphism from the free algebra on the simple reflections to
-`Module.End (HeckeRing W) (module_actedOn W)`, sending each generator `T_i` to its action
-`T_simple_action i`. -/
+/-- The `HeckeRing W`-algebra homomorphism from
+the free algebra on the simple reflections
+to `Module.End (HeckeRing W) (module_actedOn W)`,
+sending each generator `T_i` to its action `T_simple_action i`. -/
 noncomputable def heckeActionFreeAlgHom :
     FreeAlgebra (HeckeRing W) (B W) →ₐ[HeckeRing W] Module.End (HeckeRing W) (module_actedOn W) :=
   FreeAlgebra.lift (HeckeRing W) T_simple_action
@@ -795,11 +806,11 @@ theorem heckeActionFreeAlgHom_respects_rel : ∀ ⦃x y⦄, HeckeRel W x y →
       rw [heckeActionFreeAlgHom_wordProd, heckeActionFreeAlgHom_wordProd]
       exact T_simple_action_braid i i'
 
-/-- The algebra map from `HeckeAlgebra`, presented by generators and relations, to
-`Module.End (HeckeRing W) (module_actedOn W)`: the action of the Hecke algebra on the free
-`HeckeRing W`-module on `W`, specified (via the universal property of `RingQuot`) purely by
-declaring the action of each generator `T_i` (`T_simple_action`) and checking it respects the
-defining relations (`heckeActionFreeAlgHom_respects_rel`). -/
+/-- The algebra map from `HeckeAlgebra`, presented by generators and relations, to `Module.End (HeckeRing W) (module_actedOn W)`
+the action of the Hecke algebra on the free
+`HeckeRing W`-module on `W`, specified purely by
+declaring the action of each generator `T_i` (`T_simple_action`)
+and checking it respects the defining relations (`heckeActionFreeAlgHom_respects_rel`). -/
 noncomputable def heckeActionAlgHom :
     HeckeAlgebra W →ₐ[HeckeRing W] Module.End (HeckeRing W) (module_actedOn W) :=
   RingQuot.liftAlgHom (HeckeRing W) ⟨heckeActionFreeAlgHom, heckeActionFreeAlgHom_respects_rel⟩
