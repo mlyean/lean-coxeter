@@ -152,6 +152,37 @@ end ReducedWord
 
 end
 
+section BraidMoves
+
+/-! ### Braid moves and Matsumoto's theorem -/
+
+/-- An **elementary braid move**
+replacing a contiguous occurrence of the braid word
+`braidWord M i i'` (i.e. `s_i s_{i'} s_i ⋯`, `M i i'` letters)
+in a list by `braidWord M i' i`
+(`s_{i'} s_i s_{i'} ⋯`) leaving the rest of the list unchanged.
+Two lists related by `BraidMove` represent the same group element -/
+def BraidMove (ω ω' : List (B W)) : Prop :=
+  ∃ (i i' : B W) (α β : List (B W)),
+    ω = α ++ braidWord M i i' ++ β ∧ ω' = α ++ braidWord M i' i ++ β
+
+theorem BraidMove.wordProd_eq {ω ω' : List (B W)} (h : BraidMove ω ω') :
+    cs.wordProd ω = cs.wordProd ω' := by
+  obtain ⟨i, i', α, β, hω, hω'⟩ := h
+  rw [hω, hω']
+  simp only [wordProd_append, wordProd_braidWord_eq]
+
+class Matsumoto (W1 : Type*) [CoxeterGroup W1] : Prop where
+  /-- **Matsumoto's theorem**
+  (Tits' solution to the word problem for Coxeter groups)
+  Any two reduced words for the same element `w`
+  are connected by a finite chain of elementary braid moves. -/
+  reduced_words_convert : ∀ w : W1,
+    ∀ ω ω': ReducedWord w,
+    Relation.EqvGen (BraidMove (W:=W1)) ω.val ω'.val
+
+end BraidMoves
+
 section opposite
 
 /-! ### Opposite group -/
