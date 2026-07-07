@@ -189,11 +189,29 @@ individual component, since a connected component's own sub-diagram always has i
 inhabitant (`SimpleGraph.ConnectedComponent.nonempty_supp`) — so it's never vacuously empty. -/
 def IsAffineCoxeterOrEmpty : Prop := IsEmpty (B W) ∨ @IsAffineCoxeter W cg
 
+/-- `bil` being positive semidefinite assembles across connected components unconditionally — no
+"or empty" wrapper needed, since `bil` on the trivial module (no generators) is vacuously positive
+semidefinite anyway, matching the vacuous truth of `∀ c, ...` over an empty component index.
+Follows directly from `Component.lean`'s block-diagonal decomposition
+(`bil_toMatrix_blockEquiv_eq_blockDiagonal'`) fed into
+`LinearMap.BilinForm.isPosSemidef_of_toMatrix_eq_blockDiagonal'`. -/
+lemma assembles_possemidef :
+  Assembles fun [W1 : Type*] (cg1 : CoxeterGroup W1) => (@bil W1 cg1).IsPosSemidef := by
+  unfold Assembles
+  intro W1 cg1 finitely_many_comp on_components
+  classical
+  exact LinearMap.BilinForm.isPosSemidef_of_toMatrix_eq_blockDiagonal'
+    (stdBasis.reindex (blockEquiv cg1).symm) (@bil W1 cg1)
+    (fun c => @bil _ (componentCoxeterGroup cg1 c))
+    (bil_toMatrix_blockEquiv_eq_blockDiagonal' cg1) on_components
+
 /-
-TODO: the proof needs infrastructure that doesn't exist yet — that `bil` is an orthogonal direct
-sum of the components' own `bil`s (`bil x x = ∑ c, bil xc xc` where `xc` is `x` restricted to
-component `c`, via `Finsupp.filter`/`Finsupp.subtypeDomain`). This is the same missing "block
-structure on connected components" noted on `IsPolyAffineWeyl` below.
+The empty-diagram case is immediate (`Or.inl empty`). Otherwise, `IsPosSemidef` comes straight from
+`assembles_possemidef`, while `¬ Nondegenerate` needs the "or empty" case split: an arbitrary
+component is degenerate (`on_arbitrary`), which after converting the one-sided `¬ SeparatingRight`
+fact to `¬ SeparatingLeft` (using that each component's `bil` is symmetric) transfers, via
+`LinearMap.BilinForm.not_separatingLeft_of_toMatrix_eq_blockDiagonal'`, to
+`¬ SeparatingLeft (@bil W1 cg1)`, hence `¬ Nondegenerate`.
 -/
 lemma assembles_affineCoxeter :
   Assembles
@@ -229,7 +247,21 @@ lemma assembles_affineCoxeter :
         (bil_c c).IsPosSemidef := by
       intro c
       exact (on_components' c).left
-    sorry
+    classical
+    have hsep_left_ne : ¬ (bil_c arbitrary_component).SeparatingLeft := by
+      intro hleft
+      apply on_arbitrary hleft
+      intro y hy
+      apply hleft
+      intro z
+      rw [bil_c_def, (@bil_isSymm _ (componentCoxeterGroup cg1 arbitrary_component)).eq]
+      exact hy z
+    have hpsd_whole : (@bil W1 cg1).IsPosSemidef := assembles_possemidef cg1 on_components''
+    have hdeg_whole : ¬ (@bil W1 cg1).SeparatingLeft :=
+      LinearMap.BilinForm.not_separatingLeft_of_toMatrix_eq_blockDiagonal'
+        (stdBasis.reindex (blockEquiv cg1).symm) (@bil W1 cg1) bil_c
+        (bil_toMatrix_blockEquiv_eq_blockDiagonal' cg1) hsep_left_ne
+    exact ⟨hpsd_whole, fun hnd => hdeg_whole hnd.1⟩
 
 /-- A particular kind of affine Coxeter system
 (`IsAffineCoxeter`), characterized the classical way.
@@ -248,9 +280,10 @@ Concretely:
 We do not have the classification result available. So we cannot
 go from `IsAffineCoxeter` to disjoint union of connected `IsAffineCoxeter`
 and from there to disjoint union of several possibilities all of which have nullity at
-most 1. We also do not have the block structure on connected components needed
-to write `δ` in terms of `B_a^-1 B_{i0, a_j}` where `a` indexes the components upon
-removing `i0` and `a_j` indexes the nodes within that component.
+most 1. The block structure on connected components (`Component.lean`'s
+`bil_toMatrix_blockEquiv_eq_blockDiagonal'`) is now available, but writing `δ` in terms of
+`B_a^-1 B_{i0, a_j}` (where `a` indexes the components upon removing `i0` and `a_j` indexes the
+nodes within that component) is still not done.
 
 - Descent: fails, worse than `IsAffineCoxeter`. The `∃ i₀, δ` clause pins the *total* nullity of
   `bil` to exactly `1`; since the kernel of an orthogonal direct sum is the direct sum of the

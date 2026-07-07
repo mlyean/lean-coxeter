@@ -203,4 +203,24 @@ def Assembles (P : ∀ {W : Type v}, CoxeterGroup.{v, v} W → Prop) : Prop :=
     [Finite (coxeterGraphMatrix cg.M).ConnectedComponent],
     (∀ c : (coxeterGraphMatrix cg.M).ConnectedComponent, P (componentCoxeterGroup cg c)) → P cg
 
+lemma assembles_combination
+  (P Q : ∀ {W : Type v}, CoxeterGroup.{v, v} W → Prop) :
+  Assembles P -> Assembles Q -> Assembles (fun x => P x ∧ Q x) := by
+  intro assembles_P assembles_Q W cg finiteness on_components_PQ
+  have on_componentsP' : ∀ c : (coxeterGraphMatrix cg.M).ConnectedComponent,
+    P (componentCoxeterGroup cg c) := by
+    intro c
+    have key := on_components_PQ c
+    simp at key
+    exact key.left
+  have on_componentsQ' : ∀ c : (coxeterGraphMatrix cg.M).ConnectedComponent,
+    Q (componentCoxeterGroup cg c) := by
+    intro c
+    have key := on_components_PQ c
+    simp at key
+    exact key.right
+  have p_part := assembles_P cg on_componentsP'
+  have q_part := assembles_Q cg on_componentsQ'
+  exact And.intro p_part q_part
+
 end Coxeter

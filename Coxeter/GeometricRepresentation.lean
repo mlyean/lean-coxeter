@@ -48,7 +48,7 @@ def stdBasis : Module.Basis (B W) ℝ (V W) := Finsupp.basisSingleOne
 -- `-cos (π / M i i') = -1`, matching the `m → ∞` limit of `-cos (π / m)`.
 def bil : LinearMap.BilinForm ℝ (V W) := Matrix.toBilin stdBasis (fun i i' => -cos (π / M i i'))
 
-private theorem bil_isSymm : (@bil W _).IsSymm := by
+theorem bil_isSymm : (@bil W _).IsSymm := by
   rw [LinearMap.BilinForm.isSymm_iff_basis stdBasis]
   intro i i'
   unfold bil

@@ -6,6 +6,7 @@ public import Coxeter.Bruhat
 public import Coxeter.Component
 public import Coxeter.Dihedral
 public import Coxeter.Data.List.Lemmas
+public import Coxeter.FiniteOrAffine.TypeA
 public import Coxeter.GeometricRepresentation
 public import Coxeter.Hecke
 public import Coxeter.LinearAlgebra.AssociatedGraded
