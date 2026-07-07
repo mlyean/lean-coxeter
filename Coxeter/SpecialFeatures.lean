@@ -1,6 +1,7 @@
 module
 
 public import Coxeter.GeometricRepresentation
+public import Coxeter.Component
 public import Mathlib.Combinatorics.SimpleGraph.Connectivity.Connected
 
 /-!
@@ -16,6 +17,14 @@ None of these require the Coxeter diagram to be connected
 (irreducible);
 The `Poly` prefix on `IsPolyFiniteWeyl`/`IsPolyAffineWeyl` signals that they allow a
 *product* of several irreducible finite/affine Weyl groups, not just a single irreducible one.
+
+Each definition's docstring below also records how it interacts with the connected components of
+the Coxeter diagram (writing `component_cg` for the sub-Coxeter-system obtained by restricting to
+one component): whether *descent* holds (`cg.IsX → component_cg.IsX` for every component), and
+whether *assembly* holds (`component_cg.IsX` for every component `⟹ cg.IsX`). This matters because
+generators in different components automatically have `M i i' = 2`, hence
+`bil (stdBasis i) (stdBasis i') = -cos (π / 2) = 0`: the diagram's components correspond to an
+orthogonal direct sum decomposition of `bil`.
 
 ## Main definitions
 
@@ -40,27 +49,75 @@ variable {W : Type*} {cg : CoxeterGroup W}
 
 /-- A Coxeter matrix is *right-angled* if every pair of distinct generators either commutes
 (`M i i' = 2`) or generates an infinite dihedral subgroup (`M i i' = 0`) — i.e. no relation of
-order `3` or more ever occurs between two distinct generators. -/
+order `3` or more ever occurs between two distinct generators.
+
+- Descent: holds. This is a `∀` over pairs of generators, so it restricts to any subset for free.
+- Assembly: holds. `assembles_rightAngled` -/
 def IsRightAngled : Prop := ∀ i i' : B W, i ≠ i' → M i i' = 2 ∨ M i i' = 0
 
-def IsCrystallographicMatrix {B1 : Type*} (M1 : Matrix B1 B1 ℕ) : Prop :=
-  ∀ i i' : B1, i ≠ i' → M1 i i' = 0 ∨ M1 i i' = 2 ∨ M1 i i' = 3 ∨ M1 i i' = 4 ∨ M1 i i' = 6
+/-
+Generators in different components already have `M i i' = 2`, which satisfies
+the disjunction for free, so `cg.IsRightAngled` holds iff every component does.
+-/
+lemma assembles_rightAngled :
+  Assembles
+    fun [W1 : Type*] (cg1 : CoxeterGroup W1) => @IsRightAngled W1 cg1
+  := by
+  unfold Assembles
+  intro W1 cg1 finitely_many_comp on_components
+  unfold IsRightAngled
+  set cg1_graph := coxeterGraphMatrix cg1.M
+  intro i i' hii'
+  by_cases same_comp : cg1_graph.Reachable i i'
+  · set c := cg1_graph.connectedComponentMk i
+    have hi : i ∈ c.supp := rfl
+    have hi' : i' ∈ c.supp := (SimpleGraph.ConnectedComponent.sound same_comp).symm
+    have hne : (⟨i, hi⟩ : c.supp) ≠ ⟨i', hi'⟩ := fun h => hii' (congrArg Subtype.val h)
+    exact on_components c ⟨i, hi⟩ ⟨i', hi'⟩ hne
+  · exact Or.inl (M_eq_two_of_connectedComponentMk_ne cg1
+      (fun heq => same_comp (SimpleGraph.ConnectedComponent.eq.mp heq)))
 
 /-- A Coxeter matrix is *crystallographic* if every pair of distinct generators either generates an
 infinite dihedral subgroup (`M i i' = 0`) or one of order `2 * M i i'` for `M i i' ∈ {2, 3, 4, 6}`
-— the restriction on dihedral angles forced by requiring the reflections to preserve a lattice. -/
-def IsCrystallographic : Prop :=
-  IsCrystallographicMatrix (B1 := B W) (M1 := cg.M)
+— the restriction on dihedral angles forced by requiring the reflections to preserve a lattice.
 
-/-- The graph on generators with an edge between `i ≠ i'` whenever `M i i' ≠ 2` (the two simple
-reflections don't commute) — the *Coxeter diagram*, as a `SimpleGraph`. -/
-def coxeterGraphMatrix {B1 : Type*} (M1 : CoxeterMatrix B1) :
-  SimpleGraph B1 := SimpleGraph.fromRel (M1 · · ≠ 2)
+- Descent: holds, for the same reason as `IsRightAngled` — a `∀` over pairs restricts freely.
+- Assembly: holds. `assembles_crystallographic` -/
+def IsCrystallographic : Prop :=
+  ∀ i i' : cg.B, i ≠ i' →
+    cg.M i i' = 0 ∨ cg.M i i' = 2 ∨
+    cg.M i i' = 3 ∨ cg.M i i' = 4 ∨ cg.M i i' = 6
+
+/-
+Cross-component entries are `2 ∈ {0, 2, 3, 4, 6}` for free, so
+`cg.IsCrystallographic` holds iff every component does.
+-/
+lemma assembles_crystallographic :
+  Assembles
+    fun [W1 : Type*] (cg1 : CoxeterGroup W1) => @IsCrystallographic W1 cg1
+  := by
+  unfold Assembles
+  intro W1 cg1 finitely_many_comp on_components
+  unfold IsCrystallographic
+  set cg1_graph := coxeterGraphMatrix cg1.M
+  intro i i' hii'
+  by_cases same_comp : cg1_graph.Reachable i i'
+  · set c := cg1_graph.connectedComponentMk i
+    have hi : i ∈ c.supp := rfl
+    have hi' : i' ∈ c.supp := (SimpleGraph.ConnectedComponent.sound same_comp).symm
+    have hne : (⟨i, hi⟩ : c.supp) ≠ ⟨i', hi'⟩ := fun h => hii' (congrArg Subtype.val h)
+    exact on_components c ⟨i, hi⟩ ⟨i', hi'⟩ hne
+  · exact Or.inr (Or.inl (M_eq_two_of_connectedComponentMk_ne cg1
+      (fun heq => same_comp (SimpleGraph.ConnectedComponent.eq.mp heq))))
 
 /-- A Coxeter matrix is *irreducible* if its Coxeter diagram (`coxeterGraphMatrix`) is connected. -/
 def IsIrreducibleMatrix {B1 : Type*} (M1 : CoxeterMatrix B1) : Prop :=
   (coxeterGraphMatrix M1).Connected
 
+/-- - Descent: holds, but vacuously — a connected component is connected by definition, so
+    `component_cg.IsIrreducible` holds unconditionally, whether or not `cg.IsIrreducible` does.
+  - Assembly: fails. "Every component is connected" is always true and carries no information
+    about whether there is only *one* component, so it cannot imply `cg.IsIrreducible`. -/
 def IsIrreducible : Prop :=
   IsIrreducibleMatrix (M1 := cg.M)
 
@@ -77,20 +134,34 @@ def deleteGenerator (i₀ : B W) :
 /-- `W` is of *finite type*: either finite, or `bil` is positive semidefinite and nondegenerate
 (i.e. positive definite — `IsPosDef` isn't a separate notion in Mathlib for bilinear forms). Stated
 as an *or*, not an *iff*: the classical equivalence `W` finite ↔ `bil` positive definite isn't
-proved here, so satisfying either disjunct is the obligation, not both. -/
+proved here, so satisfying either disjunct is the obligation, not both.
+
+- Descent: holds, via either disjunct — a direct factor of a finite group is finite, and a block
+  of a positive-definite form is positive-definite.
+- Assembly: holds, symmetrically — a finite product of finite groups is finite, and an orthogonal
+  sum of positive-definite blocks is positive-definite (assuming finitely many components; an
+  infinite product of nontrivial finite groups is infinite). -/
 def IsFiniteCoxeter : Prop :=
   Finite W ∨ (
     (@bil W _).IsPosSemidef ∧ (@bil W _).Nondegenerate
   )
 
 /-- `W` is a *product of finite Weyl groups*:
-`IsFiniteCoxeter` together with `IsCrystallographic`. -/
+`IsFiniteCoxeter` together with `IsCrystallographic`.
+
+- Descent: holds — conjunction of two properties that each descend.
+- Assembly: holds — conjunction of two properties that each assemble. -/
 def IsPolyFiniteWeyl : Prop :=
   @IsFiniteCoxeter W cg ∧
   @IsCrystallographic W cg
 
 /-- `W` is an *irreducible finite Weyl group*: `IsPolyFiniteWeyl` together with `IsIrreducible`
-(the Coxeter diagram is connected) — the genuine, single (not a product) case. -/
+(the Coxeter diagram is connected) — the genuine, single (not a product) case.
+
+- Descent: holds, but vacuously, via the `IsIrreducible` conjunct.
+- Assembly: fails, via the `IsIrreducible` conjunct — if there are ≥2 components each individually
+  an irreducible finite Weyl group, their union is reducible, so it isn't `IsIrreducibleFiniteWeyl`
+  even though the `IsPolyFiniteWeyl` part would assemble fine. -/
 def IsIrreducibleFiniteWeyl : Prop :=
   @IsPolyFiniteWeyl W cg ∧ @IsIrreducible W cg
 
@@ -99,9 +170,66 @@ def IsIrreducibleFiniteWeyl : Prop :=
 This covers the properly-degenerate case.
 That is the only restriction on how large the degenerate (radical) directions are.
 It is at least 1, but can be more.
--/
+
+- Descent: fails. `bil` positive semidefinite does descend to each block, but degeneracy of the
+  whole form doesn't: `cg` can be degenerate because of just one "bad" component while a
+  finite-type sibling component stays nondegenerate on its own, failing `IsAffineCoxeter` there.
+- Assembly: holds, given at least one component — see `assembles_affineCoxeter`. If every
+  component's block is positive semidefinite and degenerate, the orthogonal sum is positive
+  semidefinite (sum of psd) and degenerate (its kernel contains each block's nonzero kernel). -/
 def IsAffineCoxeter : Prop :=
   (@bil W _).IsPosSemidef ∧ ¬ (@bil W _).Nondegenerate
+
+/-- `IsAffineCoxeter`, or `cg` has no generators at all. Plain `IsAffineCoxeter` isn't an instance
+of `Assembles`: on the empty diagram (zero components), `V W` is the trivial module, on which `bil`
+is vacuously `Nondegenerate`, so `IsAffineCoxeter` is false there while `∀ c, IsAffineCoxeter
+(component c)` is vacuously true. Weakening to this "or empty" version fixes it: the extra disjunct
+is only ever needed exactly when `cg` itself has no generators, and is never needed for an
+individual component, since a connected component's own sub-diagram always has itself as an
+inhabitant (`SimpleGraph.ConnectedComponent.nonempty_supp`) — so it's never vacuously empty. -/
+def IsAffineCoxeterOrEmpty : Prop := IsEmpty (B W) ∨ @IsAffineCoxeter W cg
+
+/-
+TODO: the proof needs infrastructure that doesn't exist yet — that `bil` is an orthogonal direct
+sum of the components' own `bil`s (`bil x x = ∑ c, bil xc xc` where `xc` is `x` restricted to
+component `c`, via `Finsupp.filter`/`Finsupp.subtypeDomain`). This is the same missing "block
+structure on connected components" noted on `IsPolyAffineWeyl` below.
+-/
+lemma assembles_affineCoxeter :
+  Assembles
+    fun [W1 : Type*] (cg1 : CoxeterGroup W1) => @IsAffineCoxeterOrEmpty W1 cg1
+  := by
+  unfold Assembles
+  intro W1 cg1 finitely_many_comp on_components
+  unfold IsAffineCoxeterOrEmpty
+  by_cases empty : IsEmpty (B W1)
+  · exact Or.inl empty
+  · refine Or.inr ?obligation
+    unfold IsAffineCoxeter
+    set bil_c := fun c : (coxeterGraphMatrix cg1.M).ConnectedComponent =>
+      @bil _ (componentCoxeterGroup cg1 c) with bil_c_def
+    have on_components' : ∀ c : (coxeterGraphMatrix cg1.M).ConnectedComponent,
+        (bil_c c).IsPosSemidef ∧ ¬ (bil_c c).Nondegenerate := by
+      intro c
+      rcases on_components c with hempty | haffine
+      · obtain ⟨v, hv⟩ := c.nonempty_supp
+        exact hempty.elim ⟨v, hv⟩
+      · exact haffine
+    have arbitrary_component : (coxeterGraphMatrix cg1.M).ConnectedComponent := by
+      have arbitrary_gen : B W1 := Classical.arbitrary (B W1)
+        (h:=not_isEmpty_iff.mp empty)
+      exact (coxeterGraphMatrix cg1.M).connectedComponentMk arbitrary_gen
+    have on_arbitrary := on_components' arbitrary_component
+    unfold IsAffineCoxeterOrEmpty at on_arbitrary
+    have on_arbitrary := on_arbitrary.right
+    unfold LinearMap.BilinForm.Nondegenerate at on_arbitrary
+    unfold LinearMap.Nondegenerate at on_arbitrary
+    rw [not_and] at on_arbitrary
+    have on_components'' : ∀ c : (coxeterGraphMatrix cg1.M).ConnectedComponent,
+        (bil_c c).IsPosSemidef := by
+      intro c
+      exact (on_components' c).left
+    sorry
 
 /-- A particular kind of affine Coxeter system
 (`IsAffineCoxeter`), characterized the classical way.
@@ -116,7 +244,23 @@ Concretely:
   (the diagonal entry `bil (stdBasis i₀) (stdBasis i₀) = 1` rules out the kernel
   being spanned by `stdBasis i₀` alone)
 - Deleting `i₀` (`deleteGenerator i₀`) then recovers the
-  finite part. -/
+  finite part.
+We do not have the classification result available. So we cannot
+go from `IsAffineCoxeter` to disjoint union of connected `IsAffineCoxeter`
+and from there to disjoint union of several possibilities all of which have nullity at
+most 1. We also do not have the block structure on connected components needed
+to write `δ` in terms of `B_a^-1 B_{i0, a_j}` where `a` indexes the components upon
+removing `i0` and `a_j` indexes the nodes within that component.
+
+- Descent: fails, worse than `IsAffineCoxeter`. The `∃ i₀, δ` clause pins the *total* nullity of
+  `bil` to exactly `1`; since the kernel of an orthogonal direct sum is the direct sum of the
+  kernels, `cg` satisfying this has exactly one component with nullity `1` and every other
+  component nondegenerate, so `IsPolyAffineWeyl` fails on those nondegenerate components.
+- Assembly: fails, in the opposite direction. If *every* component individually had nullity `1`,
+  the total nullity would be the number of components, not `1`, unless there is only one
+  component. The real per-component statement is a *mixed* one — exactly one component is
+  `IsIrreducibleAffineWeyl` and the rest are `IsIrreducibleFiniteWeyl` — not "the same property on
+  every component". -/
 def IsPolyAffineWeyl : Prop :=
   (@bil W _).IsPosSemidef ∧
   @IsCrystallographic W cg ∧
@@ -124,7 +268,11 @@ def IsPolyAffineWeyl : Prop :=
     LinearMap.ker (@bil W _) = Submodule.span ℝ {stdBasis i₀ + δ}
 
 /-- `W` is an *irreducible affine Weyl group*: `IsPolyAffineWeyl` together with `IsIrreducible`
-(the Coxeter diagram is connected) — the genuine, single (not a product) case. -/
+(the Coxeter diagram is connected) — the genuine, single (not a product) case.
+
+- Descent: holds, but vacuously, via the `IsIrreducible` conjunct.
+- Assembly: fails, via the `IsIrreducible` conjunct, compounded by the nullity-counting failure of
+  `IsPolyAffineWeyl` (several irreducible affine components would sum to nullity `> 1`). -/
 def IsIrreducibleAffineWeyl : Prop :=
   @IsPolyAffineWeyl W cg ∧ @IsIrreducible W cg
 

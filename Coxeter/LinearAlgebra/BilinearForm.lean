@@ -53,6 +53,46 @@ theorem Matrix.toBilin_single (B : Matrix ι ι R) (i j : ι) : toBilin b B (b i
   unfold toBilin LinearMap.BilinForm.toMatrix
   simp
 
+section BlockDiagonal
+
+variable {κ : Type*} {ιk : κ → Type*}
+
+/-- If the matrix of a bilinear form `B` (w.r.t. a basis indexed by a disjoint union `Σ k, ιk k`)
+is block diagonal, with each block itself the matrix of a bilinear form `Bk k` on the free module
+`ιk k →₀ R` (w.r.t. its standard basis `Finsupp.basisSingleOne`), and some block `Bk k₀` is
+degenerate (not left-separating), then `B` itself is degenerate.
+
+Proof idea (currently unproved — pick up here):
+* Unfold `¬ (Bk k₀).SeparatingLeft` (`LinearMap.SeparatingLeft`, `not_forall`) to get `x ≠ 0` in
+  `ιk k₀ →₀ R` with `∀ y, Bk k₀ x y = 0`.
+* The witness for `¬ B.SeparatingLeft` is `x' := x.sum (fun j r => r • b ⟨k₀, j⟩)` — `x` padded
+  with zeros outside block `k₀`.
+* `x' ≠ 0`: `b` is a basis (so `b ⟨k₀, ·⟩` is injective / linearly independent) and `x ≠ 0`.
+* `∀ z, B x' z = 0`: reduce to `z = b l` for `l : Σ k, ιk k` via `Module.Basis.ext` (a linear map
+  vanishing on a basis is the zero map). Then
+  `B x' (b l) = x.sum (fun j r => r * (toMatrix b B) ⟨k₀, j⟩ l)`
+  (unfold via `B.flip (b l) : M →ₗ[R] R`, `map_sum` after `unfold Finsupp.sum` — `map_finsupp_sum`
+  does not exist under that name in this mathlib version, use `map_sum f (fun a => g a (l a))
+  l.support` instead — plus `map_smul`/`smul_eq_mul` and the definitional
+  `(toMatrix b B) i j = B (b i) (b j)`).
+  Rewrite the matrix entry via `hB` and `Matrix.blockDiagonal'_apply'`:
+  - if `k₀ ≠ l.1`: every term is `r * 0`, so the sum is `0` (`Finsupp.sum` of the zero function).
+  - if `k₀ = l.1` (with `m := cast _ l.2 : ιk k₀`): the sum becomes
+    `x.sum (fun j r => r * (toMatrix Finsupp.basisSingleOne (Bk k₀)) j m)`, which is exactly
+    `Bk k₀ x (Finsupp.basisSingleOne m)` run through the *same* unfolding (using
+    `x = x.sum (fun j r => r • Finsupp.basisSingleOne j)`, from `Finsupp.sum_single` +
+    `Finsupp.coe_basisSingleOne`) — so it equals `0` by `hx`. -/
+theorem LinearMap.BilinForm.not_separatingLeft_of_toMatrix_eq_blockDiagonal' [DecidableEq κ]
+    (b : Module.Basis (Σ k, ιk k) R M) (B : LinearMap.BilinForm R M)
+    (Bk : ∀ k, LinearMap.BilinForm R (ιk k →₀ R))
+    (hB : LinearMap.BilinForm.toMatrix b B =
+      Matrix.blockDiagonal' (fun k => LinearMap.BilinForm.toMatrix Finsupp.basisSingleOne (Bk k)))
+    {k₀ : κ} (hdeg : ¬ (Bk k₀).SeparatingLeft) :
+    ¬ B.SeparatingLeft := by
+  sorry
+
+end BlockDiagonal
+
 section real
 
 /-! ### Positive definite symmetric bilinear forms on real vector spaces -/
@@ -60,6 +100,39 @@ section real
 open Real
 
 variable {V : Type*} [AddCommGroup V] [Module ℝ V]
+
+section BlockDiagonalPosSemidef
+
+variable {κ : Type*} {ιk : κ → Type*}
+
+/-- The positive-semidefinite analogue of
+`LinearMap.BilinForm.not_separatingLeft_of_toMatrix_eq_blockDiagonal'`: if the matrix of `B` is
+block diagonal with blocks the matrices of `Bk k` (w.r.t. `Finsupp.basisSingleOne`), and every
+block `Bk k` is positive semidefinite, then `B` is positive semidefinite.
+
+Proof idea (currently unproved — pick up here):
+* `IsSymm`: `B (b l) (b l') = (toMatrix b B) l l' = blockDiagonal' ... l l'`; this is symmetric in
+  `l, l'` termwise (`0` off the diagonal blocks, and `(Bk k).IsSymm` on the diagonal block), so
+  `B.IsSymm` follows from `LinearMap.BilinForm.isSymm_iff_basis b` (already used for `bil_isSymm`
+  in `Coxeter/GeometricRepresentation.lean`) plus a case split on whether `l, l'` share a block.
+* `IsNonneg`, i.e. `∀ x, 0 ≤ B x x`: write `x = b.repr.symm (b.repr x)`; group `b.repr x : (Σ k, ιk
+  k) →₀ ℝ` by its first (block) coordinate to get, for each block `k` in the *finite* set
+  `(b.repr x).support.image Sigma.fst`, a vector `xk : ιk k →₀ ℝ` (the restriction of `b.repr x` to
+  block `k`, via `Finsupp.comapDomain`/`Finsupp.subtypeDomain` composed with `Equiv.sigmaFiberEquiv`
+  as in `Coxeter/Component.lean`'s `blockEquiv`). Off-diagonal-block terms of `B x x` vanish (same
+  `blockDiagonal'_apply'` case split as the degenerate-case lemma), so `B x x` reduces to a *finite*
+  sum `∑ k ∈ s, Bk k xk xk`, and each summand is `≥ 0` by `hpsd k`, hence so is the sum. -/
+theorem LinearMap.BilinForm.isPosSemidef_of_toMatrix_eq_blockDiagonal' [DecidableEq κ]
+    (b : Module.Basis (Σ k, ιk k) ℝ V) (B : LinearMap.BilinForm ℝ V)
+    (Bk : ∀ k, LinearMap.BilinForm ℝ (ιk k →₀ ℝ))
+    (hB : LinearMap.BilinForm.toMatrix b B =
+      Matrix.blockDiagonal' (fun k =>
+        LinearMap.BilinForm.toMatrix Finsupp.basisSingleOne (Bk k)))
+    (hpsd : ∀ k, (Bk k).IsPosSemidef) :
+    B.IsPosSemidef := by
+  sorry
+
+end BlockDiagonalPosSemidef
 
 def Orthonormal {ι : Type*} (B : LinearMap.BilinForm ℝ V) (v : ι → V) :=
   (∀ (i : ι), B (v i) (v i) = 1) ∧ LinearMap.IsOrthoᵢ B v
