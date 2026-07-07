@@ -533,6 +533,25 @@ instance : IsDirectedOrder W where
         rw [simple_mul_simple_cancel_left] at h4
         exact ⟨h4, hx2.trans h3⟩
 
+lemma simple_upper (i : B W) (w : W) :
+  w <= cs.simple i ↔ (w = 1 ∨ w = cs.simple i) := by
+  constructor
+  · intro h
+    by_cases hw : w = 1
+    · exact Or.inl hw
+    · right
+      apply eq_of_le_of_length_eq h
+      have hle := length_le_of_le h
+      rw [cs.length_simple] at hle ⊢
+      have ⟨j, hj⟩ := cs.exists_leftDescent_of_ne_one hw
+      have hlt : cs.length (cs.simple j * w) < cs.length w :=
+        strictMono_length ((simple_mul_lt_self_iff j w).mpr hj)
+      have hpos : 0 < cs.length w := by omega
+      omega
+  · rintro (rfl | rfl)
+    · exact bot_le
+    · exact le_rfl
+
 section finite
 
 /-! ### Bruhat order on finite Coxeter groups -/

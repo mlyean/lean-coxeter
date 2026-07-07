@@ -93,6 +93,22 @@ theorem alternatingWord_even_add (i i' : B W) (k m : ℕ) :
       rw [←concat_eq_append, ←alternatingWord_succ, alternatingWord_succ']
       simp
 
+theorem reverse_alternatingWord_of_odd (i i' : B W) (m : ℕ) (hm : Odd m) :
+  (alternatingWord i i' m).reverse = alternatingWord i i' m := by
+  apply List.ext_getElem (by simp [length_alternatingWord])
+  intro k h1 h2
+  have hkm : k < m := by simpa [length_alternatingWord] using h2
+  have hkm' : m - 1 - k < m := by omega
+  simp only [List.getElem_reverse, length_alternatingWord]
+  rw [getElem_alternatingWord i i' m k hkm, getElem_alternatingWord i i' m (m - 1 - k) hkm']
+  obtain ⟨j, hj⟩ := hm
+  have hpar : Even (m + (m - 1 - k)) ↔ Even (m + k) := by
+    rw [Nat.even_iff, Nat.even_iff]
+    omega
+  by_cases hE : Even (m + k)
+  · rw [if_pos hE, if_pos (hpar.mpr hE)]
+  · rw [if_neg hE, if_neg (fun hc => hE (hpar.mp hc))]
+
 theorem reverse_alternatingWord (i i' : B W) (k : ℕ) :
   (alternatingWord i i' (2 * k)).reverse = alternatingWord i' i (2 * k) := by
   induction k with

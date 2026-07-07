@@ -7,8 +7,16 @@ public import Mathlib.Algebra.FreeAlgebra
 public import Mathlib.Algebra.RingQuot
 public import Mathlib.RingTheory.TensorProduct.Basic
 public import Mathlib.RingTheory.TensorProduct.Maps
+public import Mathlib.Tactic.Module
+public import Mathlib.Tactic.LinearCombination
+public import Mathlib.LinearAlgebra.Finsupp.VectorSpace
 public import Coxeter.LinearAlgebra.AssociatedGraded
 public import Coxeter.StrongExchange
+public import Coxeter.GeometricRepresentation
+public import Coxeter.Bruhat
+public import Coxeter.Dihedral
+public import Coxeter.GeometricRepresentation
+public import Mathlib.Data.Finsupp.Order
 
 /-!
 # The Iwahori–Hecke algebra
@@ -108,6 +116,97 @@ instance {W : Type*} [CoxeterGroup W] : StarRing (HeckeRing W) where
     rw [map_mul, mul_comm]
   star_add x y := map_add (AddMonoidAlgebra.domCongr ℤ ℤ (AddEquiv.neg (ParamIndex W →₀ ℤ))) x y
 
+/-- The fixed subring of the coefficient involution `v_i ↦ v_i⁻¹` on `HeckeRing W`: the
+"bar-invariant" Laurent polynomials, e.g. the symmetric ones in `v_i, v_i⁻¹`. -/
+def heckeRingBarFixed (W : Type*) [CoxeterGroup W] : Subring (HeckeRing W) where
+  carrier := {c | star c = c}
+  one_mem' := star_one _
+  mul_mem' {a b} ha hb := by
+    change star (a * b) = a * b
+    rw [star_mul', ha, hb]
+  zero_mem' := star_zero _
+  add_mem' {a b} ha hb := by
+    change star (a + b) = a + b
+    rw [star_add, ha, hb]
+  neg_mem' {a} ha := by
+    change star (-a) = -a
+    rw [star_neg, ha]
+
+theorem mem_heckeRingBarFixed_iff {W : Type*} [CoxeterGroup W] {c : HeckeRing W} :
+    c ∈ heckeRingBarFixed W ↔ star c = c := Iff.rfl
+
+/-- On the bar-fixed subring itself, `star` (inherited from `HeckeRing W`) is *trivial*: every
+element is already fixed by definition, so `star = id` here. Since `heckeRingBarFixed W` is
+commutative (`HeckeRing W` is), the ordinary and anti-multiplicative laws coincide, so this
+trivial `star` is a genuine `StarRing` structure (unlike the situation on `heckeAlgebraBarFixed`
+in `section BarInvariant` below, which is generally noncommutative). -/
+noncomputable instance {W : Type*} [CoxeterGroup W] : StarRing (heckeRingBarFixed W) where
+  star := id
+  star_involutive _ := rfl
+  star_mul a b := mul_comm a b
+  star_add _ _ := rfl
+
+instance {W : Type*} [CoxeterGroup W] : TrivialStar (heckeRingBarFixed W) := ⟨fun _ => rfl⟩
+
+/-- The subring of `HeckeRing W` consisting of **ordinary (non-Laurent) polynomials**: those whose
+every monomial has every exponent nonnegative, i.e. `ℤ[v_i : i]` sitting inside the Laurent ring
+`ℤ[v_i^{±1} : i]`. This is the "positive part" the Kazhdan–Lusztig degree/triangularity condition
+is stated against (`IsKLBasisElement` in `section BarInvariant`). -/
+noncomputable def heckeRingPoly (W : Type*) [CoxeterGroup W] : Subring (HeckeRing W) where
+  carrier := {c | ∀ m ∈ c.support, 0 ≤ m}
+  one_mem' m hm := by
+    classical
+    rw [Finsupp.mem_support_iff, AddMonoidAlgebra.one_def, Finsupp.single_apply] at hm
+    by_cases h : m = 0
+    · rw [h]
+    · simp only [ne_eq, ite_eq_right_iff, one_ne_zero, imp_false, Decidable.not_not] at hm
+      have h2 : ¬0=m := by
+        by_contra
+        rw [hm] at h
+        exact absurd rfl h
+      exact absurd hm h2
+  zero_mem' m hm := by
+    rw [Finsupp.mem_support_iff] at hm
+    exact absurd rfl hm
+  add_mem' {a b} ha hb m hm := by
+    rw [Finsupp.mem_support_iff] at hm
+    by_contra hc
+    have ha0 : a m = 0 := by_contra fun h => hc (ha m (Finsupp.mem_support_iff.mpr h))
+    have hb0 : b m = 0 := by_contra fun h => hc (hb m (Finsupp.mem_support_iff.mpr h))
+    exact hm (show a m + b m = 0 by rw [ha0, hb0, add_zero])
+  neg_mem' {a} ha m hm := by
+    have h : a m ≠ 0 := by
+      have hm' := Finsupp.mem_support_iff.mp hm
+      exact fun h0 => hm' (by rw [AddMonoidAlgebra.neg_apply, h0, neg_zero])
+    exact ha m (Finsupp.mem_support_iff.mpr h)
+  mul_mem' {a b} ha hb m hm := by
+    classical
+    obtain ⟨m1, hm1, m2, hm2, rfl⟩ := Finset.mem_add.mp (AddMonoidAlgebra.support_mul a b hm)
+    exact add_nonneg (ha m1 hm1) (hb m2 hm2)
+
+theorem mem_heckeRingPoly_iff {W : Type*} [CoxeterGroup W] {c : HeckeRing W} :
+    c ∈ heckeRingPoly W ↔ ∀ m ∈ c.support, 0 ≤ m := Iff.rfl
+
+/-- The total degree of a multiparameter Laurent monomial `∏ᵢ vᵢ^{eᵢ}`: the sum of its exponents
+across all parameter classes. Each `vᵢ` is given weight `1` (matching its contribution to the
+length filtration), so this is the multiparameter analogue of the usual single-variable `v`-degree
+used in the classical Kazhdan–Lusztig grading. -/
+def monomialDegree {W : Type*} [CoxeterGroup W] (m : ParamIndex W →₀ ℤ) : ℤ :=
+  m.sum (fun _ e => e)
+
+/-- An element of `HeckeRing W` is a **genuine polynomial in the `qᵢ := vᵢ²`** (not merely in the
+`vᵢ`) of `v`-degree at most `n`: every monomial in its support has every exponent nonnegative
+(`heckeRingPoly`) *and even* (so it is really built from the `qᵢ`, not just the `vᵢ` — the name
+records this, unlike a plain "degree `≤ n`" bound on `heckeRingPoly` alone, which would still
+allow odd exponents), and total degree (`monomialDegree`) at most `n`. This is the shape of bound
+the Kazhdan–Lusztig triangularity condition imposes on each (untwisted) `T_v`-coefficient of
+`C'_w`, with `n` taken to be `length w - length v - 1` (see `IsKLBasisElement` in `section
+BarInvariant`): the classical `P_{y,w}` are polynomials *in `q`*, so e.g. a bare `v_i` term
+(degree `1`, odd) can never legitimately appear, even when the bound `n` would otherwise permit
+degree `1`. -/
+def heckeRingEvenPolyDegreeLE {W : Type*} [CoxeterGroup W] (n : ℤ) (c : HeckeRing W) : Prop :=
+  c ∈ heckeRingPoly W ∧ ∀ m ∈ c.support, (∀ p, Even (m p)) ∧ monomialDegree m ≤ n
+
 /-- The distinguished indeterminate `v_i`
 at the simple reflection `i`. -/
 def heckeV {W : Type*} [CoxeterGroup W] (i : B W) : HeckeRing W :=
@@ -116,6 +215,44 @@ def heckeV {W : Type*} [CoxeterGroup W] (i : B W) : HeckeRing W :=
 /-- The Hecke algebra parameter `q_i := v_i ^ 2`
 at the simple reflection `i`. -/
 def heckeQ {W : Type*} [CoxeterGroup W] (i : B W) : HeckeRing W := heckeV i * heckeV i
+
+/-- `heckeV i` is a unit in `HeckeRing W`, with inverse `star (heckeV i)` (negating the exponent
+of the Laurent monomial `v_i` gives `v_i⁻¹`). -/
+theorem heckeV_mul_star {W : Type*} [CoxeterGroup W] (i : B W) :
+    heckeV i * star (heckeV i) = 1 := by
+  change heckeV i * AddMonoidAlgebra.domCongr ℤ ℤ (AddEquiv.neg (ParamIndex W →₀ ℤ)) (heckeV i) = 1
+  unfold heckeV
+  rw [AddMonoidAlgebra.domCongr_single, AddMonoidAlgebra.single_mul_single, mul_one,
+    AddMonoidAlgebra.one_def]
+  congr 1
+  simp
+
+theorem star_heckeV_mul {W : Type*} [CoxeterGroup W] (i : B W) :
+    star (heckeV i) * heckeV i = 1 := by
+  change AddMonoidAlgebra.domCongr ℤ ℤ (AddEquiv.neg (ParamIndex W →₀ ℤ)) (heckeV i) * heckeV i = 1
+  unfold heckeV
+  rw [AddMonoidAlgebra.domCongr_single, AddMonoidAlgebra.single_mul_single, mul_one,
+    AddMonoidAlgebra.one_def]
+  congr 1
+  simp
+
+/-- `star (heckeQ i)`, i.e. `q_i` conjugated by the involution `v_i ↦ v_i⁻¹`: the parameter that
+`bar` (via its semilinearity) sends `heckeQ i` to. Since `heckeQ i = heckeV i * heckeV i` is a
+product of units, so is it, with this inverse. -/
+noncomputable def heckeQinv {W : Type*} [CoxeterGroup W] (i : B W) : HeckeRing W :=
+  star (heckeQ i)
+
+theorem heckeQ_mul_heckeQinv {W : Type*} [CoxeterGroup W] (i : B W) :
+    heckeQ i * heckeQinv i = 1 := by
+  simp only [heckeQ, heckeQinv]
+  rw [star_mul']
+  calc heckeV i * heckeV i * (star (heckeV i) * star (heckeV i))
+      = (heckeV i * star (heckeV i)) * (heckeV i * star (heckeV i)) := by ring
+    _ = 1 := by rw [heckeV_mul_star]; ring
+
+theorem heckeQinv_mul_heckeQ {W : Type*} [CoxeterGroup W] (i : B W) :
+    heckeQinv i * heckeQ i = 1 := by
+  rw [mul_comm]; exact heckeQ_mul_heckeQinv i
 
 /-- The defining compatibility condition: `v_i` and `v_{i'}`
 coincide whenever `M i i'` is odd
@@ -236,6 +373,106 @@ theorem T_simple_braid (i i' : B W) :
     ((braidWord M i i').map T_simple).prod = ((braidWord M i' i).map T_simple).prod := by
   have h := RingQuot.mkAlgHom_rel (HeckeRing W) (HeckeRel.braid (W := W) i i')
   simpa [T_simple, map_list_prod] using h
+
+omit mat in
+/-- The formula for the (two-sided) inverse of `T_simple i`, obtained by solving the quadratic
+relation `T_simple_sq` for `T_i⁻¹`: since `T_i² = (q_i - 1) T_i + q_i`, we get
+`T_i⁻¹ = q_i⁻¹ T_i + (q_i⁻¹ - 1)` (`T_simple_mul_inv`, `T_simple_inv_mul`). This is exactly the
+value `bar` assigns to `T_simple i`, since `s_i⁻¹ = s_i` forces `bar (T_i) = T_i⁻¹`. -/
+noncomputable def T_simple_inv (i : B W) : HeckeAlgebra W :=
+  heckeQinv i • T_simple i + (heckeQinv i - 1) • 1
+
+omit mat in
+theorem T_simple_mul_inv (i : B W) : T_simple i * T_simple_inv i = 1 := by
+  have hq : heckeQinv i * heckeQ i = 1 := heckeQinv_mul_heckeQ i
+  unfold T_simple_inv
+  rw [mul_add, mul_smul_comm, mul_smul_comm, mul_one, T_simple_sq]
+  match_scalars
+  · linear_combination hq
+  · linear_combination hq
+
+omit mat in
+theorem T_simple_inv_mul (i : B W) : T_simple_inv i * T_simple i = 1 := by
+  have hq : heckeQinv i * heckeQ i = 1 := heckeQinv_mul_heckeQ i
+  unfold T_simple_inv
+  rw [add_mul, smul_mul_assoc, smul_mul_assoc, one_mul, T_simple_sq]
+  match_scalars
+  · linear_combination hq
+  · linear_combination hq
+
+omit mat in
+/-- `T_simple_inv i` satisfies the "co-quadratic" relation for the conjugate parameter
+`heckeQinv i = star (heckeQ i)`: the same shape as `T_simple_sq`, but for the inverse generator
+and the inverse parameter. This is what lets `bar`, sending `T_i ↦ T_simple_inv i` and semilinear
+over `star`, respect the defining quadratic relation `HeckeRel.quad`. -/
+theorem T_simple_inv_sq (i : B W) :
+    T_simple_inv i * T_simple_inv i
+      = (heckeQinv i - 1) • T_simple_inv i + heckeQinv i • (1 : HeckeAlgebra W) := by
+  have hq : heckeQinv i * heckeQ i = 1 := heckeQinv_mul_heckeQ i
+  simp only [T_simple_inv, add_mul, mul_add, smul_mul_assoc, mul_smul_comm, mul_one, one_mul]
+  rw [T_simple_sq]
+  match_scalars
+  · linear_combination heckeQinv i * hq
+  · linear_combination heckeQinv i * hq
+
+omit mat in
+theorem T_prod_mul_reverse_inv_prod (l : List (B W)) :
+    (l.map T_simple).prod * (l.reverse.map T_simple_inv).prod = 1 := by
+  induction l with
+  | nil => simp
+  | cons i l ih =>
+      simp only [List.map_cons, List.prod_cons, List.reverse_cons, List.map_append,
+        List.prod_append, List.map_cons, List.map_nil, List.prod_cons, List.prod_nil, mul_one]
+      rw [mul_assoc, ← mul_assoc (l.map T_simple).prod, ih, one_mul, T_simple_mul_inv]
+
+omit mat in
+theorem T_reverse_inv_prod_mul_prod (l : List (B W)) :
+    (l.reverse.map T_simple_inv).prod * (l.map T_simple).prod = 1 := by
+  induction l with
+  | nil => simp
+  | cons i l ih =>
+      simp only [List.map_cons, List.prod_cons, List.reverse_cons, List.map_append,
+        List.prod_append, List.map_cons, List.map_nil, List.prod_cons, List.prod_nil, mul_one]
+      rw [mul_assoc, ← mul_assoc (T_simple_inv i), T_simple_inv_mul, one_mul, ih]
+
+omit mat in
+/-- If two words in the simple generators have the same `T_simple`-product, their reversals have
+the same `T_simple_inv`-product: the standard "two-sided inverses are unique" argument, using
+`T_prod_mul_reverse_inv_prod`/`T_reverse_inv_prod_mul_prod` as the witnessing inverse relations. -/
+theorem T_reverse_inv_prod_eq_of_prod_eq {l l' : List (B W)}
+    (h : (l.map T_simple).prod = (l'.map T_simple).prod) :
+    (l.reverse.map T_simple_inv).prod = (l'.reverse.map T_simple_inv).prod := by
+  calc (l.reverse.map T_simple_inv).prod
+      = 1 * (l.reverse.map T_simple_inv).prod := (one_mul _).symm
+    _ = (l'.reverse.map T_simple_inv).prod * (l'.map T_simple).prod
+        * (l.reverse.map T_simple_inv).prod := by rw [T_reverse_inv_prod_mul_prod]
+    _ = (l'.reverse.map T_simple_inv).prod
+        * ((l'.map T_simple).prod * (l.reverse.map T_simple_inv).prod) := by rw [mul_assoc]
+    _ = (l'.reverse.map T_simple_inv).prod
+        * ((l.map T_simple).prod * (l.reverse.map T_simple_inv).prod) := by rw [← h]
+    _ = (l'.reverse.map T_simple_inv).prod * 1 := by rw [T_prod_mul_reverse_inv_prod]
+    _ = (l'.reverse.map T_simple_inv).prod := mul_one _
+
+omit mat in
+/-- `T_simple_inv` satisfies the same braid relation as `T_simple`: the generator-wise inverses,
+substituted in the *same* (order-preserving) positions, still braid correctly. This is the
+combinatorial fact (via `reverse_alternatingWord`/`reverse_alternatingWord_of_odd`, casing on the
+parity of `M i i'`) that lets `bar`, sending `T_i ↦ T_simple_inv i`, respect `HeckeRel.braid`. -/
+theorem T_simple_inv_braid (i i' : B W) :
+    ((braidWord M i i').map T_simple_inv).prod = ((braidWord M i' i).map T_simple_inv).prod := by
+  have h := T_reverse_inv_prod_eq_of_prod_eq (T_simple_braid i i')
+  unfold braidWord at h ⊢
+  rcases Nat.even_or_odd (M i i') with he | ho
+  · obtain ⟨k, hk⟩ := he
+    have hk2 : M i i' = 2 * k := by omega
+    have hk' : M i' i = 2 * k := by rw [← M.symmetric i i', hk2]
+    rw [hk2, hk'] at h ⊢
+    rw [reverse_alternatingWord i i' k, reverse_alternatingWord i' i k] at h
+    exact h.symm
+  · have ho' : Odd (M i' i) := by rwa [← M.symmetric i i']
+    rw [reverse_alternatingWord_of_odd i i' (M i i') ho,
+      reverse_alternatingWord_of_odd i' i (M i' i) ho'] at h
+    exact h
 
 /-- The standard basis element `T_w`
 The product of the generators `T_simple` along an
@@ -437,6 +674,39 @@ theorem heckeLengthFiltration_mul_mem {m n : ℕ} {x y : HeckeAlgebra W}
   | add_right x y z hx hy hz ihy ihz => rw [mul_add]; exact Submodule.add_mem _ ihy ihz
   | smul_left r x y hx hy ih => rw [smul_mul_assoc]; exact Submodule.smul_mem _ r ih
   | smul_right r x y hx hy ih => rw [mul_smul_comm]; exact Submodule.smul_mem _ r ih
+
+omit mat in
+/-- The length filtration is *exhaustive*: every element of `HeckeAlgebra W` lies in some finite
+level. Unlike `T_span` (spanning by the *canonical* representatives `T_w`, one per group element,
+which needs Matsumoto/an actual basis theorem), this is the much cheaper fact that `HeckeAlgebra`
+is spanned by *arbitrary* monomials in the generators — immediate from `RingQuot.mkAlgHom`'s
+surjectivity together with `FreeAlgebra.induction`, since each of the four generating cases
+(scalar, generator, product, sum) already has a witness among
+`algebraMap_mem_heckeLengthFiltration_zero`, `T_simple_mem_heckeLengthFiltration_one`,
+`heckeLengthFiltration_mul_mem`, `heckeLengthFiltration_mono`. -/
+theorem exists_mem_heckeLengthFiltration (x : HeckeAlgebra W) :
+    ∃ n, x ∈ heckeLengthFiltration (W := W) n := by
+  obtain ⟨y, rfl⟩ := RingQuot.mkAlgHom_surjective (HeckeRing W) (HeckeRel W) x
+  induction y using FreeAlgebra.induction with
+  | grade0 r =>
+      refine ⟨0, ?_⟩
+      have : RingQuot.mkAlgHom (HeckeRing W) (HeckeRel W)
+          (algebraMap (HeckeRing W) (FreeAlgebra (HeckeRing W) (B W)) r)
+          = algebraMap (HeckeRing W) (HeckeAlgebra W) r := AlgHom.commutes _ r
+      rw [this]
+      exact algebraMap_mem_heckeLengthFiltration_zero r
+  | grade1 i => exact ⟨1, T_simple_mem_heckeLengthFiltration_one i⟩
+  | mul a b ha hb =>
+      obtain ⟨na, hna⟩ := ha
+      obtain ⟨nb, hnb⟩ := hb
+      exact ⟨na + nb, by rw [map_mul]; exact heckeLengthFiltration_mul_mem hna hnb⟩
+  | add a b ha hb =>
+      obtain ⟨na, hna⟩ := ha
+      obtain ⟨nb, hnb⟩ := hb
+      refine ⟨max na nb, ?_⟩
+      rw [map_add]
+      exact Submodule.add_mem _ (heckeLengthFiltration_mono (le_max_left na nb) hna)
+        (heckeLengthFiltration_mono (le_max_right na nb) hnb)
 
 /-- The length filtration on `HeckeAlgebra W`,
 bundled as a `Coxeter.Filtration`:
@@ -661,58 +931,6 @@ end QOneSpecialization
 
 end OneParameterSpecialization
 
-section Dihedral
-
-variable {W : Type*} [CoxeterGroup W]
-
-/-- The rank-2 parabolic subgroup generated by two simple reflections. -/
-def rankTwoSubgroup (i i' : B W) : Subgroup W := Subgroup.closure {cs.simple i, cs.simple i'}
-
-/-- Every element of `rankTwoSubgroup i i'`
-can be written as `cs.wordProd μ` for some
-(not necessarily reduced) word `μ`
-using only the letters `i`, `i'`. -/
-private theorem exists_confined_word
-  {i i' : B W} {v : W}
-  (hv : v ∈ rankTwoSubgroup i i') :
-  ∃ μ : List (B W),
-    v = cs.wordProd μ ∧ ∀ k ∈ μ, k = i ∨ k = i' := by
-  induction hv using Subgroup.closure_induction with
-  | mem x hx =>
-      rcases hx with h | h
-      · exact ⟨[i], by rw [wordProd_singleton, h], by simp⟩
-      · exact ⟨[i'], by rw [wordProd_singleton, h], by simp⟩
-  | one => exact ⟨[], by rw [wordProd_nil], by simp⟩
-  | mul x y _ _ ihx ihy =>
-      obtain ⟨μx, hμx1, hμx2⟩ := ihx
-      obtain ⟨μy, hμy1, hμy2⟩ := ihy
-      refine ⟨μx ++ μy, ?_, ?_⟩
-      · rw [wordProd_append, ← hμx1, ← hμy1]
-      · intro k hk
-        rcases List.mem_append.mp hk with hk | hk
-        · exact hμx2 k hk
-        · exact hμy2 k hk
-  | inv x _ ihx =>
-      obtain ⟨μ, hμ1, hμ2⟩ := ihx
-      refine ⟨μ.reverse, ?_, ?_⟩
-      · rw [hμ1, wordProd_reverse]
-      · intro k hk
-        exact hμ2 k (List.mem_reverse.mp hk)
-
-/-- Every element of `rankTwoSubgroup i i'`
-has a **reduced** word using only the letters
-`i`, `i'`. -/
-theorem exists_confined_reduced_word
-  {i i' : B W} {v : W}
-  (hv : v ∈ rankTwoSubgroup i i') :
-  ∃ μ : List (B W),
-    cs.IsReduced μ ∧ v = cs.wordProd μ ∧ ∀ k ∈ μ, k = i ∨ k = i' := by
-  obtain ⟨μ₀, hμ₀1, hμ₀2⟩ := exists_confined_word hv
-  obtain ⟨μ, hsub, hred, heq⟩ := exists_reduced_subword μ₀
-  exact ⟨μ, hred, hμ₀1.trans heq, fun k hk => hμ₀2 k (hsub.subset hk)⟩
-
-end Dihedral
-
 section ActOnGroupAlgebra
 
 variable {W : Type*} [CoxeterGroup W]
@@ -720,10 +938,23 @@ variable {W : Type*} [CoxeterGroup W]
 abbrev module_actedOn (W : Type*) [CoxeterGroup W] : Type _ := MonoidAlgebra (HeckeRing W) W
 
 open Classical in
-/-- The action of `T_i` on `module_actedOn W`, specified on the standard basis `single w 1` by
-the same case-split formula as `T_mul_T_simple_of_rightDescent`/
-`T_mul_T_simple_of_not_rightDescent` (right multiplication by `T_simple i` on the `HeckeAlgebra`
-basis `T_w`), then extended `HeckeRing W`-linearly. -/
+/-- The action of `T_i` on `module_actedOn W`: a `Module.End`, specified directly on the standard
+basis `single w 1` by the case-split formula below, then extended `HeckeRing W`-linearly. (Aside on
+where the formula comes from: it's the same case-split as `T_mul_T_simple_of_rightDescent`/
+`T_mul_T_simple_of_not_rightDescent`, matching right multiplication by `T_simple i` on the
+`HeckeAlgebra` basis `T_w` — `{T_w}` isn't known to be a basis yet at this point; this action is
+in fact one of the tools later used to establish that, via `T_linearIndependent`.)
+
+(Aside on *right* vs. *left*: composing several `T_simple_action`s via `Module.End` multiplication,
+as `heckeActionFreeAlgHom` does order-preservingly via `FreeAlgebra.lift`, would naively need
+`T_simple_action` to be an *anti*-representation, since it's built from right multiplication. This
+isn't a problem, because of an ambidexterity in `HeckeAlgebra`'s presentation: its defining
+relations (`HeckeRel`) are invariant under reversing multiplication order — the quadratic relation
+involves only one generator, and the braid relation's two alternating words are exchanged (`M i i'`
+even) or each individually a palindrome (`M i i'` odd) under `List.reverse`
+(`reverse_alternatingWord`/`reverse_alternatingWord_of_odd`). So `HeckeAlgebra ≅ HeckeAlgebraᵐᵒᵖ`
+via the identity on generators, and an anti-representation of it is automatically a genuine
+representation too.) -/
 noncomputable def T_simple_action (i : B W) : Module.End (HeckeRing W) (module_actedOn W) :=
   Finsupp.lift (module_actedOn W) (HeckeRing W) W (fun w =>
     if cs.IsRightDescent w i then
@@ -731,6 +962,43 @@ noncomputable def T_simple_action (i : B W) : Module.End (HeckeRing W) (module_a
         + heckeQ i • MonoidAlgebra.single (w * cs.simple i) (1 : HeckeRing W)
     else
       MonoidAlgebra.single (w * cs.simple i) (1 : HeckeRing W))
+
+/-- Two deferred facts about rank-two (dihedral) parabolic subgroups, needed to finish
+`T_simple_action_braid` (the `M i i' = 2` case is proved outright, needing neither):
+
+* **The gate property** (`isRightDescent_mul_iff_of_not_rightDescent`): if `w₀` has no right
+  descent among `i`, `i'`, then right-multiplying it by any `v` in the rank-two parabolic subgroup
+  `rankTwoSubgroup i i'` they generate does not disturb the descent set among `i`, `i'` — the right
+  descent of `w₀ * v` at `i` or `i'` matches that of `v` itself. Equivalently, `w₀` is the
+  minimal-length representative of its coset `w₀ * rankTwoSubgroup i i'` in the strong sense used
+  to show length is additive along it (see e.g. Björner–Brenti, *Combinatorics of Coxeter Groups*,
+  the "Gate Property", Prop 2.4.4). Proving this needs the deletion/exchange property
+  (`StrongExchange.lean`) to rule out cancellation reaching back into `w₀`'s own reduced word.
+* **The `M i i' ≥ 3` braid fact** (`T_simple_action_braid_apply_of_ge_three`): for `v` in the
+  rank-two subgroup, applying `T_simple_action` along either alternating word builds up, step by
+  step, a `HeckeRing`-linear combination of *several* basis vectors (as soon as a right descent is
+  hit, `T_simple_action_apply` splits into a two-term sum, not a single tracked element — the same
+  phenomenon checked explicitly, term by term, in the `M i i' = 2` case). The claim is that the two
+  resulting linear combinations, one per alternating word, agree — matching `heckeQ`-coefficients
+  on each shared basis vector, both ultimately supported on the elements of `v`'s orbit under `i`,
+  `i'`, with the extremes tied together via the common longest element
+  `v * cs.wordProd (braidWord M i i') = v * cs.wordProd (braidWord M i' i)`
+  (`wordProd_braidWord_eq`); a concrete finite computation, but not yet formalized.
+
+This class defers both, exactly as `Matsumoto` defers Tits' solution to the word problem. -/
+class DihedralSubProperties (W1 : Type*) [CoxeterGroup W1] : Prop where
+  /-- The right descents of `w₀ * v` among `i`, `i'` are exactly those of `v`, provided `w₀` has
+  no right descent among `i`, `i'` and `v` lies in the rank-two subgroup they generate. -/
+  isRightDescent_mul_iff_of_not_rightDescent : ∀ {i i' : B W1} {w₀ v : W1},
+    ¬ cs.IsRightDescent w₀ i → ¬ cs.IsRightDescent w₀ i' → v ∈ rankTwoSubgroup i i' →
+    ∀ j, j = i ∨ j = i' → (cs.IsRightDescent (w₀ * v) j ↔ cs.IsRightDescent v j)
+  /-- The `M i i' ≥ 3` case of the Hecke braid relation, restricted to basis vectors indexed by
+  the rank-two subgroup `rankTwoSubgroup i i'` (see `T_simple_action_braid_apply_of_ge_three` for
+  the standalone wrapper and its documentation). -/
+  T_simple_action_braid_apply_of_ge_three {i i' : B W1} (hM : 3 ≤ M i i') {v : W1}
+    (hv : v ∈ rankTwoSubgroup i i') :
+    ((braidWord M i i').map T_simple_action).prod (MonoidAlgebra.single v (1 : HeckeRing W1)) =
+      ((braidWord M i' i).map T_simple_action).prod (MonoidAlgebra.single v (1 : HeckeRing W1))
 
 open Classical in
 theorem T_simple_action_apply (i : B W) (w : W) :
@@ -769,12 +1037,232 @@ theorem T_simple_action_sq (i : B W) :
     rw [T_simple_action_apply]
     simp only [hw, if_true, cs.simple_mul_simple_cancel_right]
 
-/-- The action `T_simple_action` satisfies the Hecke braid relation:
-deferred, comparable in difficulty to Matsumoto's theorem (see the module `TODO`). -/
-theorem T_simple_action_braid (i i' : B W) :
+/-- The one-step "gate" fact for the Hecke action: acting by `T_simple_action j` (`j ∈ {i, i'}`)
+on `single (w₀ * v) 1`, for `w₀` with no right descent among `i`, `i'` and `v` in the rank-2
+subgroup they generate, is the same as acting on `single v 1` and then translating the whole
+result by `w₀` on the left (via the ring multiplication on `module_actedOn W`). -/
+theorem T_simple_action_apply_rightCosetRep
+    [DihedralSubProperties W] {i i' : B W} {w₀ v : W} (h0i : ¬ cs.IsRightDescent w₀ i)
+    (h0i' : ¬ cs.IsRightDescent w₀ i') (hv : v ∈ rankTwoSubgroup i i') {j : B W}
+    (hj : j = i ∨ j = i') :
+    T_simple_action j (MonoidAlgebra.single (w₀ * v) (1 : HeckeRing W)) =
+      MonoidAlgebra.single w₀ (1 : HeckeRing W) *
+        T_simple_action j (MonoidAlgebra.single v (1 : HeckeRing W)) := by
+  rw [T_simple_action_apply, T_simple_action_apply,
+    DihedralSubProperties.isRightDescent_mul_iff_of_not_rightDescent h0i h0i' hv j hj]
+  by_cases hd : cs.IsRightDescent v j
+  · simp only [if_pos hd, mul_add, mul_smul_comm, MonoidAlgebra.single_mul_single, mul_one,
+      mul_assoc]
+  · simp only [if_neg hd, MonoidAlgebra.single_mul_single, mul_one, mul_assoc]
+
+/-- The "gate" fact for the Hecke action along a whole word: acting by any list `l` of
+`T_simple_action`s using only the letters `i`, `i'` on `single (w₀ * v) 1`, for `w₀` with no right
+descent among `i`, `i'` and `v` in the rank-2 subgroup they generate, is the same as acting on
+`single v 1` and translating the result by `w₀` on the left at the end. In particular this applies
+to `l = braidWord M i i'` or `l = braidWord M i' i`. -/
+theorem T_simple_action_prod_apply_rightCosetRep
+    [DihedralSubProperties W] {i i' : B W} {w₀ : W} (h0i : ¬ cs.IsRightDescent w₀ i)
+    (h0i' : ¬ cs.IsRightDescent w₀ i') {l : List (B W)} (hl : ∀ j ∈ l, j = i ∨ j = i') :
+    ∀ v ∈ rankTwoSubgroup i i',
+      (l.map T_simple_action).prod (MonoidAlgebra.single (w₀ * v) (1 : HeckeRing W)) =
+        MonoidAlgebra.single w₀ (1 : HeckeRing W) *
+          (l.map T_simple_action).prod (MonoidAlgebra.single v (1 : HeckeRing W)) := by
+  induction l using List.reverseRecOn with
+  | nil => intro v _; simp [MonoidAlgebra.single_mul_single]
+  | append_singleton rest j ih =>
+      intro v hv
+      have hj : j = i ∨ j = i' := hl j (List.mem_append_right _ (List.mem_singleton_self j))
+      have hjrest : ∀ k ∈ rest, k = i ∨ k = i' := fun k hk => hl k (List.mem_append_left _ hk)
+      have hjmem : cs.simple j ∈ rankTwoSubgroup i i' := by
+        rcases hj with rfl | rfl
+        · exact Subgroup.subset_closure (by simp)
+        · exact Subgroup.subset_closure (by simp)
+      have hv' : v * cs.simple j ∈ rankTwoSubgroup i i' := Subgroup.mul_mem _ hv hjmem
+      rw [List.map_append, List.prod_append, List.map_singleton, List.prod_singleton,
+        Module.End.mul_apply, Module.End.mul_apply,
+        T_simple_action_apply_rightCosetRep h0i h0i' hv hj]
+      rw [T_simple_action_apply]
+      by_cases hd : cs.IsRightDescent v j
+      · simp only [if_pos hd, mul_add, mul_smul_comm, MonoidAlgebra.single_mul_single, mul_one,
+          map_add, map_smul, ih hjrest v hv, ih hjrest (v * cs.simple j) hv']
+      · simp only [if_neg hd, MonoidAlgebra.single_mul_single, mul_one,
+          ih hjrest (v * cs.simple j) hv']
+
+/-- The `M i i' = 2` case of `T_simple_action_braid_apply`: `cs.simple i` and `cs.simple i'`
+commute (from `(s_i s_i')^(M i i') = 1` with exponent `2`), `braidWord M i i' = [i, i']` and
+`braidWord M i' i = [i', i]`, and `rankTwoSubgroup i i'` has only the `4` elements `1`, `s_i`,
+`s_i'`, `s_i * s_i'`, on each of which the two length-`2` actions can be checked directly. -/
+theorem T_simple_action_braid_apply_of_eq_two {i i' : B W} (hM : M i i' = 2) {v : W}
+    (hv : v ∈ rankTwoSubgroup i i') :
+    ((braidWord M i i').map T_simple_action).prod (MonoidAlgebra.single v (1 : HeckeRing W)) =
+      ((braidWord M i' i).map T_simple_action).prod (MonoidAlgebra.single v (1 : HeckeRing W)) := by
+  have hii' : i ≠ i' := by
+    rintro rfl
+    have := M.diagonal i
+    omega
+  have hne : cs.simple i ≠ cs.simple i' := fun h => hii' (simple_inj h)
+  have haa : cs.simple i * cs.simple i = 1 := by
+    nth_rewrite 2 [← cs.inv_simple i]; exact mul_inv_cancel (cs.simple i)
+  have hbb : cs.simple i' * cs.simple i' = 1 := by
+    nth_rewrite 2 [← cs.inv_simple i']; exact mul_inv_cancel (cs.simple i')
+  have habab : cs.simple i * cs.simple i' * (cs.simple i * cs.simple i') = 1 := by
+    rw [← sq, ← hM]; exact cs.simple_mul_simple_pow i i'
+  have hcomm : cs.simple i * cs.simple i' = cs.simple i' * cs.simple i := by
+    have hinv : (cs.simple i * cs.simple i')⁻¹ = cs.simple i * cs.simple i' :=
+      inv_eq_of_mul_eq_one_right habab
+    rw [← hinv, mul_inv_rev, cs.inv_simple, cs.inv_simple]
+  have hlen_ab : cs.length (cs.simple i * cs.simple i') = 2 := by
+    rcases cs.length_mul_simple (cs.simple i) i' with h | h
+    · rw [cs.length_simple] at h; omega
+    · exfalso
+      rw [cs.length_simple] at h
+      have hz : cs.length (cs.simple i * cs.simple i') = 0 := by omega
+      rw [cs.length_eq_zero_iff, mul_eq_one_iff_eq_inv, cs.inv_simple] at hz
+      exact hne hz
+  have hab_a : cs.simple i * cs.simple i' * cs.simple i = cs.simple i' := by
+    rw [mul_assoc, ← hcomm, ← mul_assoc, haa, one_mul]
+  have hab_b : cs.simple i * cs.simple i' * cs.simple i' = cs.simple i := by
+    rw [mul_assoc, hbb, mul_one]
+  have hmem : v = 1 ∨ v = cs.simple i ∨ v = cs.simple i' ∨ v = cs.simple i * cs.simple i' := by
+    induction hv using Subgroup.closure_induction with
+    | mem x hx =>
+        rcases hx with rfl | rfl
+        · exact Or.inr (Or.inl rfl)
+        · exact Or.inr (Or.inr (Or.inl rfl))
+    | one => exact Or.inl rfl
+    | mul x y _ _ ihx ihy =>
+        rcases ihx with rfl | rfl | rfl | rfl <;> rcases ihy with rfl | rfl | rfl | rfl <;>
+          (
+            try simp only [one_mul, mul_one, ← mul_assoc,
+              haa, hbb, habab, hab_a, hab_b, hcomm.symm] ;
+            try simp only [or_true, true_or]
+          )
+    | inv x _ ihx =>
+        rcases ihx with rfl | rfl | rfl | rfl
+        · exact Or.inl (by simp)
+        · exact Or.inr (Or.inl (by rw [cs.inv_simple]))
+        · exact Or.inr (Or.inr (Or.inl (by rw [cs.inv_simple])))
+        · exact Or.inr (Or.inr (Or.inr (by
+            rw [mul_inv_rev, cs.inv_simple, cs.inv_simple, ← hcomm])))
+  have hnd1 := cs.not_isRightDescent_one (W := W)
+  have hda_i : cs.IsRightDescent (cs.simple i) i := by
+    unfold CoxeterSystem.IsRightDescent; rw [haa, cs.length_simple, cs.length_one]; omega
+  have hda_i' : ¬ cs.IsRightDescent (cs.simple i) i' := by
+    unfold CoxeterSystem.IsRightDescent; rw [cs.length_simple, hlen_ab]; omega
+  have hdb_i : ¬ cs.IsRightDescent (cs.simple i') i := by
+    unfold CoxeterSystem.IsRightDescent
+    rw [cs.length_simple, ← hcomm, hlen_ab]; omega
+  have hdb_i' : cs.IsRightDescent (cs.simple i') i' := by
+    unfold CoxeterSystem.IsRightDescent; rw [hbb, cs.length_simple, cs.length_one]; omega
+  have hdab_i : cs.IsRightDescent (cs.simple i * cs.simple i') i := by
+    unfold CoxeterSystem.IsRightDescent; rw [hab_a, cs.length_simple, hlen_ab]; omega
+  have hdab_i' : cs.IsRightDescent (cs.simple i * cs.simple i') i' := by
+    unfold CoxeterSystem.IsRightDescent; rw [hab_b, cs.length_simple, hlen_ab]; omega
+  have hbraid1 : braidWord M i i' = [i, i'] := by
+    rw [show (braidWord M i i' : List (B W)) = alternatingWord i i' (M i i') from rfl, hM]
+    rfl
+  have hbraid2 : braidWord M i' i = [i', i] := by
+    rw [show (braidWord M i' i : List (B W)) = alternatingWord i' i (M i' i) from rfl,
+      ← M.symmetric i i', hM]
+    rfl
+  rw [hbraid1, hbraid2]
+  simp only [List.map_cons, List.map_nil, List.prod_cons, List.prod_nil, mul_one,
+    Module.End.mul_apply]
+  rcases hmem with rfl | rfl | rfl | rfl
+  · rw [T_simple_action_apply (i := i'), if_neg (hnd1 i'), one_mul,
+      T_simple_action_apply (i := i), if_neg hdb_i,
+      T_simple_action_apply (i := i), if_neg (hnd1 i), one_mul,
+      T_simple_action_apply (i := i'), if_neg hda_i', hcomm]
+  · rw [T_simple_action_apply (i := i'), if_neg hda_i',
+      T_simple_action_apply (i := i), if_pos hdab_i, hab_a,
+      T_simple_action_apply (i := i), if_pos hda_i, haa,
+      map_add, map_smul, map_smul,
+      T_simple_action_apply (i := i'), if_neg hda_i',
+      T_simple_action_apply (i := i'), if_neg (hnd1 i'), one_mul]
+  · rw [T_simple_action_apply (i := i'), if_pos hdb_i', hbb,
+      map_add, map_smul, map_smul,
+      T_simple_action_apply (i := i), if_neg hdb_i, ← hcomm,
+      T_simple_action_apply (i := i), if_neg (hnd1 i), one_mul,
+      T_simple_action_apply (i := i'), if_pos hdab_i', hab_b]
+  · rw [T_simple_action_apply (i := i'), if_pos hdab_i', hab_b, map_add, map_smul, map_smul,
+      T_simple_action_apply (i := i), if_pos hdab_i, hab_a,
+      T_simple_action_apply (i := i), if_pos hda_i, haa,
+      map_add, map_smul, map_smul,
+      T_simple_action_apply (i := i'), if_pos hdab_i', hab_b,
+      T_simple_action_apply (i := i'), if_pos hdb_i', hbb]
+    module
+
+/-- The `M i i' ≥ 3` case of `T_simple_action_braid_apply`: for `v` in the rank-two subgroup,
+applying `T_simple_action` along either alternating word builds up, step by step, a
+`HeckeRing`-linear combination of *several* basis vectors (as soon as a right descent is hit,
+`T_simple_action_apply` splits into a two-term sum, not a single tracked element — the same
+phenomenon checked explicitly, term by term, in the `M i i' = 2` case). The claim is that the two
+resulting linear combinations, one per alternating word, agree — matching `heckeQ`-coefficients on
+each shared basis vector, both ultimately supported on the elements of `v`'s orbit under `i`, `i'`,
+with the extremes tied together via the common longest element
+`v * cs.wordProd (braidWord M i i') = v * cs.wordProd (braidWord M i' i)`
+(`wordProd_braidWord_eq`). See `DihedralSubProperties` for why this is deferred as a class field. -/
+theorem T_simple_action_braid_apply_of_ge_three
+  [dsp : DihedralSubProperties W]
+  {i i' : B W} (hM : 3 ≤ M i i') {v : W}
+  (hv : v ∈ rankTwoSubgroup i i') :
+    ((braidWord M i i').map T_simple_action).prod (MonoidAlgebra.single v (1 : HeckeRing W)) =
+      ((braidWord M i' i).map T_simple_action).prod (MonoidAlgebra.single v (1 : HeckeRing W)) := by
+  exact dsp.T_simple_action_braid_apply_of_ge_three hM hv
+
+/-- The core dihedral-group content of the Hecke braid relation: for `v` in the rank-two subgroup
+generated by `i`, `i'`, walking the two alternating words `braidWord M i i'`/`braidWord M i' i`
+from `v` gives the same result. Trivial when `i = i'` (the two words coincide) or `M i i' = 0` (the
+infinite dihedral case: both words are empty), and otherwise dispatches to
+`T_simple_action_braid_apply_of_eq_two`/`_of_ge_three` according to `M i i'`. -/
+theorem T_simple_action_braid_apply [DihedralSubProperties W]
+  {i i' : B W} {v : W} (hv : v ∈ rankTwoSubgroup i i') :
+    ((braidWord M i i').map T_simple_action).prod (MonoidAlgebra.single v (1 : HeckeRing W)) =
+      ((braidWord M i' i).map T_simple_action).prod (MonoidAlgebra.single v (1 : HeckeRing W)) := by
+  by_cases hii' : i = i'
+  · rw [hii']
+  · rcases Nat.lt_or_ge (M i i') 2 with hlt | hge
+    · have h01 : M i i' = 0 ∨ M i i' = 1 := by omega
+      rcases h01 with h0 | h1
+      · have h0' : M i' i = 0 := by rw [← M.symmetric i i']; exact h0
+        simp [braidWord, h0, h0', alternatingWord]
+      · exact absurd h1 (M.off_diagonal i i' hii')
+    · rcases eq_or_lt_of_le hge with hM2 | hM2
+      · exact T_simple_action_braid_apply_of_eq_two hM2.symm hv
+      · exact T_simple_action_braid_apply_of_ge_three hM2 hv
+
+/-- The action `T_simple_action` satisfies the Hecke braid relation.
+
+By `MonoidAlgebra.lhom_ext'` it suffices to check both sides agree on every basis vector
+`single w 1`. Writing `w = w₀ * v` via `exists_minimal_rightCosetRep` (`w₀` has no right descent
+among `i`, `i'`, and `v ∈ rankTwoSubgroup i i'`), `T_simple_action_prod_apply_rightCosetRep` peels
+off a common `single w₀ 1 *` factor from both sides, reducing the goal to
+`((braidWord M i i').map T_simple_action).prod (single v 1)
+  = ((braidWord M i' i).map T_simple_action).prod (single v 1)`.
+Since `v` ranges over the whole rank-two subgroup `rankTwoSubgroup i i'` (dihedral of order
+`2 * M i i'`) and every letter of both alternating words lies in `{i, i'}`, this remaining goal no
+longer refers to `w₀` or the ambient group `W` at all: it is exactly the same braid identity, but
+for the Hecke action of the *dihedral* Coxeter system on `rankTwoSubgroup i i'` itself (with `v` as
+the "identity-relative" basis point). `T_simple_action_braid_apply` supplies this dihedral-group
+fact, a substantially *smaller* task than Matsumoto's theorem: `rankTwoSubgroup i i'`'s elements,
+lengths and reduced words are completely explicit (`alternatingWord`), so it is a concrete finite
+computation along the alternating words rather than an instance of the general word problem. -/
+theorem T_simple_action_braid [DihedralSubProperties W] (i i' : B W) :
     ((braidWord M i i').map T_simple_action).prod
-      = ((braidWord M i' i).map T_simple_action).prod :=
-  sorry
+      = ((braidWord M i' i).map T_simple_action).prod := by
+  apply MonoidAlgebra.lhom_ext'
+  intro w
+  apply LinearMap.ext_ring
+  simp only [LinearMap.comp_apply, MonoidAlgebra.lsingle_apply]
+  obtain ⟨w₀, v, hv, hw, h0i, h0i'⟩ := exists_minimal_rightCosetRep i i' w
+  subst hw
+  have hl : ∀ j ∈ braidWord M i i', j = i ∨ j = i' := fun j hj => mem_alternatingWord hj
+  have hl' : ∀ j ∈ braidWord M i' i, j = i ∨ j = i' :=
+    fun j hj => (mem_alternatingWord hj).symm
+  rw [T_simple_action_prod_apply_rightCosetRep h0i h0i' hl v hv,
+    T_simple_action_prod_apply_rightCosetRep h0i h0i' hl' v hv]
+  congr 1
+  exact T_simple_action_braid_apply hv
 
 /-- The `HeckeRing W`-algebra homomorphism from
 the free algebra on the simple reflections
@@ -794,7 +1282,7 @@ theorem heckeActionFreeAlgHom_wordProd (l : List (B W)) :
       congr 1
       simp [heckeActionFreeAlgHom]
 
-theorem heckeActionFreeAlgHom_respects_rel : ∀ ⦃x y⦄, HeckeRel W x y →
+theorem heckeActionFreeAlgHom_respects_rel [DihedralSubProperties W] : ∀ ⦃x y⦄, HeckeRel W x y →
     heckeActionFreeAlgHom x = heckeActionFreeAlgHom y := by
   intro x y h
   cases h with
@@ -806,18 +1294,55 @@ theorem heckeActionFreeAlgHom_respects_rel : ∀ ⦃x y⦄, HeckeRel W x y →
       rw [heckeActionFreeAlgHom_wordProd, heckeActionFreeAlgHom_wordProd]
       exact T_simple_action_braid i i'
 
-/-- The algebra map from `HeckeAlgebra`, presented by generators and relations, to `Module.End (HeckeRing W) (module_actedOn W)`
+/-- The algebra map from `HeckeAlgebra`, presented by generators and relations, to
+`Module.End (HeckeRing W) (module_actedOn W)`
 the action of the Hecke algebra on the free
 `HeckeRing W`-module on `W`, specified purely by
 declaring the action of each generator `T_i` (`T_simple_action`)
 and checking it respects the defining relations (`heckeActionFreeAlgHom_respects_rel`). -/
-noncomputable def heckeActionAlgHom :
+noncomputable def heckeActionAlgHom [DihedralSubProperties W] :
     HeckeAlgebra W →ₐ[HeckeRing W] Module.End (HeckeRing W) (module_actedOn W) :=
   RingQuot.liftAlgHom (HeckeRing W) ⟨heckeActionFreeAlgHom, heckeActionFreeAlgHom_respects_rel⟩
 
-theorem heckeActionAlgHom_T_simple (i : B W) :
+theorem heckeActionAlgHom_T_simple [DihedralSubProperties W] (i : B W) :
     heckeActionAlgHom (T_simple i) = T_simple_action i := by
   simp [heckeActionAlgHom, T_simple, heckeActionFreeAlgHom, FreeAlgebra.lift_ι_apply]
+
+/-- Evaluating the (reversed) list of simple actions for `l` at the basis vector `single u 1`
+builds up `single (u * wordProd l) 1`, *provided* right-multiplying `u` by `wordProd l` doesn't
+cancel any length along the way (`hlen`). Since `Module.End` multiplication is composition with
+the *second* factor applied first, `(l.map T_simple_action).prod` processes `l`'s letters in
+reverse order as functions — hence the `l.reverse` on the left: it undoes that reversal, so the
+letters of `l` end up applied in their original left-to-right order. -/
+theorem T_simple_action_prod_apply_single (l : List (B W)) (u : W)
+    (hlen : cs.length (u * cs.wordProd l) = cs.length u + l.length) :
+    (l.reverse.map T_simple_action).prod (MonoidAlgebra.single u (1 : HeckeRing W))
+      = MonoidAlgebra.single (u * cs.wordProd l) (1 : HeckeRing W) := by
+  induction l generalizing u with
+  | nil => simp
+  | cons i rest ih =>
+      rw [wordProd_cons, ← mul_assoc] at hlen
+      have hb1 : cs.length (u * cs.simple i) ≤ cs.length u + 1 := by
+        have := cs.length_mul_le u (cs.simple i)
+        rwa [cs.length_simple] at this
+      have hb2 : cs.length (u * cs.simple i * cs.wordProd rest)
+          ≤ cs.length (u * cs.simple i) + rest.length := by
+        have h1 := cs.length_mul_le (u * cs.simple i) (cs.wordProd rest)
+        have h2 := cs.length_wordProd_le rest
+        omega
+      have heq1 : cs.length (u * cs.simple i) = cs.length u + 1 := by
+        simp only [List.length_cons] at hlen
+        omega
+      have heq2 : cs.length (u * cs.simple i * cs.wordProd rest)
+          = cs.length (u * cs.simple i) + rest.length := by
+        simp only [List.length_cons] at hlen
+        omega
+      have hnd : ¬ cs.IsRightDescent u i := by
+        rw [not_isRightDescent_iff]
+        omega
+      rw [List.reverse_cons, List.map_append, List.prod_append, List.map_singleton,
+        List.prod_singleton, Module.End.mul_apply, T_simple_action_apply, if_neg hnd,
+        ih (u * cs.simple i) heq2, wordProd_cons, mul_assoc]
 
 end ActOnGroupAlgebra
 
@@ -841,23 +1366,81 @@ theorem T_intLinearIndependent [Matsumoto (W1 := W)] :
 
 /-- The obligation that `{T_w : w ∈ W}`
 is linearly independent over `HeckeRing W`
-one of the two facts needed to build `basis` via `Module.Basis.mk`. -/
-theorem T_linearIndependent [Matsumoto (W1 := W)] :
-  LinearIndependent (HeckeRing W) (T (W := W)) :=
-  sorry
+one of the two facts needed to build `basis` via `Module.Basis.mk`.
+Proved via the action `heckeActionAlgHom` of `HeckeAlgebra` on the free module `module_actedOn W`:
+evaluating at the basis vector `single 1 1` sends `T w⁻¹` to `single w 1`
+(`T_simple_action_prod_apply_single`, applied to a reduced word for `w` and its reverse), and
+`{single w 1}` is linearly independent, so `LinearIndependent.of_comp` pulls independence back to
+`{T w⁻¹}`, hence (reindexing by the bijection `w ↦ w⁻¹`) to `{T w}` itself. -/
+theorem T_linearIndependent [Matsumoto (W1 := W)] [DihedralSubProperties W] :
+    LinearIndependent (HeckeRing W) (T (W := W)) := by
+  let L : HeckeAlgebra W →ₗ[HeckeRing W] module_actedOn W :=
+    (LinearMap.applyₗ (MonoidAlgebra.single (1 : W) (1 : HeckeRing W))).comp
+      heckeActionAlgHom.toLinearMap
+  have hLT : ∀ w : W, L (T w⁻¹) = MonoidAlgebra.single w (1 : HeckeRing W) := by
+    intro w
+    set ω := Classical.arbitrary (ReducedWord w)
+    have hlen : cs.length ((1 : W) * cs.wordProd ω.val) = cs.length (1 : W) + ω.val.length := by
+      rw [ω.wordProd_eq, one_mul, ω.length_eq, cs.length_one, zero_add]
+    have key := T_simple_action_prod_apply_single ω.val 1 hlen
+    rw [one_mul, ω.wordProd_eq] at key
+    change heckeActionAlgHom (T w⁻¹) (MonoidAlgebra.single 1 1) = MonoidAlgebra.single w 1
+    rw [T_eq_of_reducedWord ω.reverse]
+    change heckeActionAlgHom ((ω.val.reverse.map T_simple).prod) (MonoidAlgebra.single 1 1)
+      = MonoidAlgebra.single w 1
+    rw [map_list_prod, List.map_map]
+    simp only [Function.comp_def, heckeActionAlgHom_T_simple]
+    exact key
+  have hindep :
+      LinearIndependent (HeckeRing W) (fun w : W => MonoidAlgebra.single w (1 : HeckeRing W)) :=
+    Finsupp.linearIndependent_single_one (HeckeRing W) W
+  have hcomp : LinearIndependent (HeckeRing W) (fun w : W => T w⁻¹) :=
+    LinearIndependent.of_comp L (by simpa [Function.comp_def, hLT] using hindep)
+  have hbij : Function.Injective (Inv.inv : W → W) := inv_injective
+  simpa [Function.comp_def] using hcomp.comp Inv.inv hbij
+
+/-- Every monomial `T_{i_1} ⋯ T_{i_k}` in the simple generators lies in the `HeckeRing`-span of
+`{T_w : w ∈ W}`: induct from the right using `T_mul_T_simple_mem_span`, which absorbs one more
+simple generator into the span at each step (via the quadratic relation when it's a right
+descent). -/
+theorem monomial_mem_T_span [Matsumoto (W1 := W)] (l : List (B W)) :
+    (l.map T_simple).prod ∈ Submodule.span (HeckeRing W) (Set.range (T (W := W))) := by
+  induction l using List.reverseRecOn with
+  | nil =>
+      rw [List.map_nil, List.prod_nil]
+      exact Submodule.subset_span ⟨(1 : W), T_one⟩
+  | append_singleton l i ih =>
+      rw [List.map_append, List.prod_append, List.map_singleton, List.prod_singleton]
+      exact T_mul_T_simple_mem_span ih
+
+/-- Every finite level of the length filtration lies in the `HeckeRing`-span of `{T_w : w ∈ W}`:
+its generating monomials do, by `monomial_mem_T_span`. -/
+theorem heckeLengthFiltration_le_T_span [Matsumoto (W1 := W)] (n : ℕ) :
+    heckeLengthFiltration (W := W) n ≤ Submodule.span (HeckeRing W) (Set.range (T (W := W))) := by
+  rw [heckeLengthFiltration, Submodule.span_le]
+  rintro x ⟨l, -, rfl⟩
+  exact monomial_mem_T_span l
 
 /-- The obligation that `{T_w : w ∈ W}`
 spans `HeckeAlgebra W` over `HeckeRing W`
-the other fact needed to build `basis` via `Module.Basis.mk`. -/
-theorem T_span : ⊤ ≤ Submodule.span (HeckeRing W) (Set.range (T (W := W))) :=
-  sorry
+the other fact needed to build `basis` via `Module.Basis.mk`.
+Unlike `T_linearIndependent`, this doesn't need a genuine freeness theorem: `HeckeAlgebra` is
+built as a *quotient* of the free algebra on the simple generators, so it is automatically
+spanned by arbitrary monomials (`exists_mem_heckeLengthFiltration`, no `Matsumoto` needed), and
+each monomial reduces to a `HeckeRing`-combination of the canonical `T_w` one simple generator at
+a time (`heckeLengthFiltration_le_T_span`). -/
+theorem T_span [Matsumoto (W1 := W)] :
+    ⊤ ≤ Submodule.span (HeckeRing W) (Set.range (T (W := W))) := by
+  intro x _
+  obtain ⟨n, hn⟩ := exists_mem_heckeLengthFiltration x
+  exact heckeLengthFiltration_le_T_span n hn
 
 /-- `HeckeAlgebra` is free as a `HeckeRing`-module with basis `{T_w : w ∈ W}`. -/
-noncomputable def basis [Matsumoto (W1 := W)] :
+noncomputable def basis [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)] :
   Module.Basis W (HeckeRing W) (HeckeAlgebra W) :=
   Module.Basis.mk T_linearIndependent T_span
 
-theorem basis_apply (w : W) [Matsumoto (W1 := W)] :
+theorem basis_apply (w : W) [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)] :
   basis w = T w :=
   Module.Basis.mk_apply T_linearIndependent T_span w
 
@@ -867,39 +1450,126 @@ section BarInvolution
 
 variable {W : Type*} [CoxeterGroup W]
 
-/-- The **bar involution** on `HeckeAlgebra`
-The additive ring automorphism
-sending `T_w ↦ (T_{w⁻¹})⁻¹`
-semilinear over `barScalar` -/
-noncomputable def bar :
-  HeckeAlgebra W ≃+* HeckeAlgebra W := sorry
+/-- The underlying construction of `bar`, bundled with its two defining properties: it sends
+`T_simple i ↦ T_simple_inv i` and is semilinear over `star` on `HeckeRing W`. Built by lifting the
+generator assignment `i ↦ T_simple_inv i` through the free-algebra presentation of `HeckeAlgebra`
+(`T_simple_inv_sq`/`T_simple_inv_braid` show it respects the defining relations `HeckeRel`), using
+a *twisted* `HeckeRing W`-algebra structure on the codomain (scalars acting through `star`) so that
+the lift is automatically semilinear rather than linear. Kept as a private bundle (rather than
+exposing the twisted instance) so the rest of the file only ever sees the plain `RingHom` and its
+two properties, proved once here and restated as `bar_T_simple`/`bar_smul` below. -/
+noncomputable def barCore : {f : HeckeAlgebra W →+* HeckeAlgebra W //
+    (∀ i, f (T_simple i) = T_simple_inv i) ∧
+      ∀ (c : HeckeRing W) (x : HeckeAlgebra W), f (c • x) = star c • f x} := by
+  -- `φ` and its properties are extracted from a *nested* proof so that the twisted `star_alg`
+  -- instance used to build it (only needed to make `FreeAlgebra.lift` come out semilinear) does
+  -- not leak into the rest of this proof, where `RingQuot.mkAlgHom` etc. must keep using the
+  -- ordinary (untwisted) `Algebra (HeckeRing W) (HeckeAlgebra W)` instance.
+  have hex :
+      ∃ φ : FreeAlgebra (HeckeRing W) (B W) →+* HeckeAlgebra W,
+        (∀ ⦃x y⦄, HeckeRel W x y → φ x = φ y) ∧
+        (∀ i, φ (FreeAlgebra.ι (HeckeRing W) i) = T_simple_inv i) ∧
+        ∀ (c : HeckeRing W) (x : FreeAlgebra (HeckeRing W) (B W)), φ (c • x) = star c • φ x := by
+    letI star_alg : Algebra (HeckeRing W) (HeckeAlgebra W) :=
+      Algebra.compHom (HeckeAlgebra W) (starRingEnd (HeckeRing W))
+    refine ⟨(FreeAlgebra.lift (HeckeRing W) T_simple_inv).toRingHom, ?_, ?_, ?_⟩
+    · intro x y hxy
+      change (FreeAlgebra.lift (HeckeRing W) T_simple_inv) x
+        = (FreeAlgebra.lift (HeckeRing W) T_simple_inv) y
+      cases hxy with
+      | quad i =>
+          have e1 : (FreeAlgebra.lift (HeckeRing W) T_simple_inv)
+              (FreeAlgebra.ι (HeckeRing W) i * FreeAlgebra.ι (HeckeRing W) i)
+              = T_simple_inv i * T_simple_inv i := by
+            rw [map_mul, FreeAlgebra.lift_ι_apply]
+          have e2 : (FreeAlgebra.lift (HeckeRing W) T_simple_inv)
+              ((heckeQ i - 1) • FreeAlgebra.ι (HeckeRing W) i
+                + heckeQ i • (1 : FreeAlgebra (HeckeRing W) (B W)))
+              = (heckeQinv i - 1) • T_simple_inv i + heckeQinv i • (1 : HeckeAlgebra W) := by
+            rw [map_add,
+              LinearMapClass.map_smul (FreeAlgebra.lift (HeckeRing W) T_simple_inv) (heckeQ i - 1),
+              LinearMapClass.map_smul (FreeAlgebra.lift (HeckeRing W) T_simple_inv) (heckeQ i),
+              FreeAlgebra.lift_ι_apply, map_one, Algebra.compHom_smul_def,
+              Algebra.compHom_smul_def]
+            congr 2
+            show starRingEnd (HeckeRing W) (heckeQ i - 1) = heckeQinv i - 1
+            rw [map_sub, map_one]
+            rfl
+          rw [e1, e2, T_simple_inv_sq]
+      | braid i i' =>
+          rw [map_list_prod, map_list_prod, List.map_map, List.map_map]
+          simp only [Function.comp_def, FreeAlgebra.lift_ι_apply]
+          exact T_simple_inv_braid i i'
+    · intro i
+      change (FreeAlgebra.lift (HeckeRing W) T_simple_inv) (FreeAlgebra.ι (HeckeRing W) i)
+        = T_simple_inv i
+      exact FreeAlgebra.lift_ι_apply _ _
+    · intro c x
+      change (FreeAlgebra.lift (HeckeRing W) T_simple_inv) (c • x)
+        = star c • (FreeAlgebra.lift (HeckeRing W) T_simple_inv) x
+      rw [LinearMapClass.map_smul (FreeAlgebra.lift (HeckeRing W) T_simple_inv) c,
+        Algebra.compHom_smul_def]
+      rfl
+  set φ := hex.choose with hφdef
+  obtain ⟨hrel, hφι, hφsmul⟩ := hex.choose_spec
+  refine ⟨RingQuot.lift ⟨φ, hrel⟩, ?_, ?_⟩
+  · intro i
+    have hmk : T_simple i = RingQuot.mkRingHom (HeckeRel W) (FreeAlgebra.ι (HeckeRing W) i) :=
+      DFunLike.congr_fun (RingQuot.mkAlgHom_coe (HeckeRing W) (HeckeRel W))
+        (FreeAlgebra.ι (HeckeRing W) i)
+    rw [hmk, RingQuot.lift_mkRingHom_apply]
+    exact hφι i
+  · intro c x
+    obtain ⟨y, rfl⟩ := RingQuot.mkAlgHom_surjective (HeckeRing W) (HeckeRel W) x
+    have hmk : ∀ z : FreeAlgebra (HeckeRing W) (B W),
+        RingQuot.mkAlgHom (HeckeRing W) (HeckeRel W) z = RingQuot.mkRingHom (HeckeRel W) z :=
+      fun z => DFunLike.congr_fun (RingQuot.mkAlgHom_coe (HeckeRing W) (HeckeRel W)) z
+    rw [← LinearMapClass.map_smul (RingQuot.mkAlgHom (HeckeRing W) (HeckeRel W)) c, hmk, hmk,
+      RingQuot.lift_mkRingHom_apply, RingQuot.lift_mkRingHom_apply, hφsmul]
 
-private theorem bar_smul (c : HeckeRing W) (x : HeckeAlgebra W) :
-  bar (c • x) = star c • bar x := by
-  sorry
+/-- The additive, `star`-semilinear ring homomorphism underlying the bar involution: sends
+`T_simple i ↦ T_simple_inv i` (`bar0_T_simple`) and `bar0 (c • x) = star c • bar0 x`
+(`bar0_smul`). -/
+noncomputable def bar0 : HeckeAlgebra W →+* HeckeAlgebra W := barCore.val
 
-private theorem bar_T (w : W) :
-  bar (T w) * T w⁻¹ = 1 := by
-  sorry
+theorem bar0_T_simple (i : B W) : bar0 (T_simple i) = T_simple_inv i := barCore.property.1 i
 
-private theorem bar_T_involutive (w : W) : bar (bar (T w)) = T w := by
+theorem bar0_smul (c : HeckeRing W) (x : HeckeAlgebra W) :
+    bar0 (c • x) = star c • bar0 x := barCore.property.2 c x
+
+/-- `bar0` sends `T_w ↦ (T_{w⁻¹})⁻¹`: along a reduced word `ω` for `w`, `bar0` (a ring hom)
+replaces each `T_simple i` by `T_simple_inv i` (`bar0_T_simple`), giving `bar0 (T w)` as the
+`T_simple_inv`-monomial along `ω`; `T w⁻¹` is the `T_simple`-monomial along the *reversed* word
+`ω.reverse`. These are mutually inverse by `T_reverse_inv_prod_mul_prod`. -/
+theorem bar_T (w : W) [Matsumoto (W1 := W)] : bar0 (T w) * T w⁻¹ = 1 := by
+  set ω := Classical.arbitrary (ReducedWord w)
+  have h1 : bar0 (T w) = (ω.val.map T_simple_inv).prod := by
+    rw [T_eq_of_reducedWord ω, map_list_prod, List.map_map]
+    simp only [Function.comp_def, bar0_T_simple]
+  have h2 : T w⁻¹ = (ω.val.reverse.map T_simple).prod := T_eq_of_reducedWord ω.reverse
+  rw [h1, h2]
+  have h3 := T_reverse_inv_prod_mul_prod ω.val.reverse
+  rwa [List.reverse_reverse] at h3
+
+theorem bar_T_involutive (w : W) [Matsumoto (W1 := W)] : bar0 (bar0 (T w)) = T w := by
   have h1 := bar_T w
   have h2 := bar_T w⁻¹
   rw [inv_inv] at h2
-  have h4 : bar (bar (T w)) * bar (T w⁻¹) = 1 := by
+  have h4 : bar0 (bar0 (T w)) * bar0 (T w⁻¹) = 1 := by
     rw [← map_mul, h1, map_one]
-  calc bar (bar (T w))
-      = bar (bar (T w)) * 1 := (mul_one _).symm
-    _ = bar (bar (T w)) * (bar (T w⁻¹) * T w) := by rw [h2]
-    _ = bar (bar (T w)) * bar (T w⁻¹) * T w :=
+  calc bar0 (bar0 (T w))
+      = bar0 (bar0 (T w)) * 1 := (mul_one _).symm
+    _ = bar0 (bar0 (T w)) * (bar0 (T w⁻¹) * T w) := by rw [h2]
+    _ = bar0 (bar0 (T w)) * bar0 (T w⁻¹) * T w :=
         (mul_assoc _ _ _).symm
     _ = 1 * T w := by rw [h4]
     _ = T w := one_mul _
 
-/-- Involutivity of `bar` on all of `HeckeAlgebra`
-Induct on the standard basis `{T_w}` -/
-theorem bar_involutive [Matsumoto (W1 := W)] :
-  Function.Involutive (bar (W := W)) := by
+/-- Involutivity of `bar0` on all of `HeckeAlgebra`: induct on the (now fully proven) standard
+basis `{T_w}`, using semilinearity (`bar0_smul`) and involutivity on basis elements
+(`bar_T_involutive`). -/
+theorem bar0_involutive [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)] :
+    Function.Involutive (bar0 (W := W)) := by
   intro x
   rw [← basis.linearCombination_repr x]
   generalize basis.repr x = f
@@ -909,8 +1579,409 @@ theorem bar_involutive [Matsumoto (W1 := W)] :
     have hsingle : Finsupp.linearCombination (HeckeRing W) basis (Finsupp.single w c + f)
         = c • T w + Finsupp.linearCombination (HeckeRing W) basis f := by
       rw [map_add, Finsupp.linearCombination_single, basis_apply]
-    rw [hsingle, map_add, map_add, bar_smul, bar_smul, star_involutive, bar_T_involutive, ih]
+    rw [hsingle, map_add, map_add, bar0_smul, bar0_smul, star_involutive, bar_T_involutive, ih]
+
+/-- The **bar involution** on `HeckeAlgebra`: the additive ring automorphism sending
+`T_w ↦ (T_{w⁻¹})⁻¹` (`bar0_T_simple`, extended to `T w` by `bar_T`), semilinear over `star` on
+`HeckeRing W` (`bar0_smul`), and involutive (`bar0_involutive`). -/
+noncomputable def bar [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)] :
+  HeckeAlgebra W ≃+* HeckeAlgebra W where
+  toFun := bar0
+  invFun := bar0
+  left_inv := bar0_involutive
+  right_inv := bar0_involutive
+  map_mul' := bar0.map_mul
+  map_add' := bar0.map_add
+
+theorem bar_smul [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)]
+  (c : HeckeRing W) (x : HeckeAlgebra W) :
+    bar (c • x) = star c • bar x := bar0_smul c x
+
+noncomputable instance {W : Type*} [CoxeterGroup W]
+  [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)] :
+    Star (HeckeAlgebra W) := ⟨bar⟩
+
+noncomputable instance {W : Type*} [CoxeterGroup W]
+  [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)] :
+    StarAddMonoid (HeckeAlgebra W) where
+  star_involutive := bar0_involutive
+  star_add := bar.map_add
+
+/-- `bar`'s semilinearity (`bar_smul`) is exactly the `StarModule` axiom for the `star`s just
+defined on `HeckeAlgebra W` and (already, via `barScalar`) on `HeckeRing W`. -/
+noncomputable instance {W : Type*} [CoxeterGroup W]
+  [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)] :
+    StarModule (HeckeRing W) (HeckeAlgebra W) where
+  star_smul := bar_smul
+
+/-- `bar` is multiplicative — an honest ring automorphism, not just an additive map:
+`star (a * b) = star a * star b`. Since `HeckeAlgebra` is generally noncommutative, this is the
+*ordinary* multiplicativity law, not the anti-multiplicative `star_mul' : star (a * b) =
+star b * star a` that `Mathlib`'s `StarMul`/`StarRing` classes axiomatize (that would describe an
+adjoint-like anti-automorphism, which `bar` is not). So this is stated as a plain lemma rather
+than a `StarMul`/`StarRing` instance. -/
+theorem star_mul_eq [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)]
+  (a b : HeckeAlgebra W) :
+    star (a * b) = star a * star b :=
+  bar.map_mul a b
 
 end BarInvolution
+
+section BarInvariant
+
+variable {W : Type*} [CoxeterGroup W]
+
+/-- `HeckeAlgebra W` as an algebra over the bar-fixed scalars `heckeRingBarFixed W`, restricting
+the ambient `HeckeRing W`-algebra structure along the inclusion `heckeRingBarFixed W →+* HeckeRing
+W`. This lets `heckeAlgebraBarFixed` below be phrased as a genuine `Subalgebra`, not just a
+`Subring`. -/
+noncomputable instance : Algebra (heckeRingBarFixed W) (HeckeAlgebra W) :=
+  Algebra.compHom (HeckeAlgebra W) (heckeRingBarFixed W).subtype
+
+variable [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)]
+
+/-- The `bar`-invariant elements of `HeckeAlgebra W`, as a `Subalgebra` over the bar-fixed scalars
+`heckeRingBarFixed W`. Closure under `*` uses that `bar` is a genuine ring automorphism
+(`star_mul_eq`), so no commutativity is needed between the two factors — unlike the usual
+`star`-ring `selfAdjoint` construction, which is built around the *anti*-multiplicative law and
+so only closes under products of *commuting* self-adjoint elements. Closure under the
+`heckeRingBarFixed`-action follows from `bar`'s semilinearity (`bar_smul`): a fixed scalar acting
+on a fixed vector is plain linear, landing back on a fixed vector. -/
+def heckeAlgebraBarFixed : Subalgebra (heckeRingBarFixed W) (HeckeAlgebra W) where
+  carrier := {x | star x = x}
+  mul_mem' {a b} ha hb := by
+    change star (a * b) = a * b
+    rw [star_mul_eq, ha, hb]
+  one_mem' := bar.map_one
+  add_mem' {a b} ha hb := by
+    change star (a + b) = a + b
+    rw [star_add, ha, hb]
+  zero_mem' := star_zero _
+  algebraMap_mem' r := by
+    change bar (algebraMap (heckeRingBarFixed W) (HeckeAlgebra W) r)
+      = algebraMap (heckeRingBarFixed W) (HeckeAlgebra W) r
+    have hr : algebraMap (heckeRingBarFixed W) (HeckeAlgebra W) r
+        = (r : HeckeRing W) • (1 : HeckeAlgebra W) :=
+      Algebra.algebraMap_eq_smul_one r
+    rw [hr, bar_smul, r.property, bar.map_one]
+
+theorem mem_heckeAlgebraBarFixed_iff {x : HeckeAlgebra W} :
+    x ∈ heckeAlgebraBarFixed (W := W) ↔ star x = x := Iff.rfl
+
+theorem T_one_mem_heckeAlgebraBarFixed : T (1 : W) ∈ heckeAlgebraBarFixed (W := W) := by
+  rw [T_one]
+  exact Subalgebra.one_mem _
+
+/-- The length filtration on `HeckeAlgebra W`, restricted to the bar-invariant subalgebra
+`heckeAlgebraBarFixed`: `F_n^{bar} := F_n ∩ heckeAlgebraBarFixed`, as a submodule over the
+bar-fixed scalars `heckeRingBarFixed W`. This is the filtration a Kazhdan–Lusztig-style induction
+on length would proceed along (the induction itself is not attempted here). -/
+def heckeAlgebraBarFixedFiltration (n : ℕ) :
+    Submodule (heckeRingBarFixed W) (heckeAlgebraBarFixed (W := W)) where
+  carrier := {x | (x : HeckeAlgebra W) ∈ heckeLengthFiltration (W := W) n}
+  zero_mem' := by
+    change (0 : HeckeAlgebra W) ∈ heckeLengthFiltration (W := W) n
+    exact zero_mem _
+  add_mem' {a b} ha hb := by
+    change ((a : HeckeAlgebra W) + (b : HeckeAlgebra W)) ∈ heckeLengthFiltration (W := W) n
+    exact Submodule.add_mem _ ha hb
+  smul_mem' c x hx := by
+    change ((c : HeckeRing W) • (x : HeckeAlgebra W)) ∈ heckeLengthFiltration (W := W) n
+    exact Submodule.smul_mem _ _ hx
+
+theorem mem_heckeAlgebraBarFixedFiltration_iff {n : ℕ} {x : heckeAlgebraBarFixed (W := W)} :
+    x ∈ heckeAlgebraBarFixedFiltration (W := W) n ↔
+      (x : HeckeAlgebra W) ∈ heckeLengthFiltration (W := W) n := Iff.rfl
+
+theorem heckeAlgebraBarFixedFiltration_mono :
+    Monotone (heckeAlgebraBarFixedFiltration (W := W)) :=
+  fun _ _ h _ hx => heckeLengthFiltration_mono h hx
+
+/-- The **Kazhdan–Lusztig basis element for a simple reflection**, in the `v`-normalized
+convention: `v_i⁻¹ (T_i + 1)`. This is the rank-one building block of the Kazhdan–Lusztig basis
+(`C_w` for `w` of length `≤ 1`); the general `C_w` (all `w`), defined by an induction on length
+using the bar-invariant lift against the length filtration, is not attempted here. -/
+noncomputable def KLSimple (i : B W) : HeckeAlgebra W :=
+  star (heckeV i) • (T_simple i + 1)
+
+/-- `KLSimple i` really is bar-invariant: writing `v := heckeV i` (a unit, with inverse `star v`),
+`bar (star v • (T_i + 1)) = v • (T_simple_inv i + 1)`, and this equals `star v • (T_i + 1)` because
+`v • T_simple_inv i = star v • T_i + (star v - v) • 1` (expanding `T_simple_inv i` and using
+`heckeV_mul_star`/`heckeQ`'s relation to `heckeV`), so the `1`-coefficients `(star v - v) + v` and
+the `T_i`-coefficients `star v` on both sides match after simplifying with `star_involutive`. -/
+theorem KLSimple_mem_heckeAlgebraBarFixed (i : B W) :
+    KLSimple i ∈ heckeAlgebraBarFixed (W := W) := by
+  rw [mem_heckeAlgebraBarFixed_iff]
+  change bar (star (heckeV i) • (T_simple i + 1)) = star (heckeV i) • (T_simple i + 1)
+  have hbarT : bar (T_simple i) = T_simple_inv i := bar0_T_simple i
+  rw [bar_smul, map_add, hbarT, bar.map_one, star_involutive]
+  unfold T_simple_inv heckeQinv heckeQ
+  have hv : heckeV i * star (heckeV i) = 1 := heckeV_mul_star i
+  have hstar : star (heckeV i * heckeV i) = star (heckeV i) * star (heckeV i) := star_mul' _ _
+  rw [hstar]
+  match_scalars
+  · linear_combination star (heckeV i) * hv
+  · linear_combination star (heckeV i) * hv
+
+/-- The `HeckeRing`-scalar collected from the leading (all-`T_simple`) term of a product of
+`KLSimple`'s along the list `l`: `∏ᵢ star (heckeV i)`. A unit (product of units), but generally
+not itself bar-fixed. -/
+noncomputable def KLLeadingCoeff (l : List (B W)) : HeckeRing W :=
+  (l.map (fun i => star (heckeV i))).prod
+
+/-- The **naive Kazhdan–Lusztig-style element** for `w`: the product of the rank-one
+`KLSimple`'s along an (arbitrarily chosen) reduced word for `w`, mirroring the definition of `T`.
+It is bar-fixed (`KLNaive_mem_heckeAlgebraBarFixed`) and has "leading term `T_w`" in the sense of
+`KLSimple_prod_eq_leading_add_lower` below — but, unlike the genuine Kazhdan–Lusztig basis
+element `C_w`, its leading coefficient is only a *unit* (not exactly `1`), and no attempt is made
+to cancel the lower-order terms into the canonical (triangularity/positivity) normal form. -/
+noncomputable def KLNaive (w : W) : HeckeAlgebra W :=
+  ((Classical.arbitrary (ReducedWord w)).val.map KLSimple).prod
+
+theorem KLNaive_mem_heckeAlgebraBarFixed (w : W) :
+    KLNaive w ∈ heckeAlgebraBarFixed (W := W) := by
+  unfold KLNaive
+  refine Subalgebra.list_prod_mem _ (fun x hx => ?_)
+  obtain ⟨i, -, rfl⟩ := List.mem_map.mp hx
+  exact KLSimple_mem_heckeAlgebraBarFixed i
+
+omit [DihedralSubProperties (W1 := W)] in
+/-- Auxiliary strengthened form of `KLSimple_prod_eq_leading_add_lower`, additionally tracking
+that the remainder is *exactly* `0` when `l` is empty. This extra bookkeeping is needed only to
+make the induction go through: at `l = i :: rest` with `rest = []`, the plain membership
+`r' ∈ heckeLengthFiltration (rest.length - 1) = heckeLengthFiltration 0` isn't enough to place
+`T_simple i * r'` back in `heckeLengthFiltration 0` (it would only give `heckeLengthFiltration 1`)
+— but knowing `r' = 0` exactly sidesteps this. -/
+private theorem KLSimple_prod_eq_leading_add_lower_aux (l : List (B W)) (hl : cs.IsReduced l) :
+    ∃ r, r ∈ heckeLengthFiltration (W := W) (l.length - 1) ∧
+      (l.map KLSimple).prod = KLLeadingCoeff l • T (cs.wordProd l) + r ∧ (l = [] → r = 0) := by
+  induction l with
+  | nil =>
+      exact ⟨0, zero_mem _, by simp [KLLeadingCoeff, T_one], fun _ => rfl⟩
+  | cons i rest ih =>
+      have hrest : cs.IsReduced rest := isReduced_of_append_right (μ := [i]) hl
+      have hnd : ¬ cs.IsLeftDescent (cs.wordProd rest) i := (isReduced_cons hrest i).mp hl
+      have hlen : cs.length (cs.simple i * cs.wordProd rest) = cs.length (cs.simple i)
+          + cs.length (cs.wordProd rest) := by
+        rw [not_isLeftDescent_iff] at hnd
+        rw [hnd, cs.length_simple, add_comm]
+      have hTmul : T_simple i * T (cs.wordProd rest) = T (cs.wordProd (i :: rest)) := by
+        rw [wordProd_cons, ← T_simple_eq_T, T_mul_T_of_length_add hlen]
+      obtain ⟨r', hr'mem, hr'eq, hr'zero⟩ := ih hrest
+      refine ⟨star (heckeV i) • (T_simple i * r')
+          + KLLeadingCoeff (i :: rest) • T (cs.wordProd rest) + star (heckeV i) • r',
+        ?_, ?_, fun h => absurd h (List.cons_ne_nil i rest)⟩
+      · have hrestlen : cs.length (cs.wordProd rest) = rest.length := hrest
+        have hlen2 : (i :: rest).length - 1 = rest.length := by simp
+        rw [hlen2]
+        rcases eq_or_ne rest [] with hre | hre
+        · subst hre
+          rw [hr'zero rfl]
+          have h0 : T (1 : W) ∈ heckeLengthFiltration (W := W) 0 := by
+            have h := T_mem_heckeLengthFiltration (1 : W)
+            rwa [cs.length_one] at h
+          simp only [List.length_nil, mul_zero, smul_zero, zero_add, add_zero]
+          rw [show cs.wordProd ([] : List (B W)) = (1 : W) from cs.wordProd_nil]
+          exact Submodule.smul_mem _ _ h0
+        · have hpos : 0 < rest.length := List.length_pos_of_ne_nil hre
+          have heq1 : 1 + (rest.length - 1) = rest.length := by omega
+          have hT1 : T_simple i * r' ∈ heckeLengthFiltration (W := W) rest.length := by
+            rw [← heq1]
+            exact heckeLengthFiltration_mul_mem (T_simple_mem_heckeLengthFiltration_one i) hr'mem
+          have hTrest : T (cs.wordProd rest) ∈ heckeLengthFiltration (W := W) rest.length := by
+            rw [← hrestlen]; exact T_mem_heckeLengthFiltration (cs.wordProd rest)
+          exact Submodule.add_mem _
+            (Submodule.add_mem _ (Submodule.smul_mem _ _ hT1) (Submodule.smul_mem _ _ hTrest))
+            (Submodule.smul_mem _ _ (heckeLengthFiltration_mono (by omega) hr'mem))
+      · rw [List.map_cons, List.prod_cons, hr'eq]
+        unfold KLSimple
+        have hstep : T_simple i * (KLLeadingCoeff rest • T (cs.wordProd rest))
+            = KLLeadingCoeff rest • T (cs.wordProd (i :: rest)) := by
+          rw [mul_smul_comm, hTmul]
+        have hcoeff : KLLeadingCoeff (i :: rest) = star (heckeV i) * KLLeadingCoeff rest := by
+          unfold KLLeadingCoeff
+          rw [List.map_cons, List.prod_cons]
+        rw [hcoeff, smul_mul_assoc, add_mul, one_mul, mul_add, hstep]
+        module
+
+/-- The leading coefficient of `KLNaive w`: `KLLeadingCoeff` along the same (arbitrarily chosen)
+reduced word for `w` used to define `KLNaive w`. -/
+noncomputable def KLNaiveLeadingCoeff (w : W) : HeckeRing W :=
+  KLLeadingCoeff (Classical.arbitrary (ReducedWord w)).val
+
+omit [DihedralSubProperties (W1 := W)] in
+/-- The "leading term" behavior of `KLNaive w`: it equals `KLNaiveLeadingCoeff w • T w` plus a
+remainder that lies *strictly* deeper in the length filtration than `length w`. Proved via
+`KLSimple_prod_eq_leading_add_lower_aux`, using the induction on the reduced word peeling the
+*first* letter `i` off the front: `l = i :: rest` reduced means `rest` is reduced and `i` is not a
+left descent of `wordProd rest` (`isReduced_cons`), so `T_simple i * T (wordProd rest) =
+T (wordProd l)` (`T_mul_T_of_length_add`) gives exactly the new leading term; every other term in
+the expansion of `KLSimple i * (leading + remainder)` drops into the filtration level below
+`l.length`. -/
+theorem KLNaive_eq_leading_add_lower (w : W) :
+    ∃ r ∈ heckeLengthFiltration (W := W) (cs.length w - 1),
+      KLNaive w = KLNaiveLeadingCoeff w • T w + r := by
+  unfold KLNaive KLNaiveLeadingCoeff
+  set ω := Classical.arbitrary (ReducedWord w)
+  obtain ⟨r, hmem, heq, -⟩ := KLSimple_prod_eq_leading_add_lower_aux ω.val ω.prop.1
+  rw [ω.wordProd_eq] at heq
+  exact ⟨r, by rwa [ω.length_eq] at hmem, heq⟩
+
+/-- The Kazhdan–Lusztig element for `w`: `x` is bar-invariant, has leading coefficient exactly
+`KLNaiveLeadingCoeff w` at `T_w`, its `T`-basis expansion (now available, via `basis`) is
+supported only on the Bruhat interval below `w` (`Coxeter.le`, `Coxeter.Bruhat`) — the
+*definitional* triangularity — and, the condition that actually forces *uniqueness* (without it,
+`x` and `x + C'_v` for any `v ≤ w` would both qualify): "untwisting" each remaining coefficient
+`basis.repr x v` (`v < w`) by `star (KLNaiveLeadingCoeff w)` (which is `KLNaiveLeadingCoeff w`'s
+inverse — `star` is a ring involution on `HeckeRing W`, and `star (star c) * c = c * c⁻¹ = 1` for
+the unit `c := KLNaiveLeadingCoeff w`) lands it in the `qᵢ`-polynomial subring
+`heckeRingEvenPolyDegreeLE`, of `v`-degree at most `length w - length v - 1`. -/
+def IsKLBasisElement (w : W) (x : HeckeAlgebra W) : Prop :=
+  x ∈ heckeAlgebraBarFixed (W := W) ∧
+    basis.repr x w = KLNaiveLeadingCoeff w ∧
+    (∀ v : W, ¬ v ≤ w → basis.repr x v = 0) ∧
+    ∀ v : W, v < w → heckeRingEvenPolyDegreeLE (cs.length w - cs.length v - 1 : ℤ)
+        (star (KLNaiveLeadingCoeff w) • basis.repr x v)
+
+omit [Matsumoto (W1 := W)] [DihedralSubProperties (W1 := W)] in
+theorem KLNaiveLeadingCoeff_one : KLNaiveLeadingCoeff (1 : W) = 1 := by
+  unfold KLNaiveLeadingCoeff KLLeadingCoeff
+  set ω := Classical.arbitrary (ReducedWord (1 : W))
+  have hnil : ω.val = [] :=
+    List.eq_nil_of_length_eq_zero (by rw [ω.length_eq, cs.length_one])
+  rw [hnil]
+  simp
+
+/-- `C'_1 = 1`: the trivial base case of the Kazhdan–Lusztig basis. Since `1` is the bottom
+element of the Bruhat order, the Bruhat-support and degree conditions are vacuous (nothing is
+`< 1`, and `v ≤ 1 → v = 1`), leaving just `1 ∈ heckeAlgebraBarFixed` and the leading coefficient
+computation `basis.repr 1 1 = 1 = KLNaiveLeadingCoeff 1`. -/
+theorem isKLBasisElement_one : IsKLBasisElement (1 : W) (1 : HeckeAlgebra W) := by
+  have hT1 : (1 : HeckeAlgebra W) = T (1 : W) := T_one.symm
+  have hrepr : basis.repr (1 : HeckeAlgebra W) = Finsupp.single (1 : W) (1 : HeckeRing W) := by
+    rw [hT1, ← basis_apply, Module.Basis.repr_self]
+  refine ⟨by rw [hT1]; exact T_one_mem_heckeAlgebraBarFixed, ?_, ?_, ?_⟩
+  · rw [hrepr, Finsupp.single_eq_same, KLNaiveLeadingCoeff_one]
+  · intro v hv
+    classical
+    rw [hrepr, Finsupp.single_apply, if_neg]
+    exact fun h => hv (h ▸ le_refl (1 : W))
+  · intro v hv
+    exact absurd (le_antisymm hv.le bot_le) hv.ne
+
+theorem isKLBasisElement_simple (i : B W) : IsKLBasisElement (cs.simple i : W) (KLSimple i) := by
+  set bi := KLSimple i
+  have leading : KLNaiveLeadingCoeff (cs.simple i) = star (heckeV i) := by
+    simp only [KLNaiveLeadingCoeff]
+    rw [single_letter_reduced]
+    simp only [KLLeadingCoeff]
+    erw [List.map_singleton]
+    rw [List.prod_singleton]
+  have ti := basis_apply (cs.simple i)
+  have ti_eq : T (cs.simple i) = T_simple i := by
+    simp
+  have t_one := basis_apply (1 : W)
+  have t_one_eq : T (1 : W) = (1 : HeckeAlgebra W) := by
+      exact (T_one (W:=W))
+  have t_part_1 : (basis.repr (T_simple i)) 1 = 0 := by
+    rw [<-ti_eq, <-ti]
+    simp
+  have t_part_t : (basis.repr (T_simple i)) (cs.simple i) = 1 := by
+    rw [<-ti_eq, <-ti]
+    simp
+  have one_part_1 : (basis.repr (1 : HeckeAlgebra W)) 1 = 1 := by
+    rw [<-t_one_eq,<-t_one]
+    simp
+  have one_part_t : (basis.repr (1 : HeckeAlgebra W)) (cs.simple i) = 0 := by
+    rw [<-t_one_eq,<-t_one]
+    simp
+  have t_part_rest (w : W) (hw: ¬(w ≤ cs.simple i)) : (basis.repr (T_simple i)) w = 0 := by
+    rw [<-ti_eq, <-ti]
+    by_cases w_eqi: w = cs.simple i
+    · exact absurd w_eqi.le hw
+    · simp only [Module.Basis.repr_self]
+      rw [Finsupp.single_eq_of_ne w_eqi]
+  have one_part_rest (w : W) (hw: ¬(w ≤ cs.simple i)) : (basis.repr 1) w = 0 := by
+    rw [<-t_one_eq,<-t_one]
+    have temp := (simple_upper i (1 : W)).mpr (Or.inl rfl)
+    have one_le_w : 1 <= w := by
+      exact bot_le
+    by_cases w_eq1: w = 1
+    · have w_le_simp : w ≤ cs.simple i := by
+        rw [w_eq1]
+        exact temp
+      exact absurd w_le_simp hw
+    · simp only [Module.Basis.repr_self]
+      rw [Finsupp.single_eq_of_ne w_eq1]
+  have bi_1 : basis.repr bi (1 : W) = star (heckeV i) := by
+    unfold bi
+    unfold KLSimple
+    simp only [smul_add, map_add, map_smul, Finsupp.coe_add, Finsupp.coe_smul, Pi.add_apply,
+      Pi.smul_apply, smul_eq_mul]
+    rw [t_part_1, one_part_1]
+    rw [mul_zero, zero_add, mul_one]
+  have bi_ts : basis.repr bi (cs.simple i) = star (heckeV i) := by
+    unfold bi
+    unfold KLSimple
+    simp only [smul_add, map_add, map_smul, Finsupp.coe_add, Finsupp.coe_smul, Pi.add_apply,
+      Pi.smul_apply, smul_eq_mul]
+    rw [t_part_t, one_part_t]
+    rw [mul_one, mul_zero, add_zero]
+  have bi_rest (w : W) (hw: ¬(w ≤ cs.simple i)) :
+    basis.repr bi w = 0 := by
+    unfold bi
+    unfold KLSimple
+    simp only [smul_add, map_add, map_smul, Finsupp.coe_add, Finsupp.coe_smul, Pi.add_apply,
+      Pi.smul_apply, smul_eq_mul]
+    rw [t_part_rest w hw, one_part_rest w hw]
+    rw [mul_zero, add_zero]
+  refine ⟨by exact KLSimple_mem_heckeAlgebraBarFixed i, ?_, ?_, ?_⟩
+  · rw [bi_ts]
+    rw [leading]
+  · intro v hv
+    rw [bi_rest v hv]
+  · intro v hv
+    classical
+    have v_one : v = 1 := by
+      have su := (simple_upper i v).mp hv.le
+      have is_neq : v ≠ cs.simple i := by
+        exact hv.ne
+      refine Or.by_cases su ?_ ?_
+      · exact id
+      · intro is_eq
+        exact absurd is_eq is_neq
+    rw [v_one]
+    erw [bi_1]
+    simp only [length_simple, Nat.cast_one, length_one, CharP.cast_eq_zero,
+      sub_zero, sub_self, smul_eq_mul]
+    rw [leading]
+    rw [star_star]
+    rw [heckeV_mul_star]
+    rw [heckeRingEvenPolyDegreeLE]
+    refine ⟨?_, ?_⟩
+    · simp
+    · intro m hm
+      have m_eq : m = (0 : ParamIndex W →₀ ℤ) := by
+        have one_supp : (1 : HeckeRing W) = AddMonoidAlgebra.single 0 1 := by
+          rfl
+        rw [one_supp, AddMonoidAlgebra.single, Finsupp.single] at hm
+        simp only [one_ne_zero, ↓reduceIte, Finset.mem_singleton] at hm
+        exact hm
+      rw [m_eq]
+      simp
+      simp only [monomialDegree]
+      simp
+
+/-- On `heckeAlgebraBarFixed` itself, `star` (inherited from `HeckeAlgebra W`) is *trivial*, for
+the same reason as on `heckeRingBarFixed`: every element is already fixed by definition. Unlike
+the scalar case, we stop at `TrivialStar` here rather than `StarRing`: `heckeAlgebraBarFixed` is
+*not* generally commutative (being fixed by `bar` doesn't force two elements to commute), so
+`star = id` would make the anti-multiplicative `star_mul` axiom assert `a * b = b * a`, which can
+fail. -/
+noncomputable instance : Star (heckeAlgebraBarFixed (W := W)) := ⟨id⟩
+
+instance : TrivialStar (heckeAlgebraBarFixed (W := W)) := ⟨fun _ => rfl⟩
+
+end BarInvariant
 
 end Coxeter
