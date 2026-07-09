@@ -93,6 +93,22 @@ theorem alternatingWord_even_add (i i' : B W) (k m : ℕ) :
       rw [←concat_eq_append, ←alternatingWord_succ, alternatingWord_succ']
       simp
 
+theorem reverse_alternatingWord_of_odd (i i' : B W) (m : ℕ) (hm : Odd m) :
+  (alternatingWord i i' m).reverse = alternatingWord i i' m := by
+  apply List.ext_getElem (by simp [length_alternatingWord])
+  intro k h1 h2
+  have hkm : k < m := by simpa [length_alternatingWord] using h2
+  have hkm' : m - 1 - k < m := by omega
+  simp only [List.getElem_reverse, length_alternatingWord]
+  rw [getElem_alternatingWord i i' m k hkm, getElem_alternatingWord i i' m (m - 1 - k) hkm']
+  obtain ⟨j, hj⟩ := hm
+  have hpar : Even (m + (m - 1 - k)) ↔ Even (m + k) := by
+    rw [Nat.even_iff, Nat.even_iff]
+    omega
+  by_cases hE : Even (m + k)
+  · rw [if_pos hE, if_pos (hpar.mpr hE)]
+  · rw [if_neg hE, if_neg (fun hc => hE (hpar.mp hc))]
+
 theorem reverse_alternatingWord (i i' : B W) (k : ℕ) :
   (alternatingWord i i' (2 * k)).reverse = alternatingWord i' i (2 * k) := by
   induction k with
@@ -151,6 +167,37 @@ theorem wordProd_eq (ω : ReducedWord w) : cs.wordProd ω = w := ω.2.2.symm
 end ReducedWord
 
 end
+
+section BraidMoves
+
+/-! ### Braid moves and Matsumoto's theorem -/
+
+/-- An **elementary braid move**
+replacing a contiguous occurrence of the braid word
+`braidWord M i i'` (i.e. `s_i s_{i'} s_i ⋯`, `M i i'` letters)
+in a list by `braidWord M i' i`
+(`s_{i'} s_i s_{i'} ⋯`) leaving the rest of the list unchanged.
+Two lists related by `BraidMove` represent the same group element -/
+def BraidMove (ω ω' : List (B W)) : Prop :=
+  ∃ (i i' : B W) (α β : List (B W)),
+    ω = α ++ braidWord M i i' ++ β ∧ ω' = α ++ braidWord M i' i ++ β
+
+theorem BraidMove.wordProd_eq {ω ω' : List (B W)} (h : BraidMove ω ω') :
+    cs.wordProd ω = cs.wordProd ω' := by
+  obtain ⟨i, i', α, β, hω, hω'⟩ := h
+  rw [hω, hω']
+  simp only [wordProd_append, wordProd_braidWord_eq]
+
+class Matsumoto (W1 : Type*) [CoxeterGroup W1] : Prop where
+  /-- **Matsumoto's theorem**
+  (Tits' solution to the word problem for Coxeter groups)
+  Any two reduced words for the same element `w`
+  are connected by a finite chain of elementary braid moves. -/
+  reduced_words_convert : ∀ w : W1,
+    ∀ ω ω': ReducedWord w,
+    Relation.EqvGen (BraidMove (W:=W1)) ω.val ω'.val
+
+end BraidMoves
 
 section opposite
 

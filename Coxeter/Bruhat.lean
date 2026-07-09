@@ -314,6 +314,14 @@ theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
 
 noncomputable instance : LocallyFiniteOrder W := LocallyFiniteOrder.ofFiniteIcc finite_Icc
 
+/-- Bruhat intervals are finite. -/
+lemma bruhat_interval_finite (u w : W) : {v : W | u ≤ v ∧ v ≤ w}.Finite := by
+  exact Set.Finite.ofFinset (Finset.Icc u w) (by simp)
+
+/-- Principal lower Bruhat intervals are finite. -/
+lemma bruhat_le_setOf_finite (w : W) : {u : W | u ≤ w}.Finite := by
+  exact Set.Finite.ofFinset (Finset.Icc (⊥ : W) w) (by simp)
+
 /-- Bjorner--Brenti Corollary 2.2.4 -/
 theorem card_Icc_le (u w : W) : (Finset.Icc u w).card ≤ 2 ^ cs.length w := by
   classical
@@ -369,6 +377,33 @@ theorem covBy_iff {u w : W} : u ⋖ w ↔ u ≤ w ∧ cs.length u + 1 = cs.lengt
   rw [@covBy_iff_lt_covBy_grade ℕ, Nat.covBy_iff_add_one_eq, lt_iff_le_and_length_lt,
     show grade ℕ = cs.length by rfl]
   grind
+
+theorem le_mul_of_isReflection_of_length_lt {u t : W} (ht : cs.IsReflection t)
+  (hlt : cs.length u < cs.length (u * t)) : u ≤ u * t :=
+  le.step u u (u * t) (le.rfl _) (by simpa [mul_assoc] using ht.conj u) hlt
+
+theorem covBy_iff_exists_reflection {u w : W} :
+    u ⋖ w ↔ ∃ t : W, cs.IsReflection t ∧ w = u * t ∧ cs.length u + 1 = cs.length w := by
+  constructor
+  · intro h
+    have hlen := length_cover h
+    have hle := h.1.1
+    induction hle with
+    | rfl =>
+        exact (h.ne rfl).elim
+    | step v w huv href hlt ih =>
+        have huv_eq : u = v := by
+          apply eq_of_le_of_length_eq huv
+          have huv_len := length_le_of_le huv
+          have : cs.length v < cs.length u + 1 := by
+            rwa [←hlen] at hlt
+          omega
+        subst v
+        refine ⟨u⁻¹ * w, ?_, by simp, hlen⟩
+        simpa [mul_assoc] using href.conj u⁻¹
+  · rintro ⟨t, ht, rfl, hlen⟩
+    rw [covBy_iff]
+    exact ⟨le_mul_of_isReflection_of_length_lt ht (by omega), hlen⟩
 
 theorem simple_mul_covBy_self_iff (i : B W) (w : W) :
   cs.simple i * w ⋖ w ↔ cs.IsLeftDescent w i := by
@@ -497,6 +532,25 @@ instance : IsDirectedOrder W where
         have h4 := (lifting_property (hx1.trans h3) h2 hi).2
         rw [simple_mul_simple_cancel_left] at h4
         exact ⟨h4, hx2.trans h3⟩
+
+lemma simple_upper (i : B W) (w : W) :
+  w <= cs.simple i ↔ (w = 1 ∨ w = cs.simple i) := by
+  constructor
+  · intro h
+    by_cases hw : w = 1
+    · exact Or.inl hw
+    · right
+      apply eq_of_le_of_length_eq h
+      have hle := length_le_of_le h
+      rw [cs.length_simple] at hle ⊢
+      have ⟨j, hj⟩ := cs.exists_leftDescent_of_ne_one hw
+      have hlt : cs.length (cs.simple j * w) < cs.length w :=
+        strictMono_length ((simple_mul_lt_self_iff j w).mpr hj)
+      have hpos : 0 < cs.length w := by omega
+      omega
+  · rintro (rfl | rfl)
+    · exact bot_le
+    · exact le_rfl
 
 section finite
 

@@ -179,6 +179,38 @@ theorem card_of_isRightInversion (w : W) :
   Nat.card {t : W // cs.IsRightInversion w t} = cs.length w := by
   rw [Nat.card_congr equiv_isRightInversion, card_of_isLeftInversion, length_op]
 
+/-- If `s` is a right inversion of `v`, it stays a right inversion of `w * v` provided `w * v` has
+no length cancellation (`hlen`): right-multiplying the length-additive `w` onto the left of `v`
+can't undo the length drop `s` already causes on `v`. One half of the classical fact that
+`RightInversion (w * v)` splits as `RightInversion v` together with `w`'s inversions conjugated by
+`v⁻¹` (the other half is `isRightInversion_conj_of_isRightInversion_mul_left`); a step toward the
+"gate property" (`DihedralSubProperties.isRightDescent_mul_iff_of_not_rightDescent` in
+`Coxeter/Hecke.lean`), though the disjointness/exhaustiveness of the two halves (needed to turn
+this into an iff) isn't proved here. -/
+theorem isRightInversion_of_isRightInversion_mul_right {w v s : W}
+    (hs : cs.IsRightInversion v s) (hlen : cs.length (w * v) = cs.length w + cs.length v) :
+    cs.IsRightInversion (w * v) s := by
+  obtain ⟨hrefl, hlt⟩ := hs
+  refine ⟨hrefl, ?_⟩
+  rw [mul_assoc]
+  have h1 := cs.length_mul_le w (v * s)
+  omega
+
+/-- If `t` is a right inversion of `w`, then its conjugate `v⁻¹ * t * v` is a right inversion of
+`w * v`, provided `w * v` has no length cancellation (`hlen`): appending the length-additive `v`
+on the right can't undo the length drop `t` already causes on `w`. The other half of the classical
+"inversions of a length-additive product split" fact (see
+`isRightInversion_of_isRightInversion_mul_right`). -/
+theorem isRightInversion_conj_of_isRightInversion_mul_left {w v t : W}
+    (ht : cs.IsRightInversion w t) (hlen : cs.length (w * v) = cs.length w + cs.length v) :
+    cs.IsRightInversion (w * v) (v⁻¹ * t * v) := by
+  obtain ⟨hrefl, hlt⟩ := ht
+  refine ⟨by simpa using hrefl.conj v⁻¹, ?_⟩
+  have h1 : w * v * (v⁻¹ * t * v) = w * t * v := by group
+  rw [h1]
+  have h2 := cs.length_mul_le (w * t) v
+  omega
+
 end rightVariants
 
 end Coxeter
