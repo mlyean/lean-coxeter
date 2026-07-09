@@ -55,12 +55,12 @@ theorem bil_isSymm : (@bil W _).IsSymm := by
   rw [Matrix.toBilin_single, Matrix.toBilin_single, M.symmetric i i']
 
 @[simp]
-private theorem bil_eq (i i' : B W) : bil (stdBasis i) (stdBasis i') = -cos (π / M i i') := by
+theorem bil_eq (i i' : B W) : bil (stdBasis i) (stdBasis i') = -cos (π / M i i') := by
   unfold bil
   rw [Matrix.toBilin_single]
 
 @[simp]
-private theorem bil_diag (i : B W) : bil (stdBasis i) (stdBasis i) = 1 := by
+theorem bil_diag (i : B W) : bil (stdBasis i) (stdBasis i) = 1 := by
   rw [bil_eq]
   simp
 
@@ -117,6 +117,8 @@ theorem geomRepAux_stdBasis (i : B W) : geomRepAux i (stdBasis i) = -stdBasis i 
   match_scalars
   norm_num
 
+section just_two
+
 private def E (i i' : B W) : Submodule ℝ (V W) := supported ℝ _ {i, i'}
 
 private theorem E_eq_span (i i' : B W) : E i i' = Submodule.span ℝ {stdBasis i, stdBasis i'} := by
@@ -133,7 +135,7 @@ private theorem E_symm (i i' : B W) : E i i' = E i' i := by
   unfold E
   rw [Set.pair_comm]
 
-private theorem bil_restrict_E_diag (i i' : B W) (x y : ℝ) :
+theorem bil_restrict_E_diag (i i' : B W) (x y : ℝ) :
   bil (x • stdBasis i + y • stdBasis i') (x • stdBasis i + y • stdBasis i')
   = (x - y * cos (π / M i i')) ^ 2 + (y * sin (π / M i i')) ^ 2 := by
   calc
@@ -543,6 +545,8 @@ private theorem orderOf_geomRepAux_mul_geomRepAux₂ :
     apply rot_pow
 
 end finite_order
+
+end just_two
 
 theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
   intro i i'

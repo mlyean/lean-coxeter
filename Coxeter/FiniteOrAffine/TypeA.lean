@@ -1,5 +1,6 @@
 module
 
+public import Coxeter.FiniteOrAffine.TridiagonalForm
 public import Coxeter.SpecialFeatures
 public import Mathlib.Combinatorics.SimpleGraph.Hasse
 
@@ -42,14 +43,16 @@ namespace Coxeter
 
 /-- The Coxeter group of type `A` on `n` generators, realized as the abstract group presented by
 `CoxeterMatrix.A n` (whose Coxeter-Dynkin diagram is a path on `n` vertices). -/
-@[reducible] noncomputable def typeAGroup (n : ℕ) : CoxeterGroup (CoxeterMatrix.A n).Group where
+@[reducible] noncomputable def typeAGroup (n : ℕ) [NeZero n] :
+    CoxeterGroup (CoxeterMatrix.A n).Group where
   B := Fin n
   M := CoxeterMatrix.A n
   cs := (CoxeterMatrix.A n).toCoxeterSystem
 
 /-- Type `A`'s off-diagonal entries are always `2` or `3`, both in the crystallographic set
 `{0, 2, 3, 4, 6}`. -/
-theorem typeA_isCrystallographic (n : ℕ) : @IsCrystallographic _ (typeAGroup n) := by
+theorem typeA_isCrystallographic (n : ℕ) [NeZero n] :
+    @IsCrystallographic _ (typeAGroup n) := by
   intro i i' hii'
   change (CoxeterMatrix.A n) i i' = 0 ∨ (CoxeterMatrix.A n) i i' = 2 ∨
     (CoxeterMatrix.A n) i i' = 3 ∨ (CoxeterMatrix.A n) i i' = 4 ∨ (CoxeterMatrix.A n) i i' = 6
@@ -92,93 +95,20 @@ theorem typeA_isIrreducible (n : ℕ) : @IsIrreducible _ (typeAGroup (n + 1)) :=
 
 /-! ### Positive definiteness of `bil` for type A
 
-The tridiagonal quadratic form `Q(y) = ∑_{i<m+1} y_i^2 - ∑_{i<m} y_i * y_{i+1}` (the diagonal
-`1`s and off-diagonal `-1/2`s of the type-A Coxeter matrix, doubled) is a sum of squares:
-`2 * Q(y) = y_0^2 + y_m^2 + ∑_{i<m} (y_i - y_{i+1})^2`. This lets us read off both non-negativity
-and (via forcing every square to vanish) positive definiteness directly, with no eigenvalue
-computation needed. -/
+Type A's Coxeter matrix is exactly the tridiagonal ("path graph") form handled generically by
+`Coxeter.FiniteOrAffine.TridiagonalForm`: diagonal `1`s and off-diagonal `-1/2`s. `sos_identity`
+there gives `2 * Q(y) = y_0^2 + y_m^2 + ∑_{i<m} (y_i - y_{i+1})^2`, letting us read off both
+non-negativity and (via forcing every square to vanish) positive definiteness directly, with no
+eigenvalue computation needed. -/
 
-private theorem sos_identity (y : ℕ → ℝ) (m : ℕ) :
-    2 * (∑ i ∈ Finset.range (m + 1), (y i) ^ 2 - ∑ i ∈ Finset.range m, y i * y (i + 1))
-      = y 0 ^ 2 + y m ^ 2 + ∑ i ∈ Finset.range m, (y i - y (i + 1)) ^ 2 := by
-  induction m with
-  | zero => simp; ring
-  | succ m ih =>
-      rw [Finset.sum_range_succ (f := fun i => (y i) ^ 2),
-        Finset.sum_range_succ (f := fun i => y i * y (i + 1)),
-        Finset.sum_range_succ (f := fun i => (y i - y (i + 1)) ^ 2)]
-      linear_combination ih
-
-/-- The entry function of the (doubled) type-A quadratic form: `1` on the diagonal, `-1/2` on
-adjacent off-diagonal entries, `0` elsewhere. -/
-private noncomputable def typeAEntry (i j : ℕ) : ℝ :=
-  if i = j then 1 else if j + 1 = i ∨ i + 1 = j then -(1 / 2) else 0
-
-/-- The double sum against `typeAEntry` collapses to the tridiagonal quadratic form `Q(y)` from
-`sos_identity`: only the diagonal and immediately-adjacent entries of `typeAEntry` are nonzero. -/
-private theorem sum_range_double (y : ℕ → ℝ) (m : ℕ) :
-    (∑ i ∈ Finset.range (m + 1), ∑ j ∈ Finset.range (m + 1), y i * y j * typeAEntry i j)
-      = ∑ i ∈ Finset.range (m + 1), (y i) ^ 2 - ∑ i ∈ Finset.range m, y i * y (i + 1) := by
-  induction m with
-  | zero => simp [typeAEntry]; ring
-  | succ m ih =>
-      have hL : ∀ i ∈ Finset.range (m + 1),
-          y i * y (m + 1) * typeAEntry i (m + 1) =
-            if i = m then y i * y (m + 1) * (-(1 / 2)) else 0 := by
-        intro i hi
-        simp only [Finset.mem_range] at hi
-        by_cases hc : i = m
-        · subst hc
-          simp [typeAEntry]
-        · rw [if_neg hc]
-          unfold typeAEntry
-          rw [if_neg (by omega : ¬ i = m + 1),
-            if_neg (by omega : ¬ ((m + 1) + 1 = i ∨ i + 1 = m + 1))]
-          ring
-      have hR : ∀ j ∈ Finset.range (m + 1),
-          y (m + 1) * y j * typeAEntry (m + 1) j =
-            if j = m then y (m + 1) * y j * (-(1 / 2)) else 0 := by
-        intro j hj
-        simp only [Finset.mem_range] at hj
-        by_cases hc : j = m
-        · subst hc
-          simp [typeAEntry]
-        · rw [if_neg hc]
-          unfold typeAEntry
-          rw [if_neg (by omega : ¬ (m + 1) = j),
-            if_neg (by omega : ¬ (j + 1 = m + 1 ∨ (m + 1) + 1 = j))]
-          ring
-      have hmem : m ∈ Finset.range (m + 1) := Finset.self_mem_range_succ m
-      have expand : ∀ i ∈ Finset.range (m + 1),
-          ∑ j ∈ Finset.range (m + 1 + 1), y i * y j * typeAEntry i j
-            = (∑ j ∈ Finset.range (m + 1), y i * y j * typeAEntry i j)
-              + (if i = m then y i * y (m + 1) * (-(1 / 2)) else 0) := by
-        intro i hi
-        rw [Finset.sum_range_succ, hL i hi]
-      rw [Finset.sum_range_succ (f := fun i =>
-          ∑ j ∈ Finset.range (m + 1 + 1), y i * y j * typeAEntry i j),
-        Finset.sum_congr rfl expand, Finset.sum_add_distrib,
-        Finset.sum_ite_eq' (Finset.range (m + 1)) m
-          (fun i => y i * y (m + 1) * (-(1 / 2 : ℝ))),
-        if_pos hmem]
-      rw [Finset.sum_range_succ (f := fun j => y (m + 1) * y j * typeAEntry (m + 1) j),
-        Finset.sum_congr rfl hR,
-        Finset.sum_ite_eq' (Finset.range (m + 1)) m
-          (fun j => y (m + 1) * y j * (-(1 / 2 : ℝ))),
-        if_pos hmem]
-      have hdiag : typeAEntry (m + 1) (m + 1) = 1 := if_pos rfl
-      rw [hdiag, ih, Finset.sum_range_succ (f := fun i => (y i) ^ 2) (n := m + 1),
-        Finset.sum_range_succ (f := fun i => y i * y (i + 1)) (n := m)]
-      ring
-
-/-- The Gram matrix entries of `bil` on standard basis vectors of type A match `typeAEntry`. -/
+/-- The Gram matrix entries of `bil` on standard basis vectors of type A match `pathEntry`. -/
 private theorem bil_typeA_entries (m : ℕ) (i j : Fin (m + 1)) :
     (@bil _ (typeAGroup (m + 1))) (@stdBasis _ (typeAGroup (m + 1)) i)
-      (@stdBasis _ (typeAGroup (m + 1)) j) = typeAEntry (i : ℕ) (j : ℕ) := by
+      (@stdBasis _ (typeAGroup (m + 1)) j) = pathEntry (i : ℕ) (j : ℕ) := by
   unfold bil
   rw [Matrix.toBilin_single]
-  change -Real.cos (Real.pi / ((CoxeterMatrix.A (m + 1)) i j : ℝ)) = typeAEntry (i : ℕ) (j : ℕ)
-  unfold CoxeterMatrix.A typeAEntry
+  change -Real.cos (Real.pi / ((CoxeterMatrix.A (m + 1)) i j : ℝ)) = pathEntry (i : ℕ) (j : ℕ)
+  unfold CoxeterMatrix.A pathEntry
   simp only [Matrix.of_apply]
   by_cases hij : i = j
   · have hij' : (i : ℕ) = (j : ℕ) := by rw [hij]
@@ -187,7 +117,7 @@ private theorem bil_typeA_entries (m : ℕ) (i j : Fin (m + 1)) :
   · have hij' : (i : ℕ) ≠ (j : ℕ) := fun h => hij (Fin.ext h)
     rw [if_neg hij, if_neg hij']
     split_ifs with hadj
-    · rw [show ((3 : ℕ) : ℝ) = 3 by norm_num, Real.cos_pi_div_three]
+    · rw [show ((3 : ℕ) : ℝ) = 3 by norm_num, Real.cos_pi_div_three]; norm_num
     · rw [show ((2 : ℕ) : ℝ) = 2 by norm_num, Real.cos_pi_div_two]
       norm_num
 
@@ -206,7 +136,7 @@ private theorem bil_typeA_apply (m : ℕ) (x : Fin (m + 1) →₀ ℝ) :
     (@bil _ (typeAGroup (m + 1))) x x
       = ∑ i ∈ Finset.range (m + 1), (typeAExtend m x i) ^ 2
         - ∑ i ∈ Finset.range m, typeAExtend m x i * typeAExtend m x (i + 1) := by
-  rw [← sum_range_double (typeAExtend m x) m]
+  rw [← pathEntry_sum_range_double (typeAExtend m x) m]
   have hrepr : (@stdBasis _ (typeAGroup (m + 1))).repr x = x := rfl
   have key : (@bil _ (typeAGroup (m + 1))) x x
       = ∑ i : Fin (m + 1), ∑ j : Fin (m + 1),
@@ -222,15 +152,15 @@ private theorem bil_typeA_apply (m : ℕ) (x : Fin (m + 1) →₀ ℝ) :
   have hentry : ∀ i j : Fin (m + 1),
       x i * x j * (@bil _ (typeAGroup (m + 1)))
         (@stdBasis _ (typeAGroup (m + 1)) i) (@stdBasis _ (typeAGroup (m + 1)) j)
-      = typeAExtend m x (i : ℕ) * typeAExtend m x (j : ℕ) * typeAEntry (i : ℕ) (j : ℕ) := by
+      = typeAExtend m x (i : ℕ) * typeAExtend m x (j : ℕ) * pathEntry (i : ℕ) (j : ℕ) := by
     intro i j
     rw [bil_typeA_entries, typeAExtend_apply_fin, typeAExtend_apply_fin]
   rw [Finset.sum_congr rfl (fun i (_ : i ∈ (Finset.univ : Finset (Fin (m + 1)))) =>
     Finset.sum_congr rfl (fun j (_ : j ∈ (Finset.univ : Finset (Fin (m + 1)))) => hentry i j))]
   rw [Fin.sum_univ_eq_sum_range (fun i => ∑ j : Fin (m + 1),
-    typeAExtend m x i * typeAExtend m x j * typeAEntry i j) (m + 1)]
+    typeAExtend m x i * typeAExtend m x j * pathEntry i j) (m + 1)]
   refine Finset.sum_congr rfl (fun i _ => ?_)
-  exact Fin.sum_univ_eq_sum_range (fun j => typeAExtend m x i * typeAExtend m x j * typeAEntry i j)
+  exact Fin.sum_univ_eq_sum_range (fun j => typeAExtend m x i * typeAExtend m x j * pathEntry i j)
     (m + 1)
 
 /-- Type A's `bil` is positive semidefinite: `bil x x ≥ 0` for every `x`, since (doubled) it's a

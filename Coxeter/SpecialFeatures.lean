@@ -35,6 +35,7 @@ orthogonal direct sum decomposition of `bil`.
 * `Coxeter.IsPolyFiniteWeyl`
 * `Coxeter.IsIrreducibleFiniteWeyl`
 * `Coxeter.IsAffineCoxeter`
+* `Coxeter.IsIrreducibleAffineCoxeter`
 * `Coxeter.IsPolyAffineWeyl`
 * `Coxeter.IsIrreducibleAffineWeyl`
 -/
@@ -110,6 +111,158 @@ lemma assembles_crystallographic :
   · exact Or.inr (Or.inl (M_eq_two_of_connectedComponentMk_ne cg1
       (fun heq => same_comp (SimpleGraph.ConnectedComponent.eq.mp heq))))
 
+/-- `W` *has a generalized Cartan matrix* realizing its Coxeter matrix: there is an explicit
+positive length-rescaling `scale : cg.B → ℝ` of the simple roots making every simple reflection
+integral with respect to the rescaled basis. Concretely, for every `i ≠ i'`,
+`2 * scale i' * cos (π / M i i')` must be an natural multiple of `scale i` — this is exactly the
+condition for the reflection `geomRepAux i` to send the rescaled root `scale i' • stdBasis i'`
+back into the `ℤ`-span of the rescaled roots `{scale j • stdBasis j}`. The witness `n : ℕ` for the
+pair `(i, i')` is always nonnegative by construction — this is exactly right, since (see
+`Coxeter.CartanMatrix`, notably `HasGeneralizedCartanMatrix.cartanMatrix`) it is the *negation*
+`-n` of the generalized Cartan matrix entry `a_{i i'}` in the Kac–Moody sense (whose off-diagonal
+entries are `≤ 0`).
+
+This already forces `IsCrystallographic` (`HasGeneralizedCartanMatrix.isCrystallographic` in
+`Coxeter.CartanMatrix`): the two witnesses for `(i, i')` and `(i', i)` multiply to
+`4 * cos (π / M i i') ^ 2`, a natural number, which pins `M i i' ∈ {0, 2, 3, 4, 6}`.
+
+- Descent: holds — restricting a global `scale` to a component's generators still satisfies that
+  component's own condition.
+- Assembly: holds. `assembles_hasGeneralizedCartanMatrix`: cross-component pairs already satisfy
+  the condition for free (`cos (π/2) = 0`, witnessed by `n = 0`), so gluing each component's own
+  scale function together gives a scale on the whole diagram. -/
+def HasGeneralizedCartanMatrix : Prop :=
+  ∃ scale : cg.B → ℝ, (∀ i, 0 < scale i) ∧
+    ∀ i i' : cg.B, i ≠ i' → ∃ n : ℕ, 2 * scale i' * Real.cos (Real.pi / cg.M i i') = n * scale i
+
+/-- Dividing `HasGeneralizedCartanMatrix`'s defining condition at `(i, i')` by the same condition
+at the reversed pair `(i', i)` pins the ratio `n / m` of the two integer witnesses to be exactly the
+*square* of the scale ratio `scale i' / scale i` — equivalently, in the cleared-denominator form
+proved here, `n * scale i ^ 2 = m * scale i' ^ 2`. (This is the same pair of equations used in
+`Coxeter.CartanMatrix.generalizedCartanMatrix_mul_eq` to get the *product* `n * m = 4 cos²(π/M)`;
+here we instead eliminate `cos` to compare `scale i` against `scale i'` directly, with no positivity
+hypothesis needed.) Consequently, two scales agreeing on `n` and `m` at a pair `(i, i')` must have
+the same ratio `scale i' / scale i`, since positive reals with equal squares are equal. -/
+lemma scale_ratio_sq_eq_of_generalizedCartanMatrix_cond
+    (scale : cg.B → ℝ) (i i' : cg.B)
+    (n : ℕ) (hn : 2 * scale i' * Real.cos (Real.pi / cg.M i i') = n * scale i)
+    (m : ℕ) (hm : 2 * scale i * Real.cos (Real.pi / cg.M i i') = m * scale i') :
+    (n : ℝ) * scale i ^ 2 = m * scale i' ^ 2 := by
+  linear_combination scale i' * hm - scale i * hn
+
+/-- Rescaling `scale` by a factor `t` that depends only on the connected component of each
+generator preserves `HasGeneralizedCartanMatrix`'s pairwise condition. Within a component, `i` and
+`i'` get multiplied by the *same* factor (`t` agrees on a component), so it cancels and the same
+witness `n` still works; across components the condition holds via `n = 0` regardless of any
+rescaling, since `M i i' = 2` gives `cos (π / M i i') = 0` there. -/
+lemma hasGeneralizedCartanMatrix_cond_of_rescale
+    (scale : cg.B → ℝ) (t : (coxeterGraphMatrix cg.M).ConnectedComponent → ℝ)
+    (hcond : ∀ i i' : cg.B, i ≠ i' →
+      ∃ n : ℕ, 2 * scale i' * Real.cos (Real.pi / cg.M i i') = n * scale i) :
+    ∀ i i' : cg.B, i ≠ i' →
+      ∃ n : ℕ,
+        2 * (t ((coxeterGraphMatrix cg.M).connectedComponentMk i') * scale i') *
+            Real.cos (Real.pi / cg.M i i') =
+        n * (t ((coxeterGraphMatrix cg.M).connectedComponentMk i) * scale i) := by
+  intro i i' hii'
+  by_cases same_comp : (coxeterGraphMatrix cg.M).Reachable i i'
+  · obtain ⟨n, hn⟩ := hcond i i' hii'
+    have ht : t ((coxeterGraphMatrix cg.M).connectedComponentMk i) =
+        t ((coxeterGraphMatrix cg.M).connectedComponentMk i') :=
+      congrArg t (SimpleGraph.ConnectedComponent.sound same_comp)
+    refine ⟨n, ?_⟩
+    rw [ht]
+    linear_combination t ((coxeterGraphMatrix cg.M).connectedComponentMk i') * hn
+  · refine ⟨0, ?_⟩
+    rw [M_eq_two_of_connectedComponentMk_ne cg
+      (fun heq => same_comp (SimpleGraph.ConnectedComponent.eq.mp heq))]
+    simp
+
+/-- Renormalize an a priori `HasGeneralizedCartanMatrix` witness `a_priori_scale` so that, on each
+connected component `c`, the chosen representative `(component_reps c).1` gets exactly the
+*prescribed* scale `(component_reps c).2`, rather than whatever value `a_priori_scale` happened to
+give it. `HasGeneralizedCartanMatrix`'s defining condition only pins the *ratio* `scale i / scale
+i'` between generators sharing a component (and says nothing at all about cross-component ratios,
+where `n = 0` works regardless), so multiplying every generator of one component by a single
+positive constant is always still a valid witness — and the constant needed to hit the prescribed
+target `(component_reps c).2` at the representative is
+`(component_reps c).2 / a_priori_scale (component_reps c).1`. -/
+noncomputable def scale_fixing
+  (a_priori_scale : cg.B → ℝ)
+  (a_priori_scale_proof :
+    (∀ i, 0 < a_priori_scale i) ∧
+    ∀ i i' : cg.B, i ≠ i' →
+      ∃ n : ℕ,
+        2 * a_priori_scale i' * Real.cos (Real.pi / cg.M i i') =
+        n * a_priori_scale i
+  )
+  (component_reps : (coxeterGraphMatrix cg.M).ConnectedComponent -> cg.B × ℝ)
+  (component_reps_pos : ∀ c, 0 < (component_reps c).2)
+  (component_reps_mem : ∀ c,
+    (coxeterGraphMatrix cg.M).connectedComponentMk (component_reps c).1 = c)
+  : {new_scale: cg.B → ℝ //
+    (∀ i, 0 < new_scale i) ∧
+    (∀ i i' : cg.B, i ≠ i' →
+      ∃ n : ℕ,
+        2 * new_scale i' * Real.cos (Real.pi / cg.M i i') =
+        n * new_scale i
+    ) ∧
+    (∀ c : (coxeterGraphMatrix cg.M).ConnectedComponent,
+      new_scale (component_reps c).1 = (component_reps c).2)
+  } := by
+  let cg1_graph := coxeterGraphMatrix cg.M
+  let rep : cg1_graph.ConnectedComponent → cg.B := fun c => (component_reps c).1
+  let target : cg1_graph.ConnectedComponent → ℝ := fun c => (component_reps c).2
+  let t : cg1_graph.ConnectedComponent → ℝ := fun c => target c / a_priori_scale (rep c)
+  let new_scale_candidate : cg.B → ℝ :=
+    fun i => t (cg1_graph.connectedComponentMk i) * a_priori_scale i
+  refine ⟨new_scale_candidate, fun i => ?_, ?_, fun c => ?_⟩
+  · exact mul_pos (div_pos (component_reps_pos _) (a_priori_scale_proof.1 _))
+      (a_priori_scale_proof.1 i)
+  · exact hasGeneralizedCartanMatrix_cond_of_rescale a_priori_scale t a_priori_scale_proof.2
+  · change t (cg1_graph.connectedComponentMk (rep c)) * a_priori_scale (rep c) = target c
+    rw [component_reps_mem c]
+    exact div_mul_cancel₀ _ (a_priori_scale_proof.1 (rep c)).ne'
+
+/-
+Cross-component pairs already satisfy the condition for free (`cos (π/2) = 0`, witnessed by
+`n = 0` regardless of scale), so gluing each component's own scale function together (indexed by
+`coxeterGraphMatrix.connectedComponentMk`) gives a scale on all of `cg1.B` satisfying the condition
+on every pair — hence `cg1.HasGeneralizedCartanMatrix` holds iff every component does.
+-/
+lemma assembles_hasGeneralizedCartanMatrix :
+  Assembles
+    fun [W1 : Type*] (cg1 : CoxeterGroup W1) => @HasGeneralizedCartanMatrix W1 cg1
+  := by
+  unfold Assembles
+  intro W1 cg1 finitely_many_comp on_components
+  choose scale_c hscale_c_pos hscale_c_cond using on_components
+  set cg1_graph := coxeterGraphMatrix cg1.M
+  refine ⟨fun i => scale_c (cg1_graph.connectedComponentMk i) ⟨i, rfl⟩,
+    fun i => hscale_c_pos _ _, ?_⟩
+  intro i i' hii'
+  dsimp only
+  by_cases same_comp : cg1_graph.Reachable i i'
+  · have heq : cg1_graph.connectedComponentMk i = cg1_graph.connectedComponentMk i' :=
+      SimpleGraph.ConnectedComponent.sound same_comp
+    have hi : i ∈ (cg1_graph.connectedComponentMk i).supp := rfl
+    have hi' : i' ∈ (cg1_graph.connectedComponentMk i).supp := heq.symm
+    have hne : (⟨i, hi⟩ : (cg1_graph.connectedComponentMk i).supp) ≠ ⟨i', hi'⟩ :=
+      fun h => hii' (congrArg Subtype.val h)
+    obtain ⟨n, hn⟩ := hscale_c_cond (cg1_graph.connectedComponentMk i) ⟨i, hi⟩ ⟨i', hi'⟩ hne
+    refine ⟨n, ?_⟩
+    have transport : ∀ {c c' : cg1_graph.ConnectedComponent} (h : c = c') {x : cg1.B}
+        (hx : x ∈ c.supp), scale_c c ⟨x, hx⟩ = scale_c c' ⟨x, h ▸ hx⟩ := by
+      rintro c c' rfl x hx
+      rfl
+    rw [transport heq hi'] at hn
+    rw [M_eq_componentMatrix cg1 (cg1_graph.connectedComponentMk i) ⟨i, hi⟩ ⟨i', hi'⟩]
+    exact hn
+  · refine ⟨0, ?_⟩
+    rw [M_eq_two_of_connectedComponentMk_ne cg1
+      (fun heq => same_comp (SimpleGraph.ConnectedComponent.eq.mp heq))]
+    simp
+
 /-- A Coxeter matrix is *irreducible* if its Coxeter diagram (`coxeterGraphMatrix`) is connected. -/
 def IsIrreducibleMatrix {B1 : Type*} (M1 : CoxeterMatrix B1) : Prop :=
   (coxeterGraphMatrix M1).Connected
@@ -179,6 +332,13 @@ It is at least 1, but can be more.
   semidefinite (sum of psd) and degenerate (its kernel contains each block's nonzero kernel). -/
 def IsAffineCoxeter : Prop :=
   (@bil W _).IsPosSemidef ∧ ¬ (@bil W _).Nondegenerate
+
+/-- `W` is an *irreducible affine Coxeter group*: `IsAffineCoxeter` together with
+`IsIrreducible`. This is the broad affine-Coxeter predicate and does not require
+crystallographic entries or a finite Weyl part. Use `IsIrreducibleAffineWeyl` for the stronger
+root-system/Weyl refinement. -/
+def IsIrreducibleAffineCoxeter : Prop :=
+  @IsAffineCoxeter W cg ∧ @IsIrreducible W cg
 
 /-- `IsAffineCoxeter`, or `cg` has no generators at all. Plain `IsAffineCoxeter` isn't an instance
 of `Assembles`: on the empty diagram (zero components), `V W` is the trivial module, on which `bil`
