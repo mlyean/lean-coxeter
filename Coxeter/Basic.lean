@@ -99,7 +99,8 @@ theorem reverse_alternatingWord (i i' : B W) (k : ℕ) :
   | zero =>
       simp [alternatingWord]
   | succ k ih =>
-      simp only [alternatingWord, Nat.mul_eq, concat_eq_append, append_assoc, cons_append,
+      rw [mul_add]
+      simp only [alternatingWord, concat_eq_append, append_assoc, cons_append,
         nil_append, reverse_append, reverse_cons, reverse_nil]
       rw [ih]
       trans alternatingWord i' i (2 * k + 2)

@@ -56,8 +56,7 @@ theorem reflect_reflect {x y : E} (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) :
   match i with
   | 0 =>
       simp only [Fin.isValue, Orientation.coe_basisRightAngleRotation, Nat.succ_eq_add_one,
-        Nat.reduceAdd, Matrix.cons_val_zero, LinearEquiv.coe_coe, LinearEquiv.trans_apply,
-        SemilinearEquivClass.semilinearEquiv_apply, b]
+        Nat.reduceAdd, Matrix.cons_val_zero, LinearEquiv.coe_coe, LinearEquiv.trans_apply, b]
       calc
         reflect hy (reflect hx x) = reflect hy (-x) := by simp [reflect]
         _ = -x - (2 * ⟪y, -x⟫) • y := by rw [reflect_apply]
@@ -81,7 +80,7 @@ theorem reflect_reflect {x y : E} (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) :
   | 1 =>
       simp only [Fin.isValue, Orientation.coe_basisRightAngleRotation, Nat.succ_eq_add_one,
         Nat.reduceAdd, Matrix.cons_val_one, Matrix.cons_val_fin_one, LinearEquiv.coe_coe,
-        LinearEquiv.trans_apply, SemilinearEquivClass.semilinearEquiv_apply, b]
+        LinearEquiv.trans_apply, b]
       calc
         reflect hy (reflect hx (J x)) = reflect hy (J x) := ?_
         _ = J x - (2 * ⟪y, J x⟫) • y := by rw [reflect_apply]
