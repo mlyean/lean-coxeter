@@ -27,12 +27,10 @@ noncomputable def LinearMap.BilinForm.toMatrix :
   invFun B := b.constr R ((b.constr R) ∘ B)
   map_add' := by
     intro B₁ B₂
-    ext i j
-    simp
+    rfl
   map_smul' := by
     intro m B
-    ext i j
-    simp
+    rfl
   left_inv := by
     intro B
     apply b.ext
@@ -43,15 +41,17 @@ noncomputable def LinearMap.BilinForm.toMatrix :
   right_inv := by
     intro B
     ext i j
-    simp
+    simp [Function.comp]
 
 /-- Omits the `Fintype` and `DecidableEq` hypotheses from mathlib's version -/
 noncomputable def Matrix.toBilin : Matrix ι ι R ≃ₗ[R] LinearMap.BilinForm R M :=
   (LinearMap.BilinForm.toMatrix b).symm
 
+@[simp]
 theorem Matrix.toBilin_single (B : Matrix ι ι R) (i j : ι) : toBilin b B (b i) (b j) = B i j := by
   unfold toBilin LinearMap.BilinForm.toMatrix
-  simp
+  change (((b.constr R) ((b.constr R) ∘ B)) (b i)) (b j) = B i j
+  simp [Function.comp]
 
 section real
 

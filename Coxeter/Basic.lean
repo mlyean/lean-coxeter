@@ -215,7 +215,7 @@ theorem leftInvSeq_op (ω : List (B W)) : (@cs Wᵐᵒᵖ).leftInvSeq ω = map o
   | nil => rfl
   | cons i is ih =>
       dsimp [leftInvSeq]
-      rw [ih, simple_op, map_map, map_map]
+      rw [ih, simple_op, map_map, map_cons, map_map]
       congr 2
       ext w
       dsimp

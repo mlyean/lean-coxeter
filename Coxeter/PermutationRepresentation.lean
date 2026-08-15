@@ -81,7 +81,7 @@ theorem permRepAux_nil : permRepAux ([] : List (B W)) = id := by
 theorem permRepAux_append (ω₁ ω₂ : List (B W)) :
   permRepAux (ω₁ ++ ω₂) = permRepAux ω₁ ∘ permRepAux ω₂ := by
   ext ⟨⟨t, _⟩, ε⟩
-  rw [comp_apply]
+  simp only [Function.comp]
   unfold permRepAux
   dsimp
   rw [add_assoc, reverse_append, etaAux_append, wordProd_reverse, inv_inv]
@@ -99,6 +99,7 @@ theorem permRepAux_alternatingWord (i i' : B W) :
   unfold permRepAux
   apply Prod.ext
   · simp [prod_alternatingWord_eq_mul_pow]
+    rfl
   · unfold etaAux
     rw [id_eq, add_eq_left, reverse_alternatingWord, ZMod.natCast_eq_zero_iff]
     let p := M i i'
@@ -180,7 +181,7 @@ theorem eta_spec (ω : List (B W)) (t : W) : η (cs.wordProd ω) t = count t (cs
       rw [wordProd_reverse, wordProd_reverse, inv_inj]
       exact (cs.wordProd_surjective (cs.wordProd ω)).choose_spec
     rw [permRep_wordProd_eq_permRepAux, permRep_wordProd_eq_permRepAux] at h
-    apply_fun Prod.snd at h
+    replace h := congr_arg Prod.snd h
     simp [permRepAux, etaAux] at h
     assumption
   · unfold eta
@@ -270,9 +271,9 @@ theorem permRep_inj : Injective (@permRep W _) := by
   cases ω with
   | nil => simp
   | cons i is =>
-      have h := permRep_inv_eq (cs.wordProd (i :: is)) ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩
-      apply_fun Prod.snd at h
-      classical rw [hw, Equiv.Perm.coe_one, id_eq, zero_add, eta_spec,
+      have h := congr_arg Prod.snd <|
+        permRep_inv_eq (cs.wordProd (i :: is)) ⟨⟨cs.simple i, cs.isReflection_simple i⟩, 0⟩
+      classical rw [hw, Equiv.Perm.coe_one, zero_add, eta_spec,
         count_eq_one_of_mem hω1.nodup_leftInvSeq (Mem.head _)] at h
       change 0 = 1 at h
       contradiction
@@ -280,7 +281,8 @@ theorem permRep_inj : Injective (@permRep W _) := by
 /-- Bjorner--Brenti Theorem 1.3.2 (ii) -/
 theorem permRep_reflection (t : ReflectionSet W) (ε : ZMod 2) :
   permRep t.val (t, ε) = (t, ε + 1) := by
-  rw [permRep_eq, t.prop.inv]
+  rw [@permRep_eq _ _ t.val (t, ε), t.prop.inv]
   simp [eta_reflection_self t.prop]
+  rfl
 
 end Coxeter

@@ -62,7 +62,7 @@ def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
 instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
   have ⟨ω, h1, h2⟩ := cs.exists_isReduced w
   subst h2
-  haveI : Finite {x // x ∈ cs.leftInvSeq ω} := List.finite_toSet _
+  have : Finite {x // x ∈ cs.leftInvSeq ω} := List.finite_toSet _
   exact Finite.of_equiv _ (equiv_IsLeftInversion ω h1).symm
 
 /-- Bjorner--Brenti Corollary 1.4.5 -/

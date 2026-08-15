@@ -47,12 +47,13 @@ theorem bil_isSymm : (@bil W _).IsSymm := by
   rw [LinearMap.BilinForm.isSymm_iff_basis stdBasis]
   intro i i'
   unfold bil
-  rw [Matrix.toBilin_single, Matrix.toBilin_single, M.symmetric i i']
+  repeat rw [@Matrix.toBilin_single (B := fun i i' ↦ -cos (π / ↑(M.M i i')))]
+  rw [M.symmetric i i']
 
 @[simp]
 theorem bil_eq (i i' : B W) : bil (stdBasis i) (stdBasis i') = -cos (π / M i i') := by
   unfold bil
-  rw [Matrix.toBilin_single]
+  rw [@Matrix.toBilin_single (B := fun i i' ↦ -cos (π / ↑(M.M i i')))]
 
 @[simp]
 theorem bil_diag (i : B W) : bil (stdBasis i) (stdBasis i) = 1 := by
@@ -361,12 +362,13 @@ theorem E_sup_orthogonal : E i i' ⊔ (E i i').orthogonalBilin bil = ⊤ := by
 theorem orderOf_geomRepAux_mul_geomRepAux_eq_orderOf_restrict (m : ℕ) :
   (geomRepAux i * geomRepAux i') ^ m = 1
   ↔ (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i') ^ m = 1 := by
+  simp only [LinearEquiv.coe_toLinearMap_mul]
   rw [Module.End.pow_restrict]
   constructor
   · intro h2
     ext ⟨x, hx⟩ : 1
     rw [LinearMap.restrict_apply]
-    simp only [LinearEquiv.coe_toLinearMap_mul, Module.End.one_apply, Subtype.mk.injEq]
+    simp only [Module.End.one_apply, Subtype.mk.injEq]
     rw [Module.End.pow_apply]
     have := LinearEquiv.congr_fun h2 x
     rwa [LinearEquiv.pow_apply] at this
@@ -382,7 +384,7 @@ theorem orderOf_geomRepAux_mul_geomRepAux_eq_orderOf_restrict (m : ℕ) :
     congr
     · have := LinearMap.congr_fun h2 ⟨u, hu⟩
       rw [LinearMap.restrict_apply] at this
-      simp only [LinearEquiv.coe_toLinearMap_mul, Module.End.one_apply, Subtype.mk.injEq] at this
+      simp only [Module.End.one_apply, Subtype.mk.injEq] at this
       rw [Module.End.pow_apply] at this
       rwa [LinearEquiv.pow_apply]
     · clear h2
@@ -463,7 +465,7 @@ theorem oangle_stdBasisE : ∃ (o : Orientation ℝ (E i i') (Fin 2)),
 theorem restrict_geomRepAux_left_eq_reflect :
   (geomRepAux i).restrict (geomRepAux_E_left i i') = reflect (norm_stdBasisE_0 i i') := by
   ext x : 1
-  rw [LinearMap.restrict_apply]
+  rw [@LinearMap.restrict_apply (hf := geomRepAux_E_left i i')]
   simp only [LinearEquiv.coe_coe]
   rw [reflect_apply, ←Subtype.coe_inj]
   simp only [AddSubgroupClass.coe_sub, SetLike.val_smul, stdBasisE_0]
@@ -476,7 +478,7 @@ theorem restrict_geomRepAux_left_eq_reflect :
 theorem restrict_geomRepAux_right_eq_reflect :
   (geomRepAux i').restrict (geomRepAux_E_right i i') = reflect (norm_stdBasisE_1 i i') := by
   ext x : 1
-  rw [LinearMap.restrict_apply]
+  rw [@LinearMap.restrict_apply (hf := geomRepAux_E_right i i')]
   simp only [LinearEquiv.coe_coe]
   rw [reflect_apply, ←Subtype.coe_inj]
   simp only [Fin.isValue, AddSubgroupClass.coe_sub, SetLike.val_smul, stdBasisE_1]
@@ -539,7 +541,7 @@ theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
   · rw [h, ←(M.off_diagonal i i').mtr h]
     ext : 1
     apply geomRepAux_involutive i
-  · haveI : Fact (M i i' ≥ 2) := { out := h }
+  · have : Fact (M i i' ≥ 2) := { out := h }
     rw [←orderOf_geomRepAux_mul_geomRepAux₂ i i']
     apply pow_orderOf_eq_one
 
@@ -559,7 +561,7 @@ theorem orderOf_geomRep_simple_mul_simple (i i' : B W) :
   rcases (show M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 by lia) with h | h | h
   · rw [h, orderOf_geomRepAux_mul_geomRepAux₀ i i' h]
   · rw [h, orderOf_geomRepAux_mul_geomRepAux₁ i i' h]
-  · haveI : Fact (M i i' ≥ 2) := { out := h }
+  · have : Fact (M i i' ≥ 2) := { out := h }
     exact orderOf_geomRepAux_mul_geomRepAux₂ i i'
 
 theorem orderOf_simple_mul_simple (i i' : B W) : orderOf (cs.simple i * cs.simple i') = M i i' := by

@@ -301,9 +301,9 @@ private theorem chooseReducedSubword_inj {w : W} (ω : ReducedWord w) :
 
 theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
   have ω : ReducedWord w := Classical.ofNonempty
-  let f : Set.Icc u w → {μ : List (B W) | μ <+ ω} := @Set.restrict₂ _
+  let f : Set.Icc u w → {μ : List (B W) | μ <+ ω} := @Set.domRestrict₂ _
     (fun _ => {μ : List (B W) | μ <+ ω}) _ _ Set.Icc_subset_Iic_self (chooseReducedSubword ω)
-  haveI : Finite {x | x <+ ω.val} := finite_sublist _
+  have : Finite {x | x <+ ω.val} := finite_sublist _
   apply Finite.of_injective f
   intro x y h
   apply chooseReducedSubword_inj ω at h
@@ -324,7 +324,7 @@ theorem card_Icc_le (u w : W) : (Finset.Icc u w).card ≤ 2 ^ cs.length w := by
     intro x y h
     rw [Subtype.mk.injEq, Subtype.val_inj] at h
     apply chooseReducedSubword_inj ω at h
-    rwa [Subtype.mk.injEq, Subtype.val_inj] at h
+    grind
   rw [←ω.length_eq, ←length_sublists]
   exact (Finset.card_le_card_of_injective hf_inj).trans (toFinset_card_le _)
 
@@ -524,7 +524,7 @@ theorem finite_of_orderTop [OrderTop W] : Finite W := by
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) -/
 theorem finite_of_exists_all_isLeftDescent (h : ∃ x : W, ∀ (i : B W), cs.IsLeftDescent x i) :
   Finite W := by
-  haveI : OrderTop W := {
+  have : OrderTop W := {
     top := h.choose
     le_top := isTop_iff_all_isLeftDescent.mp h.choose_spec
   }
