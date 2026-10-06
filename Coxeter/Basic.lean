@@ -5,7 +5,7 @@ public import Mathlib.GroupTheory.Coxeter.Inversion
 /-!
 # Coxeter groups
 
-We build upon the the theory of Coxeter systems currently available in `mathlib`.
+We build upon the theory of Coxeter systems currently available in `mathlib`.
 
 ## Main definitions
 

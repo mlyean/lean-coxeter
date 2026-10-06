@@ -8,7 +8,7 @@ public import Mathlib.LinearAlgebra.QuadraticForm.Basic
 /-!
 # Bilinear forms
 
-This file relates bilinar forms and matrices, and proves properties about real vector spaces with
+This file relates bilinear forms and matrices, and proves properties about real vector spaces with
 positive definite symmetric bilinear forms.
 -/
 

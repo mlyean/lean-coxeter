@@ -6,7 +6,7 @@ We formalize in Lean some results on Coxeter groups, following the textbooks [[1
     * Basic definitions and lemmas
     * The opposite of a Coxeter group
 * [PermutationRepresentation.lean](Coxeter/PermutationRepresentation.lean)
-    * Construction of the permutation repersentation
+    * Construction of the permutation representation
 * [StrongExchange.lean](Coxeter/StrongExchange.lean)
     * Strong exchange
     * Deletion property
@@ -16,7 +16,7 @@ We formalize in Lean some results on Coxeter groups, following the textbooks [[1
     * Lifting property
     * The longest element of a finite Coxeter group
 * [GeometricRepresentation.lean](Coxeter/GeometricRepresentation.lean)
-    * Construction of the geometric repersentation
+    * Construction of the geometric representation
     * Order of $s_i s_{i'}$
     * Injectivity of `cs.simple`
 
