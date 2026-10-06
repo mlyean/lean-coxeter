@@ -71,10 +71,10 @@ theorem reflect_reflect {x y : E} (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) :
         rw [inner_add_left, inner_smul_left, inner_smul_left]
         simp [hx]
       · match_scalars
-        · simp only [neg_mul, mul_one, sub_neg_eq_add]
+        · simp only [neg_mul, sub_neg_eq_add]
           rw [cos_two_nsmul, ←Real.Angle.cos_sq_add_sin_sq]
           ring
-        · simp only [neg_mul, mul_one, neg_neg]
+        · simp only [neg_mul, neg_neg]
           rw [Real.Angle.sin_two_nsmul]
           ring
   | 1 =>
@@ -97,10 +97,9 @@ theorem reflect_reflect {x y : E} (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) :
         rw [inner_add_left, inner_smul_left, inner_smul_left]
         simp [hx]
       · match_scalars
-        · simp only [mul_one]
-          rw [cos_two_nsmul, ←Real.Angle.cos_sq_add_sin_sq]
+        · rw [cos_two_nsmul, ←Real.Angle.cos_sq_add_sin_sq]
           ring
-        · simp only [mul_one, neg_inj]
+        · simp only [neg_inj]
           rw [Real.Angle.sin_two_nsmul]
           ring
 
