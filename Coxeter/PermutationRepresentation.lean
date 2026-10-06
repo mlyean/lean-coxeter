@@ -80,9 +80,8 @@ theorem permRepAux_nil : permRepAux ([] : List (B W)) = id := by
 
 theorem permRepAux_append (ω₁ ω₂ : List (B W)) :
   permRepAux (ω₁ ++ ω₂) = permRepAux ω₁ ∘ permRepAux ω₂ := by
-  ext ⟨⟨t, _⟩, ε⟩
-  simp only [Function.comp]
-  unfold permRepAux
+  ext r
+  simp only [permRepAux, Function.comp]
   dsimp
   rw [add_assoc, reverse_append, etaAux_append, wordProd_reverse, inv_inv]
   congr 2
@@ -111,7 +110,7 @@ theorem permRepAux_alternatingWord (i i' : B W) :
     rw [ext_get_iff]
     simp only [length_take, length_drop, length_leftInvSeq, length_alternatingWord]
     constructor
-    · grind
+    · lia
     · intro n h _
       rw [lt_inf_iff] at h
       simp only [get_eq_getElem, getElem_take, getElem_drop]

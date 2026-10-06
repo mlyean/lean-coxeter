@@ -631,7 +631,6 @@ theorem antitone_mul_w₀ : Antitone (Equiv.mulRight (w₀ : W)) := by
       rw [←ht, mul_assoc, lt_reflection_mul_self_iff h2]
       simp only [IsLeftInversion, h2, true_and, not_lt]
       rw [←mul_assoc, length_mul_w₀, length_mul_w₀, ht]
-      have := length_le_length_w₀ w
       lia
 
 theorem strictAnti_mul_w₀ : StrictAnti (Equiv.mulRight (w₀ : W)) :=

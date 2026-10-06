@@ -47,26 +47,23 @@ theorem bil_isSymm : (@bil W _).IsSymm := by
   rw [LinearMap.BilinForm.isSymm_iff_basis stdBasis]
   intro i i'
   unfold bil
-  repeat rw [@Matrix.toBilin_single (B := fun i i' ↦ -cos (π / ↑(M.M i i')))]
+  repeat rw [@Matrix.toBilin_single (B := fun i i' ↦ -cos (π / M.M i i'))]
   rw [M.symmetric i i']
 
 @[simp]
 theorem bil_eq (i i' : B W) : bil (stdBasis i) (stdBasis i') = -cos (π / M i i') := by
   unfold bil
-  rw [@Matrix.toBilin_single (B := fun i i' ↦ -cos (π / ↑(M.M i i')))]
+  rw [@Matrix.toBilin_single (B := fun i i' ↦ -cos (π / M.M i i'))]
 
 @[simp]
 theorem bil_diag (i : B W) : bil (stdBasis i) (stdBasis i) = 1 := by
-  rw [bil_eq]
-  simp
+  norm_num
 
 theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis i') ≤ 0 := by
   rw [bil_eq, neg_nonpos]
   apply cos_nonneg_of_neg_pi_div_two_le_of_le
-  · trans 0
-    · rw [neg_nonpos]
-      positivity
-    · positivity
+  · rw [neg_le_iff_add_nonneg]
+    positivity
   · cases Nat.eq_zero_or_pos (M i i') with
     | inl h2 =>
         rw [h2]
