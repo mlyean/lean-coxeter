@@ -114,7 +114,7 @@ theorem sup_orthogonal_eq_top (B : LinearMap.BilinForm ℝ V)
   let u : W := ∑ (i : Fin (Module.finrank ℝ W)), B x (v i) • v i
   exists u
   refine ⟨u.prop, x - u, ?_, by simp⟩
-  rw [Submodule.mem_orthogonalBilin_iff]
+  rw [Submodule.mem_orthogonalBilin]
   conv =>
     intro
     rw [hB1.eq, ←LinearMap.mem_ker]
