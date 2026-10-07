@@ -176,9 +176,8 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
         · simp [M.symmetric i' i, h2]
     · absurd h2
       exact M.off_diagonal i i' h
-    · have : M i i' ≠ 0 := by lia
-      simp only [ne_eq, LinearMap.BilinForm.restrict_apply, LinearMap.domRestrict_apply,
-        Subtype.forall, Submodule.mk_eq_zero, this, not_false_eq_true, iff_true]
+    · simp only [ne_eq, LinearMap.BilinForm.restrict_apply, LinearMap.domRestrict_apply,
+        Subtype.forall, Submodule.mk_eq_zero, show M i i' ≠ 0 by lia, not_false_eq_true, iff_true]
       intro z hz1 hz2
       apply lt_of_le_of_ne
       · exact (bil_restrict_E_nonneg i i').nonneg ⟨z, hz1⟩
@@ -239,7 +238,7 @@ theorem geomRepAux_E_2 (i i' : B W)
 theorem restrict_geomRepAux_mul (i i' : B W) :
   (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
   = (geomRepAux i).restrict (geomRepAux_E_left i i')
-    ∘ₗ (geomRepAux i').restrict (geomRepAux_E_right i i') := by rfl
+    ∘ₗ (geomRepAux i').restrict (geomRepAux_E_right i i') := rfl
 
 section infinite_order
 
@@ -264,8 +263,7 @@ theorem geomRepAux_mul_geomRepAux_pow₀ (h : M i i' = 0) (n : ℕ) :
     simp only [geomRepAux_apply, bil_eq, mul_neg, neg_smul, sub_neg_eq_add, map_add,
       map_smul, smul_add]
     rw [M.symmetric i' i, h]
-    simp
-    module
+    simp; module
   suffices ((geomRepAux i * geomRepAux i') ^ n) (stdBasis i) = (2 * n) • u + stdBasis i ∧
     ((geomRepAux i * geomRepAux i') ^ n) u = u from this.1
   induction n with
@@ -361,9 +359,7 @@ theorem orderOf_geomRepAux_mul_geomRepAux_eq_orderOf_restrict (m : ℕ) :
   constructor
   · intro h2
     ext ⟨x, hx⟩ : 1
-    rw [LinearMap.restrict_apply]
-    simp only [Module.End.one_apply, Subtype.mk.injEq]
-    rw [Module.End.pow_apply]
+    rw [LinearMap.restrict_apply, Module.End.one_apply, Subtype.mk.injEq, Module.End.pow_apply]
     have := LinearEquiv.congr_fun h2 x
     rwa [LinearEquiv.pow_apply] at this
   · intro h2
