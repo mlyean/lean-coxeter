@@ -80,16 +80,16 @@ def geomRepAux (i : B W) : V W ≃ₗ[ℝ] V W where
   invFun x := x - (2 * bil (stdBasis i) x) • stdBasis i
   map_add' := by
     repeat intro
-    match_scalars <;> simp; ring
+    simp; module
   map_smul' := by
     repeat intro
-    match_scalars <;> simp; ring
+    simp; module
   left_inv := by
     repeat intro
-    match_scalars <;> simp; ring
+    simp; module
   right_inv := by
     repeat intro
-    match_scalars <;> simp; ring
+    simp; module
 
 theorem geomRepAux_apply (i : B W) (x : V W) :
   geomRepAux i x = x - (2 * bil (stdBasis i) x) • stdBasis i := rfl
@@ -107,8 +107,7 @@ theorem orderOf_geomRepAux_mul_geomRepAux₁ (i i' : B W) (h : M i i' = 1) :
 @[simp]
 theorem geomRepAux_stdBasis (i : B W) : geomRepAux i (stdBasis i) = -stdBasis i := by
   rw [geomRepAux_apply, bil_diag]
-  match_scalars
-  norm_num
+  module
 
 def E (i i' : B W) : Submodule ℝ (V W) := supported ℝ _ {i, i'}
 
@@ -211,10 +210,11 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
 theorem geomRepAux_E_perp_left (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i z = z := by
   intro z hz
-  rw [geomRepAux_apply, sub_eq_self, hz (stdBasis i), mul_zero, zero_smul]
-  rw [E_eq_span]
-  apply Submodule.mem_span_of_mem
-  simp
+  rw [geomRepAux_apply, hz]
+  · module
+  · rw [E_eq_span]
+    apply Submodule.mem_span_of_mem
+    tauto
 
 theorem geomRepAux_E_perp_right (i i' : B W) :
   ∀ z ∈ (E i i').orthogonalBilin bil, geomRepAux i' z = z := by
@@ -234,7 +234,6 @@ theorem geomRepAux_E_right (i i' : B W) : Set.MapsTo (geomRepAux i') (E i i') (E
 
 theorem geomRepAux_E_2 (i i' : B W)
   : Set.MapsTo (geomRepAux i * geomRepAux i') (E i i') (E i i') := by
-  change Set.MapsTo (geomRepAux i ∘ geomRepAux i') (E i i') (E i i')
   exact (geomRepAux_E_left i i').comp (geomRepAux_E_right i i')
 
 theorem restrict_geomRepAux_mul (i i' : B W) :
@@ -265,7 +264,8 @@ theorem geomRepAux_mul_geomRepAux_pow₀ (h : M i i' = 0) (n : ℕ) :
     simp only [geomRepAux_apply, bil_eq, mul_neg, neg_smul, sub_neg_eq_add, map_add,
       map_smul, smul_add]
     rw [M.symmetric i' i, h]
-    match_scalars <;> simp; ring
+    simp
+    module
   suffices ((geomRepAux i * geomRepAux i') ^ n) (stdBasis i) = (2 * n) • u + stdBasis i ∧
     ((geomRepAux i * geomRepAux i') ^ n) u = u from this.1
   induction n with
@@ -273,7 +273,7 @@ theorem geomRepAux_mul_geomRepAux_pow₀ (h : M i i' = 0) (n : ℕ) :
   | succ n ih =>
       constructor
       · rw [pow_succ, LinearEquiv.mul_apply, h4, map_add, ih.1, map_nsmul, ih.2]
-        match_scalars <;> ring
+        module
       · rw [pow_succ, LinearEquiv.mul_apply, h3, ih.2]
 
 theorem orderOf_geomRepAux_mul_geomRepAux₀ (h : M i i' = 0) :
@@ -283,17 +283,14 @@ theorem orderOf_geomRepAux_mul_geomRepAux₀ (h : M i i' = 0) :
   have h3 := LinearEquiv.congr_fun h2 (stdBasis i)
   rw [geomRepAux_mul_geomRepAux_pow₀ i i' h n] at h3
   simp only [smul_add, LinearEquiv.coe_one, id_eq, add_eq_right] at h3
-  have h4 : i ≠ i' := by
-    intro heq
-    rw [heq] at h
-    simp at h
-  unfold stdBasis at h3
-  simp only [coe_basisSingleOne, smul_single, nsmul_eq_mul, Nat.cast_mul, Nat.cast_ofNat,
-    mul_one] at h3
-  rw [Finsupp.ext_iff] at h3
-  specialize h3 i
-  simp [h4] at h3
-  lia
+  have h4 := stdBasis.linearIndepOn {i, i'}
+  rw [LinearIndepOn.pair_iff] at h4
+  · repeat rw [←Nat.cast_smul_eq_nsmul ℝ] at h3
+    have := h4 _ _ h3
+    norm_num at this
+    lia
+  · contrapose h
+    simp [h]
 
 end infinite_order
 
