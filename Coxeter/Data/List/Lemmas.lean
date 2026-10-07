@@ -1,9 +1,16 @@
+/-
+Copyright (c) 2026 Ming Yean Lim. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Ming Yean Lim
+-/
 module
 
 public import Mathlib.Algebra.Group.Basic
 public import Mathlib.Algebra.Group.Nat.Defs
 public import Mathlib.Data.List.Sublists
 public import Mathlib.Data.Set.Finite.Basic
+
+/-! Lemmas about lists -/
 
 @[expose] public section
 
