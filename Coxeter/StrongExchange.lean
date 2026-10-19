@@ -6,6 +6,7 @@ Authors: Ming Yean Lim
 module
 
 public import Mathlib.Data.List.Palindrome
+public import Mathlib.Data.List.GetD
 public import Coxeter.PermutationRepresentation
 public import Coxeter.Data.List.Lemmas
 

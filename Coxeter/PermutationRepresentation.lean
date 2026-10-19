@@ -5,6 +5,7 @@ Authors: Ming Yean Lim
 -/
 module
 
+public import Mathlib.Tactic.Group
 public import Coxeter.Basic
 
 /-!
@@ -250,6 +251,7 @@ theorem eta_eq_one_iff {t w : W} : η w t = 1 ↔ cs.IsLeftInversion w t := by
 theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
   rw [←eta_eq_one_iff]
   unfold ZMod
+  cases η w t
   grind
 
 /-! ### Properties of the permutation representation -/
