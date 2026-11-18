@@ -252,6 +252,7 @@ theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := 
   rw [←eta_eq_one_iff]
   unfold ZMod
   cases η w t
+  norm_num
   grind
 
 /-! ### Properties of the permutation representation -/

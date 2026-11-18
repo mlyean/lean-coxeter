@@ -106,7 +106,7 @@ theorem orderOf_geomRepAux_mul_geomRepAux₁ (i i' : B W) (h : M i i' = 1) :
   rw [(M.off_diagonal i i').mtr h, orderOf_eq_one_iff]
   apply LinearEquiv.ext
   intro x
-  simp only [LinearEquiv.mul_apply, LinearEquiv.coe_one, id_eq]
+  rw [mul_apply_eq_comp, one_apply_eq_self]
   apply geomRepAux_involutive
 
 @[simp]
@@ -151,8 +151,8 @@ theorem bil_restrict_E_nonneg (i i' : B W) : (bil.restrict (E i i')).IsNonneg :=
   intro ⟨z, hz⟩
   rw [mem_E_iff] at hz
   obtain ⟨x, y, h⟩ := hz
-  simp only [LinearMap.BilinForm.restrict_apply, LinearMap.domRestrict_apply]
-  rw [h, bil_restrict_E_diag]
+  rw [LinearMap.BilinForm.restrict_apply, LinearMap.domRestrict_apply, Subtype.coe_mk,
+    h, bil_restrict_E_diag]
   positivity
 
 /-- Bourbaki Ch V, §4, Proposition 1 -/
@@ -172,9 +172,9 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
       exists ⟨cos (π / M i i') • stdBasis i + 1 • stdBasis i', ?_⟩
       · rw [mem_E_iff]
         exists cos (π / M i i'), 1
-        simp only [one_smul]
+        norm_num
       · constructor
-        · simp only [one_smul, ne_eq, Submodule.mk_eq_zero]
+        · norm_num
           rw [←ne_eq, Finsupp.ne_iff]
           exists i'
           simp [stdBasis, h]
@@ -260,11 +260,11 @@ theorem geomRepAux_mul_geomRepAux_pow₀ (h : M i i' = 0) (n : ℕ) :
     rw [←hu, map_add, bil_eq, M.symmetric i' i, h]
     simp
   have h3 : (geomRepAux i * geomRepAux i') u = u := by
-    rw [LinearEquiv.mul_apply]
+    rw [mul_apply_eq_comp]
     nth_rw 2 [geomRepAux_apply]
     rw [h2, mul_zero, zero_smul, sub_zero, geomRepAux_apply, h1, mul_zero, zero_smul, sub_zero]
   have h4 : (geomRepAux i * geomRepAux i') (stdBasis i) = 2 • u + stdBasis i := by
-    rw [LinearEquiv.mul_apply, ←hu]
+    rw [mul_apply_eq_comp, ←hu]
     simp only [geomRepAux_apply, bil_eq, mul_neg, neg_smul, sub_neg_eq_add, map_add,
       map_smul, smul_add]
     rw [M.symmetric i' i, h]
@@ -275,17 +275,16 @@ theorem geomRepAux_mul_geomRepAux_pow₀ (h : M i i' = 0) (n : ℕ) :
   | zero => simp
   | succ n ih =>
       constructor
-      · rw [pow_succ, LinearEquiv.mul_apply, h4, map_add, ih.1, map_nsmul, ih.2]
+      · rw [pow_succ, mul_apply_eq_comp, h4, map_add, ih.1, map_nsmul, ih.2]
         module
-      · rw [pow_succ, LinearEquiv.mul_apply, h3, ih.2]
+      · rw [pow_succ, mul_apply_eq_comp, h3, ih.2]
 
 theorem orderOf_geomRepAux_mul_geomRepAux₀ (h : M i i' = 0) :
   orderOf (geomRepAux i * geomRepAux i') = 0 := by
   rw [orderOf_eq_zero_iff']
   intro n hn h2
   have h3 := LinearEquiv.congr_fun h2 (stdBasis i)
-  rw [geomRepAux_mul_geomRepAux_pow₀ i i' h n] at h3
-  simp only [smul_add, LinearEquiv.coe_one, id_eq, add_eq_right] at h3
+  rw [geomRepAux_mul_geomRepAux_pow₀ i i' h n, smul_add, one_apply_eq_self, add_eq_right] at h3
   have h4 := stdBasis.linearIndepOn {i, i'}
   rw [LinearIndepOn.pair_iff] at h4
   · repeat rw [←Nat.cast_smul_eq_nsmul ℝ] at h3
@@ -364,13 +363,13 @@ theorem orderOf_geomRepAux_mul_geomRepAux_eq_orderOf_restrict (m : ℕ) :
   constructor
   · intro h2
     ext ⟨x, hx⟩ : 1
-    rw [LinearMap.restrict_apply, Module.End.one_apply, Subtype.mk.injEq, Module.End.pow_apply]
+    rw [LinearMap.restrict_apply, one_apply_eq_self, Subtype.mk.injEq, pow_apply_eq_iterate]
     have := LinearEquiv.congr_fun h2 x
-    rwa [LinearEquiv.pow_apply] at this
+    rwa [pow_apply_eq_iterate] at this
   · intro h2
     apply LinearEquiv.ext
     intro z
-    simp only [LinearEquiv.coe_one, id_eq]
+    rw [one_apply_eq_self]
     have h3 := E_sup_orthogonal i i'
     rw [Submodule.sup_eq_top_iff] at h3
     have ⟨u, hu, v, hv, hz⟩ := h3 z
@@ -379,9 +378,9 @@ theorem orderOf_geomRepAux_mul_geomRepAux_eq_orderOf_restrict (m : ℕ) :
     congr
     · have := LinearMap.congr_fun h2 ⟨u, hu⟩
       rw [LinearMap.restrict_apply] at this
-      simp only [Module.End.one_apply, Subtype.mk.injEq] at this
-      rw [Module.End.pow_apply] at this
-      rwa [LinearEquiv.pow_apply]
+      simp only [one_apply_eq_self, Subtype.mk.injEq] at this
+      rw [pow_apply_eq_iterate] at this
+      rwa [pow_apply_eq_iterate]
     · clear h2
       induction m with
       | zero => simp
@@ -392,12 +391,8 @@ theorem orderOf_geomRepAux_mul_geomRepAux_eq_orderOf_restrict (m : ℕ) :
 
 instance : PreInnerProductSpace.Core ℝ (E i i') where
   inner x y := bil.restrict (E i i') x y
-  conj_inner_symm x y := by
-    simp only [conj_trivial]
-    apply bil_isSymm.eq
-  re_inner_nonneg := by
-    simp only [RCLike.re_to_real]
-    exact (bil_restrict_E_nonneg i i').nonneg
+  conj_inner_symm x y := bil_isSymm.eq _ _
+  re_inner_nonneg := (bil_restrict_E_nonneg i i').nonneg
   add_left := by simp
   smul_left := by simp
 
@@ -410,10 +405,9 @@ instance : InnerProductSpace.Core ℝ (E i i') where
       · lia
       · intro h3
         simp [h3] at h2
-    unfold LinearMap.BilinForm.Nondegenerate at h3
-    rw [LinearMap.BilinForm.nondegenerate_iff] at h3
-    · rwa [h3 x] at h
-    · exact (bil_restrict_E_nonneg i i').nonneg
+    rw [LinearMap.BilinForm.Nondegenerate,
+      LinearMap.BilinForm.nondegenerate_iff _ (bil_restrict_E_nonneg i i').nonneg ?_] at h3
+    · grind
     · rw [←LinearMap.BilinForm.isSymm_iff]
       exact bil_restrict_E_isSymm i i'
 
@@ -447,8 +441,7 @@ theorem oangle_stdBasisE : ∃ (o : Orientation ℝ (E i i') (Fin 2)),
   let o := (stdBasisE i i').orientation
   have h2 := o.inner_eq_norm_mul_norm_mul_cos_oangle (stdBasisE i i' 0) (stdBasisE i i' 1)
   symm at h2
-  simp only [Fin.isValue, inner_stdBasisE_0_1, norm_stdBasisE_0, norm_stdBasisE_1, mul_one,
-    one_mul] at h2
+  simp only [norm_stdBasisE_0, norm_stdBasisE_1, one_mul, inner_stdBasisE_0_1] at h2
   rw [←cos_pi_sub, Angle.cos_eq_real_cos_iff_eq_or_eq_neg] at h2
   cases h2 with
   | inl h2 =>
@@ -514,7 +507,7 @@ theorem orderOf_geomRepAux_mul_geomRepAux₂ : orderOf (geomRepAux i * geomRepAu
   constructor
   · rw [orderOf_geomRepAux_mul_geomRepAux_eq_orderOf_restrict, ho]
     ext x : 1
-    rw [Module.End.one_apply, Module.End.pow_apply, LinearEquiv.coe_coe,
+    rw [one_apply_eq_self, pow_apply_eq_iterate, LinearEquiv.coe_coe,
       LinearIsometryEquiv.coe_toLinearEquiv, ←rot_pow, h2.1]
     rfl
   · intro m hm1 hm2 h3
@@ -522,8 +515,8 @@ theorem orderOf_geomRepAux_mul_geomRepAux₂ : orderOf (geomRepAux i * geomRepAu
     rw [orderOf_geomRepAux_mul_geomRepAux_eq_orderOf_restrict, ho] at h3
     ext x : 1
     have : ((o.rotation (Angle.coe (2 * π / M i i'))).toLinearEquiv.toLinearMap ^ m) x = x := by
-      simp_all only [ge_iff_le, LinearEquiv.coe_toLinearMap_mul, ne_eq, Module.End.one_apply]
-    rw [Module.End.pow_apply, LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv] at this
+      simp_all only [ge_iff_le, LinearEquiv.coe_toLinearMap_mul, ne_eq, one_apply_eq_self]
+    rw [pow_apply_eq_iterate, LinearEquiv.coe_coe, LinearIsometryEquiv.coe_toLinearEquiv] at this
     nth_rw 2 [←this]
     apply rot_pow
 
