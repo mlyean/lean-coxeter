@@ -5,7 +5,8 @@ Authors: Ming Yean Lim
 -/
 module
 
-public import Mathlib.Order.Preorder.Finite
+-- public import Mathlib.Order.Preorder.Finite
+public import Mathlib.Data.Fintype.Order
 
 /-! Lemmas about directed orders -/
 
@@ -15,11 +16,8 @@ namespace Coxeter
 
 @[implicit_reducible]
 noncomputable def orderTop_ofFiniteDirectedOrder {α : Type*}
-  [Nonempty α] [Preorder α] [Finite α] [IsDirectedOrder α] : OrderTop α where
-  top := (Set.finite_univ.exists_maximal Set.univ_nonempty).choose
-  le_top := by
-    apply IsMax.isTop
-    intro a
-    exact (Set.finite_univ.exists_maximal Set.univ_nonempty).choose_spec.2 (Set.mem_univ a)
+  [Finite α] [Nonempty α] [Preorder α] [IsDirectedOrder α] : OrderTop α where
+  top := (Finite.exists_le id).choose
+  le_top := (Finite.exists_le id).choose_spec
 
 end Coxeter
