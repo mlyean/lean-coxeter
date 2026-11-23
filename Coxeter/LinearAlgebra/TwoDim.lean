@@ -116,10 +116,8 @@ theorem reflect_reflect_apply {x y : E} (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) (v
 
 theorem rotation_inj : Injective o.rotation := by
   intro θ₁ θ₂ h
-  have ⟨x, hx⟩ : ∃ (x : E), x ≠ 0 := by
-    have b := Module.finBasisOfFinrankEq ℝ E hdim2.out
-    exists b 0
-    exact Basis.ne_zero b 0
+  have : Nontrivial E := nontrivial_of_finrank_eq_succ hdim2.out
+  obtain ⟨x, hx⟩ := exists_ne (0 : E)
   have h2 : o.rotation (θ₂ - θ₁) (o.rotation θ₁ x) = o.rotation θ₁ x := by
     simp only [Orientation.rotation_rotation, sub_add_cancel]
     rw [h]

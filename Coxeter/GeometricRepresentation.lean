@@ -160,7 +160,7 @@ theorem bil_restrict_E_nondegenerate_iff (i i' : B W) (h : i ≠ i') :
   (bil.restrict (E i i')).Nondegenerate ↔ M i i' ≠ 0 := by
   unfold LinearMap.BilinForm.Nondegenerate
   rw [LinearMap.BilinForm.nondegenerate_iff']
-  · rcases (show M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 by lia) with h2 | h2 | h2
+  · obtain h2 | h2 | h2 : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
     · rw [h2]
       simp only [ne_eq,  not_true_eq_false, iff_false]
       push Not
@@ -231,9 +231,8 @@ theorem geomRepAux_E_right (i i' : B W) : Set.MapsTo (geomRepAux i') (E i i') (E
   rw [E_symm]
   apply geomRepAux_E_left
 
-theorem geomRepAux_E_2 (i i' : B W)
-  : Set.MapsTo (geomRepAux i * geomRepAux i') (E i i') (E i i') := by
-  exact (geomRepAux_E_left i i').comp (geomRepAux_E_right i i')
+theorem geomRepAux_E_2 (i i' : B W) : Set.MapsTo (geomRepAux i * geomRepAux i') (E i i') (E i i') :=
+  (geomRepAux_E_left i i').comp (geomRepAux_E_right i i')
 
 theorem restrict_geomRepAux_mul (i i' : B W) :
   (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
@@ -301,9 +300,9 @@ theorem index_ne : i ≠ i' := by
   subst heq
   simp at h
 
-open Classical in
+open scoped Classical in
 def e : ({i, i'} : Set (B W)) ≃ Fin 2 where
-  toFun := fun x => if x.val = i then 0 else 1
+  toFun x := if x.val = i then 0 else 1
   invFun
   | 0 => ⟨i, by tauto⟩
   | 1 => ⟨i', by tauto⟩
@@ -513,7 +512,7 @@ end finite_order
 
 theorem geomRepAux_liftable : (@M W).IsLiftable geomRepAux := by
   intro i i'
-  rcases (show M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 by lia) with h | h | h
+  obtain h | h | h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
   · rw [h, pow_zero]
   · rw [h, ←(M.off_diagonal i i').mtr h]
     ext : 1
@@ -535,7 +534,7 @@ theorem geomRep_simple_apply (i : B W) (x : V W) :
 theorem orderOf_geomRep_simple_mul_simple (i i' : B W) :
   orderOf (geomRep (cs.simple i * cs.simple i')) = M i i' := by
   rw [map_mul, geomRep_simple, geomRep_simple]
-  rcases (show M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 by lia) with h | h | h
+  obtain h | h | h : M i i' = 0 ∨ M i i' = 1 ∨ M i i' ≥ 2 := by lia
   · rw [h, orderOf_geomRepAux_mul_geomRepAux₀ i i' h]
   · rw [h, orderOf_geomRepAux_mul_geomRepAux₁ i i' h]
   · have : Fact (M i i' ≥ 2) := { out := h }

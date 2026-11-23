@@ -63,7 +63,7 @@ noncomputable section construction
 
 /-! ### Construction of the permutation representation -/
 
-open Classical in
+open scoped Classical in
 def etaAux (ω : List (B W)) (t : W) : ZMod 2 := count t (cs.leftInvSeq ω)
 
 theorem etaAux_append (μ ω : List (B W)) (t : W) :
@@ -154,7 +154,7 @@ theorem permRepAux_liftable : (@M W).IsLiftable permRepAux_equiv := by
 /-- Bjorner--Brenti Theorem 1.3.2 (i): extension -/
 def permRep : W →* Equiv.Perm (AbstractRootSet W) := cs.lift ⟨permRepAux_equiv, permRepAux_liftable⟩
 
-open Classical in
+open scoped Classical in
 def eta (w t : W) : ZMod 2 := count t (cs.leftInvSeq (cs.wordProd_surjective w).choose)
 
 end construction
@@ -173,7 +173,7 @@ theorem permRep_wordProd_eq_permRepAux (ω : List (B W)) :
 
 /-! ### Properties of $η$ -/
 
-open Classical in
+open scoped Classical in
 theorem eta_spec (ω : List (B W)) (t : W) : η (cs.wordProd ω) t = count t (cs.leftInvSeq ω) := by
   by_cases ht : cs.IsReflection t
   · have h : permRep (cs.wordProd ((cs.wordProd_surjective (cs.wordProd ω))).choose.reverse)
