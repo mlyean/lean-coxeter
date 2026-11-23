@@ -141,7 +141,7 @@ variable {w : W}
 instance : CoeOut (ReducedWord w) (List (B W)) where
   coe := Subtype.val
 
-instance : Nonempty (ReducedWord w) := ⟨(Classical.indefiniteDescription _ (cs.exists_isReduced w))⟩
+instance : Nonempty (ReducedWord w) := nonempty_subtype.mpr (cs.exists_isReduced w)
 
 namespace ReducedWord
 
