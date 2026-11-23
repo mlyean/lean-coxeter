@@ -30,22 +30,16 @@ noncomputable def LinearMap.BilinForm.toMatrix :
   LinearMap.BilinForm R M ≃ₗ[R] Matrix ι ι R where
   toFun B i j := B (b i) (b j)
   invFun B := b.constr R ((b.constr R) ∘ B)
-  map_add' := by
-    intro B₁ B₂
-    rfl
-  map_smul' := by
-    intro m B
-    rfl
-  left_inv := by
-    intro B
+  map_add' _ _ := rfl
+  map_smul' _ _ := rfl
+  left_inv B := by
     apply b.ext
-    intro i
+    intro
     apply b.ext
-    intro j
+    intro
     simp
-  right_inv := by
-    intro B
-    ext i j
+  right_inv B := by
+    ext
     simp [Function.comp]
 
 /-- Omits the `Fintype` and `DecidableEq` hypotheses from mathlib's version -/
@@ -54,9 +48,7 @@ noncomputable def Matrix.toBilin : Matrix ι ι R ≃ₗ[R] LinearMap.BilinForm 
 
 @[simp]
 theorem Matrix.toBilin_single (B : Matrix ι ι R) (i j : ι) : toBilin b B (b i) (b j) = B i j := by
-  unfold toBilin LinearMap.BilinForm.toMatrix
-  change (((b.constr R) ((b.constr R) ∘ B)) (b i)) (b j) = B i j
-  simp [Function.comp]
+  simp [toBilin, LinearMap.BilinForm.toMatrix, Function.comp]
 
 section real
 
@@ -80,8 +72,7 @@ theorem exists_orthonormal_basis [FiniteDimensional ℝ V] (B : LinearMap.BilinF
     intro i
     unfold LinearMap.BilinForm.Nondegenerate at hB3
     rw [LinearMap.BilinForm.nondegenerate_iff' _ hB2.nonneg hB1] at hB3
-    apply hB3
-    exact v.ne_zero i
+    exact hB3 _ (v.ne_zero i)
   have h2 : ∀ (i : Fin (Module.finrank ℝ V)), IsUnit (1 / sqrt (B (v i) (v i))) := by
     intro i
     apply Ne.isUnit
@@ -90,33 +81,28 @@ theorem exists_orthonormal_basis [FiniteDimensional ℝ V] (B : LinearMap.BilinF
   exists w
   constructor
   · intro i
-    unfold w
     rw [Module.Basis.unitsSMul_apply]
     simp
     grind
   · intro i j h
     change B (w i) (w j) = 0
-    unfold w
-    simp only [Module.Basis.unitsSMul_apply, LinearMap.map_smul_of_tower, LinearMap.smul_apply]
-    rw [hv h]
-    simp
+    simp [w, Module.Basis.unitsSMul_apply, LinearMap.smul_apply, hv h]
 
 variable {W : Submodule ℝ V} [FiniteDimensional ℝ W]
 
 /-- If $V$ is an arbitrary real vector space equipped with a positive definite symmetric
-bilinar form and $W$ is a finite dimensional subspace, then $V$ is a sum of $W$ and its
+bilinear form and $W$ is a finite dimensional subspace, then $V$ is a sum of $W$ and its
 orthogonal complement. -/
 theorem sup_orthogonal_eq_top (B : LinearMap.BilinForm ℝ V)
   (hB1 : B.IsSymm) (hB2 : (B.restrict W).IsNonneg) (hB3 : (B.restrict W).Nondegenerate) :
   W ⊔ W.orthogonalBilin B = ⊤ := by
-  have hB1' : (B.restrict W).IsSymm := by
-    exact hB1.restrict W
+  have hB1' : (B.restrict W).IsSymm := hB1.restrict W
   have ⟨v, hv1, hv2⟩ := exists_orthonormal_basis (B.restrict W) hB1' hB2 hB3
   rw [Submodule.sup_eq_top_iff]
   intro x
   let u : W := ∑ (i : Fin (Module.finrank ℝ W)), B x (v i) • v i
   exists u
-  refine ⟨u.prop, x - u, ?_, by simp⟩
+  refine ⟨u.prop, x - u, ?_, by abel⟩
   rw [Submodule.mem_orthogonalBilin]
   conv =>
     intro

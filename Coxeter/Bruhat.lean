@@ -61,33 +61,20 @@ theorem eq_of_le_of_length_ge {u w : W} (h : u ≤ w) (h2 : cs.length u ≥ cs.l
 theorem eq_of_le_of_length_eq {u w : W} (h : u ≤ w) (h2 : cs.length u = cs.length w) : u = w :=
   eq_of_le_of_length_ge h (ge_of_eq h2)
 
-def lt (u w : W) : Prop := u ≤ w ∧ u ≠ w
-
-instance : LT W where
-  lt := lt
-
-theorem lt_iff_le_and_length_lt (u w : W) : u < w ↔ u ≤ w ∧ cs.length u < cs.length w := by
-  change (u ≤ w ∧ ¬ u = w) ↔ u ≤ w ∧ cs.length u < cs.length w
-  rw [and_congr_right_iff, not_iff_comm, not_lt]
-  intro h
-  refine ⟨eq_of_le_of_length_ge h, ?_⟩
-  intro h2
-  rw [h2]
-
 instance : PartialOrder W where
   le_refl := le.rfl
   le_trans u v w huv hvw := by
     induction hvw with
     | rfl => tauto
     | step v w _ h1 h2 ih => exact le.step u v w ih h1 h2
-  lt_iff_le_not_ge u w := by
-    rw [lt_iff_le_and_length_lt, and_congr_right_iff, iff_not_comm, not_lt]
-    intro h
-    refine ⟨length_le_of_le, ?_⟩
-    intro h2
-    rw [eq_of_le_of_length_ge h h2]
-    apply le.rfl
   le_antisymm u w h1 h2 := eq_of_le_of_length_ge h1 (length_le_of_le h2)
+
+theorem lt_iff_le_and_length_lt (u w : W) : u < w ↔ u ≤ w ∧ cs.length u < cs.length w := by
+  rw [lt_iff_le_and_ne, and_congr_right_iff, not_iff_comm, not_lt]
+  intro h
+  refine ⟨eq_of_le_of_length_ge h, ?_⟩
+  intro h2
+  rw [h2]
 
 theorem monotone_length : Monotone (@cs W).length := by apply length_le_of_le
 
@@ -480,8 +467,8 @@ instance : IsDirectedOrder W where
     induction u using WellFoundedLT.induction with | ind u ih =>
     intro w
     by_cases h : u = 1
-    · exists w
-      rw [h]
+    · subst h
+      exists w
       exact ⟨bot_le, le_refl _⟩
     · have ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
       have hlt : cs.simple i * u < u := by

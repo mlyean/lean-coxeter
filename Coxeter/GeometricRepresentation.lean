@@ -48,21 +48,16 @@ def stdBasis : Module.Basis (B W) ℝ (V W) := Finsupp.basisSingleOne
 
 def bil : LinearMap.BilinForm ℝ (V W) := Matrix.toBilin stdBasis (fun i i' => -cos (π / M i i'))
 
-theorem bil_isSymm : (@bil W _).IsSymm := by
-  rw [LinearMap.BilinForm.isSymm_iff_basis stdBasis]
-  intro i i'
-  unfold bil
-  repeat rw [@Matrix.toBilin_single (B := fun i i' ↦ -cos (π / M.M i i'))]
-  rw [M.symmetric i i']
-
 @[simp]
 theorem bil_eq (i i' : B W) : bil (stdBasis i) (stdBasis i') = -cos (π / M i i') := by
   unfold bil
   rw [@Matrix.toBilin_single (B := fun i i' ↦ -cos (π / M.M i i'))]
 
+theorem bil_isSymm : (@bil W _).IsSymm := by
+  simp [LinearMap.BilinForm.isSymm_iff_basis stdBasis, M.symmetric]
+
 @[simp]
-theorem bil_diag (i : B W) : bil (stdBasis i) (stdBasis i) = 1 := by
-  norm_num
+theorem bil_diag (i : B W) : bil (stdBasis i) (stdBasis i) = 1 := by simp
 
 theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis i') ≤ 0 := by
   rw [bil_eq, neg_nonpos]
@@ -325,26 +320,21 @@ def stdBasisE : Module.Basis (Fin 2) ℝ (E i i') :=
   (Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')
 
 @[simp]
-theorem stdBasisE_0 : stdBasisE i i' 0 = stdBasis i :=
-  calc
-    (((Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')) 0).val
-    = ((Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm) ((e i i').symm 0)).val
-      := by rw [Module.Basis.reindex_apply]
-    _ = stdBasis i := by rw [Module.Basis.map_apply]; simp [stdBasis, e]
+theorem stdBasisE_0 : stdBasisE i i' 0 = stdBasis i := by
+  change (((Finsupp.basisSingleOne.map
+    (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')) 0).val = stdBasis i
+  simp [Module.Basis.reindex_apply, stdBasis, e]
 
 @[simp]
-theorem stdBasisE_1 : stdBasisE i i' 1 = stdBasis i' :=
-  calc
-    (((Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')) 1).val
-    = ((Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm) ((e i i').symm 1)).val
-      := by rw [Module.Basis.reindex_apply]
-    _ = stdBasis i' := by rw [Module.Basis.map_apply]; simp [stdBasis, e]
+theorem stdBasisE_1 : stdBasisE i i' 1 = stdBasis i' := by
+  change (((Finsupp.basisSingleOne.map
+    (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')) 1).val = stdBasis i'
+  simp [Module.Basis.reindex_apply, stdBasis, e]
 
 instance : FiniteDimensional ℝ (E i i') := (stdBasisE i i').finiteDimensional_of_finite
 
 theorem finrank_E_eq_two : Module.finrank ℝ (E i i') = 2 := by
-  rw [Module.finrank_eq_card_basis (stdBasisE i i')]
-  apply Fintype.card_fin
+  simp [Module.finrank_eq_card_basis (stdBasisE i i')]
 
 instance : Fact (Module.finrank ℝ (E i i') = 2) where
   out := finrank_E_eq_two i i'
@@ -411,8 +401,7 @@ instance : InnerProductSpace.Core ℝ (E i i') where
     · rw [←LinearMap.BilinForm.isSymm_iff]
       exact bil_restrict_E_isSymm i i'
 
-instance : NormedAddCommGroup (E i i') :=
-  @InnerProductSpace.Core.toNormedAddCommGroup ℝ (E i i') _ _ _ inferInstance
+instance : NormedAddCommGroup (E i i') := InnerProductSpace.Core.toNormedAddCommGroup (𝕜 := ℝ)
 
 instance : InnerProductSpace ℝ (E i i') := InnerProductSpace.ofCore inferInstance
 

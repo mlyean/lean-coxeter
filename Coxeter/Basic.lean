@@ -27,10 +27,6 @@ class CoxeterGroup (W : Type*) extends Group W where
   M : CoxeterMatrix B
   cs : CoxeterSystem M W
 
-end Coxeter
-
-namespace Coxeter
-
 open List CoxeterSystem CoxeterGroup
 
 variable {W : Type*} [CoxeterGroup W]
