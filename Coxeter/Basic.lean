@@ -150,9 +150,9 @@ def reverse (ω : ReducedWord w) : ReducedWord w⁻¹ :=
   ⟨ω.val.reverse, ω.prop.1.reverse, (congr_arg Inv.inv ω.prop.2).trans (cs.wordProd_reverse _).symm⟩
 
 theorem length_eq (ω : ReducedWord w) : ω.val.length = cs.length w := by
-  rw [←ω.2.1, ←ω.2.2]
+  rw [←ω.property.1, ←ω.property.2]
 
-theorem wordProd_eq (ω : ReducedWord w) : cs.wordProd ω = w := ω.2.2.symm
+theorem wordProd_eq (ω : ReducedWord w) : cs.wordProd ω = w := ω.property.2.symm
 
 end ReducedWord
 
