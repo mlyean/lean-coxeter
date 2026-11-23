@@ -84,9 +84,7 @@ theorem card_of_isLeftInversion (w : W) :
 theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
   ∃ i j, i < j ∧ j < ω.length ∧ cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
   induction ω with
-  | nil =>
-      absurd hω
-      exact isReduced_nil
+  | nil => exact absurd isReduced_nil hω
   | cons k ks ih =>
       by_cases h : cs.IsReduced ks
       · rw [not_isReduced_cons h k] at hω

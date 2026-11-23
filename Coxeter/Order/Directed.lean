@@ -5,7 +5,6 @@ Authors: Ming Yean Lim
 -/
 module
 
--- public import Mathlib.Order.Preorder.Finite
 public import Mathlib.Data.Fintype.Order
 
 /-! Lemmas about directed orders -/

@@ -133,12 +133,8 @@ theorem permRepAux_singleton_involutive (i : B W) : Involutive (permRepAux [i]) 
   have h := permRepAux_alternatingWord i i
   rwa [CoxeterMatrix.diagonal] at h
 
-def permRepAux_equiv (i : B W) : Equiv.Perm (AbstractRootSet W) := {
-  toFun := permRepAux [i]
-  invFun := permRepAux [i]
-  left_inv := permRepAux_singleton_involutive i
-  right_inv := permRepAux_singleton_involutive i
-}
+def permRepAux_equiv (i : B W) : Equiv.Perm (AbstractRootSet W) :=
+    Function.Involutive.toPerm _ (permRepAux_singleton_involutive i)
 
 theorem permRepAux_iterate (i i' : B W) (k : ℕ) :
   (permRepAux [i, i'])^[k] = permRepAux (alternatingWord i i' (2 * k)) := by
@@ -250,10 +246,9 @@ theorem eta_eq_one_iff {t w : W} : η w t = 1 ↔ cs.IsLeftInversion w t := by
 
 theorem eta_eq_zero_iff {t w : W} : η w t = 0 ↔ ¬ cs.IsLeftInversion w t := by
   rw [←eta_eq_one_iff]
-  unfold ZMod
-  cases η w t
-  norm_num
-  grind
+  generalize η w t = a
+  revert a
+  decide
 
 /-! ### Properties of the permutation representation -/
 

@@ -53,8 +53,7 @@ theorem isReduced_cons {ω : List (B W)} (hω : cs.IsReduced ω) (i : B W) :
   rw [not_isLeftDescent_iff, wordProd_cons, length_cons, hω]
 
 theorem not_isReduced_cons {ω : List (B W)} (hω : cs.IsReduced ω) (i : B W) :
-  ¬ cs.IsReduced (i :: ω) ↔ cs.IsLeftDescent (cs.wordProd ω) i :=
-  Iff.not_left (isReduced_cons hω i)
+  ¬ cs.IsReduced (i :: ω) ↔ cs.IsLeftDescent (cs.wordProd ω) i := (isReduced_cons hω i).not_left
 
 theorem isReduced_of_append_left {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) : cs.IsReduced μ :=
   take_left.subst (h.take (μ.length))
