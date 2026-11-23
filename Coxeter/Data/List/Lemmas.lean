@@ -36,8 +36,6 @@ theorem reverse_eraseIdx {l : List α} {i : ℕ} (hi : i < l.length) :
     ←reverse_append, Nat.sub_one_add_one hi, Nat.sub_add_eq]
 
 theorem finite_sublist (l : List α) : {l' : List α | l' <+ l}.Finite := by
-  have h := l.sublists.finite_toSet
-  simp only [mem_sublists] at h
-  assumption
+  simpa [mem_sublists] using l.sublists.finite_toSet
 
 end List

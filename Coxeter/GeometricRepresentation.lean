@@ -320,14 +320,12 @@ def stdBasisE : Module.Basis (Fin 2) ℝ (E i i') :=
 
 @[simp]
 theorem stdBasisE_0 : stdBasisE i i' 0 = stdBasis i := by
-  change (((Finsupp.basisSingleOne.map
-    (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')) 0).val = stdBasis i
+  unfold stdBasisE E
   simp [Module.Basis.reindex_apply, stdBasis, e]
 
 @[simp]
 theorem stdBasisE_1 : stdBasisE i i' 1 = stdBasis i' := by
-  change (((Finsupp.basisSingleOne.map
-    (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')) 1).val = stdBasis i'
+  unfold stdBasisE E
   simp [Module.Basis.reindex_apply, stdBasis, e]
 
 instance : FiniteDimensional ℝ (E i i') := (stdBasisE i i').finiteDimensional_of_finite
@@ -335,8 +333,7 @@ instance : FiniteDimensional ℝ (E i i') := (stdBasisE i i').finiteDimensional_
 theorem finrank_E_eq_two : Module.finrank ℝ (E i i') = 2 := by
   simp [Module.finrank_eq_card_basis (stdBasisE i i')]
 
-instance : Fact (Module.finrank ℝ (E i i') = 2) where
-  out := finrank_E_eq_two i i'
+instance : Fact (Module.finrank ℝ (E i i') = 2) := ⟨finrank_E_eq_two i i'⟩
 
 theorem E_sup_orthogonal : E i i' ⊔ (E i i').orthogonalBilin bil = ⊤ := by
   apply sup_orthogonal_eq_top _ bil_isSymm (bil_restrict_E_nonneg i i')
@@ -464,7 +461,7 @@ theorem restrict_geomRepAux_right_eq_reflect :
   rw [LinearMap.BilinForm.restrict_apply, stdBasisE_1]
   rfl
 
-theorem restrict_geomRepAux_mul_geomRep_aux_eq_rotate : ∃ (o : Orientation ℝ (E i i') (Fin 2)),
+theorem restrict_geomRepAux_mul_geomRepAux_eq_rotate : ∃ (o : Orientation ℝ (E i i') (Fin 2)),
   (geomRepAux i * geomRepAux i').restrict (geomRepAux_E_2 i i')
   = (o.rotation (2 * π / M i i' : ℝ)).toLinearMap := by
   have h := (inferInstance : Fact (M i i' ≥ 2)).out
@@ -481,7 +478,7 @@ theorem restrict_geomRepAux_mul_geomRep_aux_eq_rotate : ∃ (o : Orientation ℝ
 
 theorem orderOf_geomRepAux_mul_geomRepAux₂ : orderOf (geomRepAux i * geomRepAux i') = M i i' := by
   have h := (inferInstance : Fact (M i i' ≥ 2)).out
-  have ⟨o, ho⟩ := restrict_geomRepAux_mul_geomRep_aux_eq_rotate i i'
+  have ⟨o, ho⟩ := restrict_geomRepAux_mul_geomRepAux_eq_rotate i i'
   have h2 := order_rotation_two_pi_div o (M i i') (by lia)
   rw [orderOf_eq_iff (by lia)] at h2 ⊢
   have rot_pow : ∀ (m : ℕ) (x : E i i'), (o.rotation (Angle.coe (2 * π / M i i')) ^ m) x

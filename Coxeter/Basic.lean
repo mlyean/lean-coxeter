@@ -68,12 +68,12 @@ theorem leftInvSeq_append (μ ω : List (B W)) :
   | cons i μ ih =>
       simp [leftInvSeq, ih, wordProd_cons]
 
-theorem tail_alternatingWord (i j : (B W)) (p : ℕ) :
+theorem tail_alternatingWord (i j : B W) (p : ℕ) :
   tail (alternatingWord i j (p + 1)) = alternatingWord i j p := by
   rw [alternatingWord_succ']
   rfl
 
-theorem drop_alternatingWord (i j : (B W)) (p q : ℕ) :
+theorem drop_alternatingWord (i j : B W) (p q : ℕ) :
   drop p (alternatingWord i j (p + q)) = alternatingWord i j q := by
   induction p generalizing q with
   | zero => simp
@@ -178,7 +178,7 @@ theorem wordProd_op (ω : List (B W)) : (@cs Wᵐᵒᵖ).wordProd ω = op (cs.wo
       rw [wordProd_cons, reverse_cons, wordProd_append, op_mul, hi, wordProd_singleton, simple_op]
 
 theorem length_op (w : W) : cs.length (op w) = cs.length w := by
-  apply eq_of_le_of_ge
+  apply le_antisymm
   · have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
     rw [hω2, hω1]
     nth_rw 1 [←reverse_reverse ω, ←wordProd_op, ←length_reverse]

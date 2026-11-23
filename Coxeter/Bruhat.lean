@@ -218,7 +218,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
   let ν : ReducedWord v := ⟨ν', ?_, rfl⟩
   · refine ⟨hν2, ?_, ν, hν1⟩
     rwa [←ν.length_eq]
-  · apply eq_of_le_of_ge (length_wordProd_le ..)
+  · apply le_antisymm (length_wordProd_le ..)
     rw [hν3, μ.length_eq, ←μ.wordProd_eq]
     exact strictMono_length hν2
 
@@ -468,8 +468,7 @@ instance : IsDirectedOrder W where
     intro w
     by_cases h : u = 1
     · subst h
-      exists w
-      exact ⟨bot_le, le_refl _⟩
+      exact ⟨w, bot_le, le_rfl⟩
     · have ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
       have hlt : cs.simple i * u < u := by
         rwa [simple_mul_lt_self_iff]

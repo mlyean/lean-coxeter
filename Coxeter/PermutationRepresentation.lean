@@ -39,6 +39,7 @@ open Function List CoxeterSystem CoxeterGroup
 
 def ReflectionSet (W : Type*) [CoxeterGroup W] : Type _ := {t : W // cs.IsReflection t}
 
+@[implicit_reducible]
 def AbstractRootSet (W : Type*) [CoxeterGroup W] : Type _ := ReflectionSet W × ZMod 2
 
 variable {W : Type*} [CoxeterGroup W]
@@ -175,21 +176,18 @@ theorem permRep_wordProd_eq_permRepAux (ω : List (B W)) :
 
 open scoped Classical in
 theorem eta_spec (ω : List (B W)) (t : W) : η (cs.wordProd ω) t = count t (cs.leftInvSeq ω) := by
-  by_cases ht : cs.IsReflection t
+  wlog ht : cs.IsReflection t
+  · unfold eta
+    repeat rw [count_eq_zero_of_not_mem ((cs.isReflection_of_mem_leftInvSeq _).mt ht)]
   · have h : permRep (cs.wordProd ((cs.wordProd_surjective (cs.wordProd ω))).choose.reverse)
       (⟨t, ht⟩, 0) = permRep (cs.wordProd ω.reverse) (⟨t, ht⟩, 0) := by
       congr 2
       rw [wordProd_reverse, wordProd_reverse, inv_inj]
-      exact (cs.wordProd_surjective (cs.wordProd ω)).choose_spec
+      exact (cs.wordProd_surjective _).choose_spec
     rw [permRep_wordProd_eq_permRepAux, permRep_wordProd_eq_permRepAux] at h
-    replace h := congr_arg Prod.snd h
+    apply_fun Prod.snd at h
     simp [permRepAux, etaAux] at h
     assumption
-  · unfold eta
-    rw [count_eq_zero.mpr, count_eq_zero.mpr]
-    all_goals
-      contrapose ht
-      exact cs.isReflection_of_mem_leftInvSeq _ ht
 
 theorem eta_mul (u w t : W) : η (u * w) t = η u t + η w (u⁻¹ * t * u) := by
   have ⟨μ, hμ⟩ := cs.wordProd_surjective u
@@ -207,8 +205,7 @@ theorem eta_reflection_self {t : W} (ht : cs.IsReflection t) : η t t = 1 := by
   let t' : ReflectionSet W := ⟨t, ht⟩
   change η t'.val t'.val = 1
   induction t' using ReflectionSet.induction with
-  | simple i =>
-      apply eta_simple_self
+  | simple i => apply eta_simple_self
   | conj t i ih =>
       dsimp
       have h1 := (eta_mul (cs.simple i) (cs.simple i * t.val * (cs.simple i)⁻¹) t.val)
@@ -226,14 +223,12 @@ theorem isLeftInversion_of_eta_eq_one {w t : W} (h : η w t = 1) : cs.IsLeftInve
   subst hω2
   apply cs.isLeftInversion_of_mem_leftInvSeq hω1
   classical rw [eta_spec, hω1.nodup_leftInvSeq.count] at h
-  simp at h
-  assumption
+  simpa using h
 
 theorem not_isLeftInversion_of_eta_eq_zero {w t : W} (h : η w t = 0) :
   ¬ cs.IsLeftInversion w t := by
   wlog ht : cs.IsReflection t
-  · contrapose ht
-    exact ht.1
+  · exact And.left.mt ht
   · rw [←ht.isLeftInversion_mul_right_iff]
     apply isLeftInversion_of_eta_eq_one
     rw [eta_mul]
