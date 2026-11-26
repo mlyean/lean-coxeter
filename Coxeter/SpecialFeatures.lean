@@ -31,12 +31,14 @@ orthogonal direct sum decomposition of `bil`.
 
 * `Coxeter.IsRightAngled`
 * `Coxeter.IsCrystallographic`
-* `Coxeter.IsIrreducible`
+* `Coxeter.HasGeneralizedCartanMatrix`
+* `Coxeter.IsIrreducibleMatrix`, `Coxeter.IsIrreducible`
 * `Coxeter.IsFiniteCoxeter`
 * `Coxeter.IsPolyFiniteWeyl`
 * `Coxeter.IsIrreducibleFiniteWeyl`
 * `Coxeter.IsAffineCoxeter`
 * `Coxeter.IsIrreducibleAffineCoxeter`
+* `Coxeter.IsAffineCoxeterOrEmpty`
 * `Coxeter.IsPolyAffineWeyl`
 * `Coxeter.IsIrreducibleAffineWeyl`
 -/
@@ -135,6 +137,40 @@ This already forces `IsCrystallographic` (`HasGeneralizedCartanMatrix.isCrystall
 def HasGeneralizedCartanMatrix : Prop :=
   ∃ scale : cg.B → ℝ, (∀ i, 0 < scale i) ∧
     ∀ i i' : cg.B, i ≠ i' → ∃ n : ℕ, 2 * scale i' * Real.cos (Real.pi / cg.M i i') = n * scale i
+
+/-- `HasGeneralizedCartanMatrix` from an explicit positive scale: each pair of distinct generators
+either commutes, or is joined by an edge labelled `3` or `∞` (`0`) with equal scales, or by an edge
+labelled `4` (resp. `6`) with one scale `√2` (resp. `√3`) times the other. -/
+theorem hasGeneralizedCartanMatrix_of_scale (scale : cg.B → ℝ) (hpos : ∀ i, 0 < scale i)
+    (h : ∀ i i' : cg.B, i ≠ i' → cg.M i i' = 2 ∨
+      ((cg.M i i' = 0 ∨ cg.M i i' = 3) ∧ scale i = scale i') ∨
+      (cg.M i i' = 4 ∧
+        (scale i' = Real.sqrt 2 * scale i ∨ scale i = Real.sqrt 2 * scale i')) ∨
+      (cg.M i i' = 6 ∧
+        (scale i' = Real.sqrt 3 * scale i ∨ scale i = Real.sqrt 3 * scale i'))) :
+    @HasGeneralizedCartanMatrix W cg := by
+  have h2 : Real.sqrt 2 ^ 2 = 2 := Real.sq_sqrt (by norm_num)
+  have h3 : Real.sqrt 3 ^ 2 = 3 := Real.sq_sqrt (by norm_num)
+  refine ⟨scale, hpos, fun i i' hne ↦ ?_⟩
+  rcases h i i' hne with hM | ⟨hM | hM, hs⟩ | ⟨hM, hs | hs⟩ | ⟨hM, hs | hs⟩ <;> rw [hM]
+  · exact ⟨0, by norm_num⟩
+  · exact ⟨2, by rw [hs]; norm_num⟩
+  · exact ⟨1, by rw [hs]; norm_num [Real.cos_pi_div_three]; ring⟩
+  · exact ⟨2, by rw [hs]; norm_num [Real.cos_pi_div_four]; linear_combination scale i * h2⟩
+  · exact ⟨1, by rw [hs]; norm_num [Real.cos_pi_div_four]; ring⟩
+  · exact ⟨3, by rw [hs]; norm_num [Real.cos_pi_div_six]; linear_combination scale i * h3⟩
+  · exact ⟨1, by rw [hs]; norm_num [Real.cos_pi_div_six]; ring⟩
+
+/-- `HasGeneralizedCartanMatrix` when every off-diagonal entry is `0`, `2` or `3` (e.g. simply
+laced): the constant scale `1` works. -/
+theorem hasGeneralizedCartanMatrix_of_entries
+    (h : ∀ i i' : cg.B, i ≠ i' → cg.M i i' = 0 ∨ cg.M i i' = 2 ∨ cg.M i i' = 3) :
+    @HasGeneralizedCartanMatrix W cg :=
+  hasGeneralizedCartanMatrix_of_scale (fun _ ↦ 1) (fun _ ↦ one_pos) fun i i' hne ↦ by
+    rcases h i i' hne with hM | hM | hM
+    · exact Or.inr (Or.inl ⟨Or.inl hM, rfl⟩)
+    · exact Or.inl hM
+    · exact Or.inr (Or.inl ⟨Or.inr hM, rfl⟩)
 
 /-- Dividing `HasGeneralizedCartanMatrix`'s defining condition at `(i, i')` by the same condition
 at the reversed pair `(i', i)` pins the ratio `n / m` of the two integer witnesses to be exactly the
@@ -263,6 +299,15 @@ lemma assembles_hasGeneralizedCartanMatrix :
     rw [M_eq_two_of_connectedComponentMk_ne cg1
       (fun heq => same_comp (SimpleGraph.ConnectedComponent.eq.mp heq))]
     simp
+
+/-- Transport a property of the Coxeter group presented by `M` to the one presented by `M'` along
+an equality `M = M'` of Coxeter matrices. Used for the small-rank accidental identifications, whose
+`HEq` statements are proved from such matrix equalities. -/
+theorem coxeterGroup_transport {B : Type} {M M' : CoxeterMatrix B} (h : M = M')
+    (P : ∀ {W : Type}, CoxeterGroup.{0, 0} W → Prop)
+    (hP : @P M.Group ⟨B, M, M.toCoxeterSystem⟩) : @P M'.Group ⟨B, M', M'.toCoxeterSystem⟩ := by
+  subst h
+  exact hP
 
 /-- A Coxeter matrix is *irreducible* if its Coxeter diagram (`coxeterGraphMatrix`) is connected. -/
 def IsIrreducibleMatrix {B1 : Type*} (M1 : CoxeterMatrix B1) : Prop :=
