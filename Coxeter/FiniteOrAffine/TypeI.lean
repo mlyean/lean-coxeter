@@ -166,4 +166,52 @@ theorem typeI_six_identifies_typeG_two :
 
 end Accidentals
 
+/-! ### Special features -/
+
+/-- `I₂(2) = A₁ × A₁`: the two generators commute, so it is right-angled. -/
+theorem typeI_zero_isRightAngled : @IsRightAngled _ (typeIGroup 0) := fun i i' hne ↦ by
+  left
+  change CoxeterMatrix.I 0 i i' = 2
+  unfold CoxeterMatrix.I
+  simp only [Matrix.of_apply, ite_eq_right hne]
+
+/-- `I₂(m + 2)` is crystallographic when `m + 2 ∈ {2, 3, 4, 6}`. -/
+theorem typeI_isCrystallographic (m : ℕ) (hm : m = 0 ∨ m = 1 ∨ m = 2 ∨ m = 4) :
+    @IsCrystallographic _ (typeIGroup m) := fun i i' hne ↦ by
+  change CoxeterMatrix.I m i i' = 0 ∨ CoxeterMatrix.I m i i' = 2 ∨ CoxeterMatrix.I m i i' = 3 ∨
+    CoxeterMatrix.I m i i' = 4 ∨ CoxeterMatrix.I m i i' = 6
+  unfold CoxeterMatrix.I
+  simp only [Matrix.of_apply, ite_eq_right hne]
+  omega
+
+/-- `I₂(m + 2)` has a generalized Cartan matrix when `m + 2 ∈ {2, 3, 4, 6}`: scale `1` for
+`m + 2 ∈ {2, 3}`, and `(1, √2)`, `(1, √3)` for `m + 2 = 4, 6`. -/
+theorem typeI_hasGeneralizedCartanMatrix (m : ℕ) (hm : m = 0 ∨ m = 1 ∨ m = 2 ∨ m = 4) :
+    @HasGeneralizedCartanMatrix _ (typeIGroup m) := by
+  have hM : ∀ i i' : Fin 2, i ≠ i' → CoxeterMatrix.I m i i' = m + 2 := fun i i' hne ↦ by
+    unfold CoxeterMatrix.I
+    simp only [Matrix.of_apply, ite_eq_right hne]
+  rcases hm with rfl | rfl | rfl | rfl
+  · exact hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (Or.inl (hM i i' hne))
+  · exact hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (Or.inr (hM i i' hne))
+  · refine hasGeneralizedCartanMatrix_of_scale (cg := typeIGroup 2)
+      (fun i : Fin 2 ↦ ![1, Real.sqrt 2] i) (fun i : Fin 2 ↦ by fin_cases i <;> norm_num)
+      fun i i' hne ↦ Or.inr (Or.inr (Or.inl ⟨hM i i' hne, ?_⟩))
+    change Fin 2 at i i'
+    fin_cases i <;> fin_cases i' <;> simp at hne ⊢
+  · refine hasGeneralizedCartanMatrix_of_scale (cg := typeIGroup 4)
+      (fun i : Fin 2 ↦ ![1, Real.sqrt 3] i) (fun i : Fin 2 ↦ by fin_cases i <;> norm_num)
+      fun i i' hne ↦ Or.inr (Or.inr (Or.inr ⟨hM i i' hne, ?_⟩))
+    change Fin 2 at i i'
+    fin_cases i <;> fin_cases i' <;> simp at hne ⊢
+
+theorem typeI_isPolyFiniteWeyl (m : ℕ) (hm : m = 0 ∨ m = 1 ∨ m = 2 ∨ m = 4) :
+    @IsPolyFiniteWeyl _ (typeIGroup m) :=
+  ⟨typeI_isFiniteCoxeter m, typeI_isCrystallographic m hm⟩
+
+/-- `I₂(m + 2)` is an irreducible finite Weyl group when `m + 2 ∈ {3, 4, 6}` (`A₂`, `B₂`, `G₂`). -/
+theorem typeI_isIrreducibleFiniteWeyl (m : ℕ) [NeZero m] (hm : m = 1 ∨ m = 2 ∨ m = 4) :
+    @IsIrreducibleFiniteWeyl _ (typeIGroup m) :=
+  ⟨typeI_isPolyFiniteWeyl m (Or.inr hm), typeI_isIrreducible m⟩
+
 end Coxeter

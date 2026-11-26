@@ -274,6 +274,67 @@ theorem typeBC_one_identifies_typeA_one :
   change HEq (CoxeterMatrix.B 1).toCoxeterSystem (CoxeterMatrix.A 1).toCoxeterSystem
   rw [← coxeterMatrix_B_one_eq_A_one]
 
+/-! Special features of `BC₁`, transported from `A₁`. -/
+
+theorem typeBC_one_isIrreducible : @IsIrreducible _ (typeBCGroup 1) :=
+  coxeterGroup_transport coxeterMatrix_B_one_eq_A_one.symm (fun cg ↦ @IsIrreducible _ cg)
+    (typeA_isIrreducible 0)
+
+theorem typeBC_one_isFiniteCoxeter : @IsFiniteCoxeter _ (typeBCGroup 1) :=
+  coxeterGroup_transport coxeterMatrix_B_one_eq_A_one.symm (fun cg ↦ @IsFiniteCoxeter _ cg)
+    (typeA_isFiniteCoxeter 0)
+
+theorem typeBC_one_isPolyFiniteWeyl : @IsPolyFiniteWeyl _ (typeBCGroup 1) :=
+  coxeterGroup_transport coxeterMatrix_B_one_eq_A_one.symm (fun cg ↦ @IsPolyFiniteWeyl _ cg)
+    (typeA_isPolyFiniteWeyl 0)
+
+theorem typeBC_one_isIrreducibleFiniteWeyl : @IsIrreducibleFiniteWeyl _ (typeBCGroup 1) :=
+  coxeterGroup_transport coxeterMatrix_B_one_eq_A_one.symm (fun cg ↦ @IsIrreducibleFiniteWeyl _ cg)
+    (typeA_isIrreducibleFiniteWeyl 0)
+
 end Accidentals
+
+/-! ### Special features -/
+
+/-- Scaling the last simple root by `√2` (the long/short root ratio across the edge labelled `4`)
+gives a generalized Cartan matrix. -/
+theorem typeBC_hasGeneralizedCartanMatrix (n : ℕ) [NeZero n] :
+    @HasGeneralizedCartanMatrix _ (typeBCGroup n) := by
+  refine hasGeneralizedCartanMatrix_of_scale (cg := typeBCGroup n)
+    (fun i : Fin n ↦ if (i : ℕ) = n - 1 then Real.sqrt 2 else 1)
+    (fun i : Fin n ↦ by split_ifs <;> positivity) fun i i' hne ↦ ?_
+  change Fin n at i i'
+  have hi := i.isLt
+  have hi' := i'.isLt
+  have hne' : (i : ℕ) ≠ i' := fun h ↦ hne (Fin.ext h)
+  change CoxeterMatrix.B n i i' = 2 ∨
+    ((CoxeterMatrix.B n i i' = 0 ∨ CoxeterMatrix.B n i i' = 3) ∧ _) ∨
+    (CoxeterMatrix.B n i i' = 4 ∧ _) ∨ (CoxeterMatrix.B n i i' = 6 ∧ _)
+  have hB : CoxeterMatrix.B n i i' =
+      if (i : ℕ) = n - 1 ∧ (i' : ℕ) = n - 2 ∨ (i' : ℕ) = n - 1 ∧ (i : ℕ) = n - 2 then 4
+      else if (i' : ℕ) + 1 = i ∨ (i : ℕ) + 1 = i' then 3 else 2 := by
+    unfold CoxeterMatrix.B
+    simp only [Matrix.of_apply, ite_eq_right hne]
+  rw [hB]
+  by_cases h4 : (i : ℕ) = n - 1 ∧ (i' : ℕ) = n - 2 ∨ (i' : ℕ) = n - 1 ∧ (i : ℕ) = n - 2
+  · rw [ite_eq_left h4]
+    refine Or.inr (Or.inr (Or.inl ⟨rfl, ?_⟩))
+    rcases h4 with ⟨ha, hb⟩ | ⟨ha, hb⟩
+    · exact Or.inr (by
+        rw [ite_eq_left ha, ite_eq_right (show ¬ (i' : ℕ) = n - 1 by omega), mul_one])
+    · exact Or.inl (by
+        rw [ite_eq_left ha, ite_eq_right (show ¬ (i : ℕ) = n - 1 by omega), mul_one])
+  · rw [ite_eq_right h4]
+    by_cases h3 : (i' : ℕ) + 1 = i ∨ (i : ℕ) + 1 = i'
+    · rw [ite_eq_left h3]
+      refine Or.inr (Or.inl ⟨Or.inr rfl, ?_⟩)
+      rw [ite_eq_right (show ¬ (i : ℕ) = n - 1 by omega),
+        ite_eq_right (show ¬ (i' : ℕ) = n - 1 by omega)]
+    · rw [ite_eq_right h3]
+      exact Or.inl rfl
+
+/-- `BC₁` has a single generator, so it is vacuously right-angled. -/
+theorem typeBC_one_isRightAngled : @IsRightAngled _ (typeBCGroup 1) :=
+  fun i i' hne ↦ absurd (Subsingleton.elim (α := Fin 1) i i') hne
 
 end Coxeter

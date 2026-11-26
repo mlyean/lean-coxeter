@@ -673,4 +673,23 @@ noncomputable abbrev affineTypeDBilinearLatticeWithMonoidQuasiUnipotent (n : ℕ
 
 end EulerLattice
 
+/-! ### Special features -/
+
+theorem affineTypeD_isAffineCoxeter (n : ℕ) (hn : 4 ≤ n) :
+    @IsAffineCoxeter _ (@affineTypeDGroup n ⟨by omega⟩) :=
+  (affineTypeD_isIrreducibleAffineCoxeter n hn).1
+
+theorem affineTypeD_isAffineCoxeterOrEmpty (n : ℕ) (hn : 4 ≤ n) :
+    @IsAffineCoxeterOrEmpty _ (@affineTypeDGroup n ⟨by omega⟩) :=
+  Or.inr (affineTypeD_isAffineCoxeter n hn)
+
+theorem affineTypeD_isPolyAffineWeyl (n : ℕ) (hn : 4 ≤ n) :
+    @IsPolyAffineWeyl _ (@affineTypeDGroup n ⟨by omega⟩) :=
+  (affineTypeD_isIrreducibleAffineWeyl n hn).1
+
+theorem affineTypeD_hasGeneralizedCartanMatrix (n : ℕ) (hn : 4 ≤ n) :
+    @HasGeneralizedCartanMatrix _ (@affineTypeDGroup n ⟨by omega⟩) :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦
+    Or.inr (affineTypeD_isSimplyLaced n hn i i' hne)
+
 end Coxeter

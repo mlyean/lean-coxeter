@@ -459,4 +459,34 @@ noncomputable abbrev affineTypeABilinearLatticeWithMonoidQuasiUnipotent (n : ℕ
 
 end EulerLattice
 
+/-! ### Special features -/
+
+theorem affineTypeA_isAffineCoxeter (n : ℕ) [NeZero n] :
+    @IsAffineCoxeter _ (affineTypeAGroup n) :=
+  (affineTypeA_isIrreducibleAffineCoxeter n).1
+
+theorem affineTypeA_isAffineCoxeterOrEmpty (n : ℕ) [NeZero n] :
+    @IsAffineCoxeterOrEmpty _ (affineTypeAGroup n) :=
+  Or.inr (affineTypeA_isAffineCoxeter n)
+
+theorem affineTypeA_isPolyAffineWeyl (n : ℕ) [NeZero n] :
+    @IsPolyAffineWeyl _ (affineTypeAGroup n) :=
+  (affineTypeA_isIrreducibleAffineWeyl n).1
+
+theorem affineTypeA_hasGeneralizedCartanMatrix (n : ℕ) [NeZero n] :
+    @HasGeneralizedCartanMatrix _ (affineTypeAGroup n) :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ by
+    change affineTypeAMatrix n i i' = 0 ∨ affineTypeAMatrix n i i' = 2 ∨
+      affineTypeAMatrix n i i' = 3
+    unfold affineTypeAMatrix
+    simp only [Matrix.of_apply, ite_eq_right hne]
+    split_ifs <;> simp
+
+/-- `Ã₁`: the two generators are joined by an edge labelled `∞`, so it is right-angled. -/
+theorem affineTypeA_one_isRightAngled : @IsRightAngled _ (affineTypeAGroup 1) := fun i i' hne ↦ by
+  right
+  change affineTypeAMatrix 1 i i' = 0
+  unfold affineTypeAMatrix
+  simp only [Matrix.of_apply, ite_eq_right hne, ↓reduceIte]
+
 end Coxeter

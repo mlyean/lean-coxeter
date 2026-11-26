@@ -618,4 +618,51 @@ noncomputable abbrev typeE8BilinearLatticeWithMonoidQuasiUnipotent :
 
 end EulerLattice
 
+/-! ### Special features -/
+
+theorem typeE6_hasGeneralizedCartanMatrix : @HasGeneralizedCartanMatrix _ typeE6Group :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (typeE6_isSimplyLaced i i' hne)
+
+theorem typeE6_isPolyFiniteWeyl : @IsPolyFiniteWeyl _ typeE6Group :=
+  typeE6_isIrreducibleFiniteWeyl.1
+
+theorem typeE7_hasGeneralizedCartanMatrix : @HasGeneralizedCartanMatrix _ typeE7Group :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (typeE7_isSimplyLaced i i' hne)
+
+theorem typeE7_isPolyFiniteWeyl : @IsPolyFiniteWeyl _ typeE7Group :=
+  typeE7_isIrreducibleFiniteWeyl.1
+
+theorem typeE8_hasGeneralizedCartanMatrix : @HasGeneralizedCartanMatrix _ typeE8Group :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (typeE8_isSimplyLaced i i' hne)
+
+theorem typeE8_isPolyFiniteWeyl : @IsPolyFiniteWeyl _ typeE8Group :=
+  typeE8_isIrreducibleFiniteWeyl.1
+
+theorem typeF4_hasGeneralizedCartanMatrix : @HasGeneralizedCartanMatrix _ typeF4Group := by
+  refine hasGeneralizedCartanMatrix_of_scale (cg := typeF4Group)
+    (fun i : Fin 4 ↦ ![1, 1, Real.sqrt 2, Real.sqrt 2] i)
+    (fun i : Fin 4 ↦ by fin_cases i <;> norm_num)
+    fun i i' hne ↦ ?_
+  change Fin 4 at i i'
+  change CoxeterMatrix.F₄ i i' = 2 ∨ ((CoxeterMatrix.F₄ i i' = 0 ∨ CoxeterMatrix.F₄ i i' = 3) ∧ _) ∨
+    (CoxeterMatrix.F₄ i i' = 4 ∧ _) ∨ (CoxeterMatrix.F₄ i i' = 6 ∧ _)
+  fin_cases i <;> fin_cases i' <;> simp at hne <;> norm_num [CoxeterMatrix.F₄]
+
+theorem typeF4_isPolyFiniteWeyl : @IsPolyFiniteWeyl _ typeF4Group :=
+  typeF4_isIrreducibleFiniteWeyl.1
+
+theorem typeG2_hasGeneralizedCartanMatrix : @HasGeneralizedCartanMatrix _ typeG2Group := by
+  refine hasGeneralizedCartanMatrix_of_scale (cg := typeG2Group)
+    (fun i : Fin 2 ↦ ![1, Real.sqrt 3] i)
+    (fun i : Fin 2 ↦ by fin_cases i <;> norm_num)
+    fun i i' hne ↦ ?_
+  change Fin 2 at i i'
+  change CoxeterMatrix.G₂ i i' = 2 ∨ ((CoxeterMatrix.G₂ i i' = 0 ∨ CoxeterMatrix.G₂ i i' = 3) ∧ _) ∨
+    (CoxeterMatrix.G₂ i i' = 4 ∧ _) ∨ (CoxeterMatrix.G₂ i i' = 6 ∧ _)
+  fin_cases i <;> fin_cases i' <;> simp at hne <;> norm_num [CoxeterMatrix.G₂]
+
+theorem typeG2_isPolyFiniteWeyl : @IsPolyFiniteWeyl _ typeG2Group :=
+  typeG2_isIrreducibleFiniteWeyl.1
+
+
 end Coxeter

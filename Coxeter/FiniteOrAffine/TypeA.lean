@@ -345,4 +345,14 @@ noncomputable abbrev typeABilinearLatticeWithMonoidQuasiUnipotent (n : ℕ) :
 
 end EulerLattice
 
+/-! ### Special features -/
+
+theorem typeA_hasGeneralizedCartanMatrix (n : ℕ) [NeZero n] :
+    @HasGeneralizedCartanMatrix _ (typeAGroup n) :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (typeA_isSimplyLaced n i i' hne)
+
+/-- `A₁` has a single generator, so it is vacuously right-angled. -/
+theorem typeA_one_isRightAngled : @IsRightAngled _ (typeAGroup 1) :=
+  fun i i' hne ↦ absurd (Subsingleton.elim (α := Fin 1) i i') hne
+
 end Coxeter

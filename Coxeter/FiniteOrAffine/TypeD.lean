@@ -336,6 +336,60 @@ theorem typeD_three_identifies_typeA_three :
   change HEq (typeDMatrix 3).toCoxeterSystem (CoxeterMatrix.A 3).toCoxeterSystem
   rw [← typeDMatrix_three_eq_A_three]
 
+/-! Special features of `D1`, transported from `A1`. -/
+
+theorem typeD_one_isIrreducible : @IsIrreducible _ (typeDGroup 1) :=
+  coxeterGroup_transport typeDMatrix_one_eq_A_one.symm (fun cg ↦ @IsIrreducible _ cg)
+    (typeA_isIrreducible 0)
+
+theorem typeD_one_isFiniteCoxeter : @IsFiniteCoxeter _ (typeDGroup 1) :=
+  coxeterGroup_transport typeDMatrix_one_eq_A_one.symm (fun cg ↦ @IsFiniteCoxeter _ cg)
+    (typeA_isFiniteCoxeter 0)
+
+theorem typeD_one_isPolyFiniteWeyl : @IsPolyFiniteWeyl _ (typeDGroup 1) :=
+  coxeterGroup_transport typeDMatrix_one_eq_A_one.symm (fun cg ↦ @IsPolyFiniteWeyl _ cg)
+    (typeA_isPolyFiniteWeyl 0)
+
+theorem typeD_one_isIrreducibleFiniteWeyl : @IsIrreducibleFiniteWeyl _ (typeDGroup 1) :=
+  coxeterGroup_transport typeDMatrix_one_eq_A_one.symm (fun cg ↦ @IsIrreducibleFiniteWeyl _ cg)
+    (typeA_isIrreducibleFiniteWeyl 0)
+
+/-! Special features of `D2`, transported from `A2`. -/
+
+theorem typeD_two_isIrreducible : @IsIrreducible _ (typeDGroup 2) :=
+  coxeterGroup_transport typeDMatrix_two_eq_A_two.symm (fun cg ↦ @IsIrreducible _ cg)
+    (typeA_isIrreducible 1)
+
+theorem typeD_two_isFiniteCoxeter : @IsFiniteCoxeter _ (typeDGroup 2) :=
+  coxeterGroup_transport typeDMatrix_two_eq_A_two.symm (fun cg ↦ @IsFiniteCoxeter _ cg)
+    (typeA_isFiniteCoxeter 1)
+
+theorem typeD_two_isPolyFiniteWeyl : @IsPolyFiniteWeyl _ (typeDGroup 2) :=
+  coxeterGroup_transport typeDMatrix_two_eq_A_two.symm (fun cg ↦ @IsPolyFiniteWeyl _ cg)
+    (typeA_isPolyFiniteWeyl 1)
+
+theorem typeD_two_isIrreducibleFiniteWeyl : @IsIrreducibleFiniteWeyl _ (typeDGroup 2) :=
+  coxeterGroup_transport typeDMatrix_two_eq_A_two.symm (fun cg ↦ @IsIrreducibleFiniteWeyl _ cg)
+    (typeA_isIrreducibleFiniteWeyl 1)
+
+/-! Special features of `D3`, transported from `A3`. -/
+
+theorem typeD_three_isIrreducible : @IsIrreducible _ (typeDGroup 3) :=
+  coxeterGroup_transport typeDMatrix_three_eq_A_three.symm (fun cg ↦ @IsIrreducible _ cg)
+    (typeA_isIrreducible 2)
+
+theorem typeD_three_isFiniteCoxeter : @IsFiniteCoxeter _ (typeDGroup 3) :=
+  coxeterGroup_transport typeDMatrix_three_eq_A_three.symm (fun cg ↦ @IsFiniteCoxeter _ cg)
+    (typeA_isFiniteCoxeter 2)
+
+theorem typeD_three_isPolyFiniteWeyl : @IsPolyFiniteWeyl _ (typeDGroup 3) :=
+  coxeterGroup_transport typeDMatrix_three_eq_A_three.symm (fun cg ↦ @IsPolyFiniteWeyl _ cg)
+    (typeA_isPolyFiniteWeyl 2)
+
+theorem typeD_three_isIrreducibleFiniteWeyl : @IsIrreducibleFiniteWeyl _ (typeDGroup 3) :=
+  coxeterGroup_transport typeDMatrix_three_eq_A_three.symm (fun cg ↦ @IsIrreducibleFiniteWeyl _ cg)
+    (typeA_isIrreducibleFiniteWeyl 2)
+
 end Accidentals
 
 
@@ -568,5 +622,22 @@ noncomputable abbrev typeDBilinearLatticeWithMonoidQuasiUnipotent (n : ℕ) :
       (typeDBilinearLattice_S_pow n) two_pos)
 
 end EulerLattice
+
+/-! ### Special features -/
+
+theorem typeD_hasGeneralizedCartanMatrix (n : ℕ) [NeZero n] :
+    @HasGeneralizedCartanMatrix _ (typeDGroup n) :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (by
+    change Fin n at i i'
+    change typeDMatrix n i i' = 2 ∨ typeDMatrix n i i' = 3
+    by_cases h : n ≤ 3
+    · rw [typeDMatrix, ite_eq_left h]
+      exact typeA_isSimplyLaced n i i' hne
+    · obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
+      exact typeD_isSimplyLaced m i i' hne)
+
+/-- `D₁ = A₁` has a single generator, so it is vacuously right-angled. -/
+theorem typeD_one_isRightAngled : @IsRightAngled _ (typeDGroup 1) :=
+  fun i i' hne ↦ absurd (Subsingleton.elim (α := Fin 1) i i') hne
 
 end Coxeter

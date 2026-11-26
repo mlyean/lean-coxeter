@@ -878,4 +878,70 @@ noncomputable abbrev affineTypeE8BilinearLatticeWithMonoidQuasiUnipotent :
 
 end EulerLattice
 
+/-! ### Special features -/
+
+theorem affineTypeE6_hasGeneralizedCartanMatrix : @HasGeneralizedCartanMatrix _ affineTypeE6Group :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (affineTypeE6_isSimplyLaced i i' hne)
+
+theorem affineTypeE6_isAffineCoxeterOrEmpty : @IsAffineCoxeterOrEmpty _ affineTypeE6Group :=
+  Or.inr affineTypeE6_isAffineCoxeter
+
+theorem affineTypeE6_isPolyAffineWeyl : @IsPolyAffineWeyl _ affineTypeE6Group :=
+  affineTypeE6_isIrreducibleAffineWeyl.1
+
+theorem affineTypeE7_hasGeneralizedCartanMatrix : @HasGeneralizedCartanMatrix _ affineTypeE7Group :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (affineTypeE7_isSimplyLaced i i' hne)
+
+theorem affineTypeE7_isAffineCoxeterOrEmpty : @IsAffineCoxeterOrEmpty _ affineTypeE7Group :=
+  Or.inr affineTypeE7_isAffineCoxeter
+
+theorem affineTypeE7_isPolyAffineWeyl : @IsPolyAffineWeyl _ affineTypeE7Group :=
+  affineTypeE7_isIrreducibleAffineWeyl.1
+
+theorem affineTypeE8_hasGeneralizedCartanMatrix : @HasGeneralizedCartanMatrix _ affineTypeE8Group :=
+  hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦ Or.inr (affineTypeE8_isSimplyLaced i i' hne)
+
+theorem affineTypeE8_isAffineCoxeterOrEmpty : @IsAffineCoxeterOrEmpty _ affineTypeE8Group :=
+  Or.inr affineTypeE8_isAffineCoxeter
+
+theorem affineTypeE8_isPolyAffineWeyl : @IsPolyAffineWeyl _ affineTypeE8Group :=
+  affineTypeE8_isIrreducibleAffineWeyl.1
+
+theorem affineTypeF4_hasGeneralizedCartanMatrix :
+    @HasGeneralizedCartanMatrix _ affineTypeF4Group := by
+  refine hasGeneralizedCartanMatrix_of_scale (cg := affineTypeF4Group)
+    (fun i : Fin 5 ↦ ![1, 1, Real.sqrt 2, Real.sqrt 2, 1] i)
+    (fun i : Fin 5 ↦ by fin_cases i <;> norm_num)
+    fun i i' hne ↦ ?_
+  change Fin 5 at i i'
+  change affineTypeF4Matrix i i' = 2 ∨
+    ((affineTypeF4Matrix i i' = 0 ∨ affineTypeF4Matrix i i' = 3) ∧ _) ∨
+    (affineTypeF4Matrix i i' = 4 ∧ _) ∨ (affineTypeF4Matrix i i' = 6 ∧ _)
+  fin_cases i <;> fin_cases i' <;> simp at hne <;> norm_num [affineTypeF4Matrix]
+
+theorem affineTypeF4_isAffineCoxeterOrEmpty : @IsAffineCoxeterOrEmpty _ affineTypeF4Group :=
+  Or.inr affineTypeF4_isAffineCoxeter
+
+theorem affineTypeF4_isPolyAffineWeyl : @IsPolyAffineWeyl _ affineTypeF4Group :=
+  affineTypeF4_isIrreducibleAffineWeyl.1
+
+theorem affineTypeG2_hasGeneralizedCartanMatrix :
+    @HasGeneralizedCartanMatrix _ affineTypeG2Group := by
+  refine hasGeneralizedCartanMatrix_of_scale (cg := affineTypeG2Group)
+    (fun i : Fin 3 ↦ ![1, Real.sqrt 3, 1] i)
+    (fun i : Fin 3 ↦ by fin_cases i <;> norm_num)
+    fun i i' hne ↦ ?_
+  change Fin 3 at i i'
+  change affineTypeG2Matrix i i' = 2 ∨
+    ((affineTypeG2Matrix i i' = 0 ∨ affineTypeG2Matrix i i' = 3) ∧ _) ∨
+    (affineTypeG2Matrix i i' = 4 ∧ _) ∨ (affineTypeG2Matrix i i' = 6 ∧ _)
+  fin_cases i <;> fin_cases i' <;> simp at hne <;> norm_num [affineTypeG2Matrix]
+
+theorem affineTypeG2_isAffineCoxeterOrEmpty : @IsAffineCoxeterOrEmpty _ affineTypeG2Group :=
+  Or.inr affineTypeG2_isAffineCoxeter
+
+theorem affineTypeG2_isPolyAffineWeyl : @IsPolyAffineWeyl _ affineTypeG2Group :=
+  affineTypeG2_isIrreducibleAffineWeyl.1
+
+
 end Coxeter
