@@ -348,8 +348,8 @@ theorem generalizedCartanMatrix_dValue_symm
           : ℝ) := by
   unfold generalizedCartanMatrix_dValue
   by_cases hB : IsEmpty cg.B
-  · simp [dif_pos hB]
-  · simp only [dif_neg hB, Sum.elim_inr]
+  · simp [dite_eq_left hB]
+  · simp only [dite_eq_right hB, Sum.elim_inr]
     intro i i'
     by_cases hii' : i = i'
     · subst hii'; rfl
@@ -359,7 +359,7 @@ theorem generalizedCartanMatrix_dValue_symm
           (generalizedCartanMatrix_scaleSq_ne_zero scale hscale hB)).someVector j =
           t * scale j ^ 2 := fun j => by rw [hteq]; rfl
       rw [hrep i, hrep i']
-      simp only [dif_neg hii', dif_neg (Ne.symm hii')]
+      simp only [dite_eq_right hii', dite_eq_right (Ne.symm hii')]
       have hn := (scale_ii' i i' hii').choose_spec
       have hm' : 2 * scale i * Real.cos (Real.pi / cg.M i i') =
           (scale_ii' i' i (Ne.symm hii')).choose * scale i' := by
@@ -382,10 +382,10 @@ noncomputable def HasGeneralizedCartanMatrix.cartanMatrix (h : @HasGeneralizedCa
   { a := fun i i' => if hii' : i = i' then 2 else -(scale_ii' i i' hii').choose
     diag := fun i => by simp
     off_diag_nonpos := fun i i' hii' => by
-      simp only [dif_neg hii', neg_nonpos]
+      simp only [dite_eq_right hii', neg_nonpos]
       exact Int.natCast_nonneg _
     off_diag_zero_iff := fun i i' hii' => by
-      simp only [dif_neg hii', dif_neg (Ne.symm hii'), neg_eq_zero, Nat.cast_eq_zero]
+      simp only [dite_eq_right hii', dite_eq_right (Ne.symm hii'), neg_eq_zero, Nat.cast_eq_zero]
       rw [generalizedCartanMatrix_witness_eq_zero_iff i i' scale scale_pos _
           (scale_ii' i i' hii').choose_spec,
         generalizedCartanMatrix_witness_eq_zero_iff i' i scale scale_pos _
@@ -409,7 +409,7 @@ private theorem HasGeneralizedCartanMatrix.cartanMatrix_apply_eq
   classical
   have key : h.cartanMatrix.a i i' = -(h.choose_spec.2 i i' hii').choose := by
     change (if hii' : i = i' then (2 : ℤ) else -(h.choose_spec.2 i i' hii').choose) = _
-    rw [dif_neg hii']
+    rw [dite_eq_right hii']
   have hbil_off : bil (stdBasis i') (stdBasis i) = -Real.cos (Real.pi / cg.M i i') := by
     rw [bil_eq, cg.M.symmetric i' i]
   have hden : bil (h.choose i • stdBasis i) (h.choose i • stdBasis i)
@@ -484,14 +484,11 @@ theorem HasGeneralizedCartanMatrix.geomRep_mapsTo_lattice (h : @HasGeneralizedCa
     (w : W) : Set.MapsTo (geomRep w) h.lattice h.lattice := by
   refine cg.cs.simple_induction (p := fun w => Set.MapsTo (geomRep w) h.lattice h.lattice)
     w (fun i => ?_) ?_ (fun w w' hw hw' => ?_)
-  · dsimp only
-    rw [geomRep_simple]
+  · rw [geomRep_simple]
     exact h.geomRepAux_mapsTo_lattice i
-  · dsimp only
-    rw [map_one]
+  · rw [map_one]
     exact Set.mapsTo_id _
-  · dsimp only at hw hw' ⊢
-    rw [map_mul]
+  · rw [map_mul]
     exact hw.comp hw'
 
 end Coxeter

@@ -279,10 +279,10 @@ the remaining generators is again a valid Coxeter matrix (symmetric, diagonal `1
 `≠ 1`), inherited directly from `M`. -/
 def deleteGenerator (i₀ : B W) :
     CoxeterMatrix {j : B W // j ≠ i₀} where
-  M a b := M a.1 b.1
-  isSymm := Matrix.IsSymm.ext_iff.mpr (fun a b => M.symmetric b.1 a.1)
-  diagonal a := M.diagonal a.1
-  off_diagonal a b hab := M.off_diagonal a.1 b.1 (fun h => hab (Subtype.ext h))
+  M a b := M a.val b.val
+  isSymm := Matrix.IsSymm.ext_iff.mpr (fun a b => M.symmetric b.val a.val)
+  diagonal a := M.diagonal a.val
+  off_diagonal a b hab := M.off_diagonal a.val b.val (fun h => hab (Subtype.ext h))
 
 /-- `W` is of *finite type*: either finite, or `bil` is positive semidefinite and nondegenerate
 (i.e. positive definite — `IsPosDef` isn't a separate notion in Mathlib for bilinear forms). Stated
@@ -398,7 +398,6 @@ lemma assembles_affineCoxeter :
         (h:=not_isEmpty_iff.mp empty)
       exact (coxeterGraphMatrix cg1.M).connectedComponentMk arbitrary_gen
     have on_arbitrary := on_components' arbitrary_component
-    unfold IsAffineCoxeterOrEmpty at on_arbitrary
     have on_arbitrary := on_arbitrary.right
     unfold LinearMap.BilinForm.Nondegenerate at on_arbitrary
     unfold LinearMap.Nondegenerate at on_arbitrary

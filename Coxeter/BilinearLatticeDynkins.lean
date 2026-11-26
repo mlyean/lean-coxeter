@@ -96,7 +96,7 @@ def eulerMatrix (M : CoxeterMatrix (Fin n)) :
   Matrix.of fun i j ↦ if i = j then 1 else if i < j ∧ M i j = 3 then -1 else 0
 
 theorem det_eulerMatrix (M : CoxeterMatrix (Fin n)) : (eulerMatrix M).det = 1 := by
-  rw [Matrix.det_of_upperTriangular]
+  rw [Matrix.det_of_isUpperTriangular]
   · simp [eulerMatrix]
   · intro i j hji
     simp only [id] at hji
@@ -104,6 +104,7 @@ theorem det_eulerMatrix (M : CoxeterMatrix (Fin n)) : (eulerMatrix M).det = 1 :=
 
 /-- The Euler lattice of a Coxeter matrix:
 `ℤⁿ` with the Euler form and the Coxeter transformation. -/
+@[implicit_reducible]
 noncomputable def eulerLattice (M : CoxeterMatrix (Fin n)) : BilinearLattice.{0} :=
   ofUnimodular (eulerMatrix M) (by rw [det_eulerMatrix]; exact isUnit_one)
 
@@ -159,7 +160,7 @@ theorem eulerLattice_χ_self (M : CoxeterMatrix (Fin n)) (hM : IsSimplyLaced M)
     simp [dotProduct, _root_.Matrix.mulVec, Finset.mul_sum, mul_assoc]
   have hbil : @bil M.Group (coxeterGroupOf M) (toV x) (toV x) =
       ∑ i, ∑ j, (x i : ℝ) * -Real.cos (Real.pi / M i j) * x j := by
-    letI := coxeterGroupOf M
+    let := coxeterGroupOf M
     have hv : toV x = ∑ i, (x i : ℝ) • (stdBasis (W := M.Group)) i := by
       ext k
       simp [toV, stdBasis, Finsupp.single_apply]

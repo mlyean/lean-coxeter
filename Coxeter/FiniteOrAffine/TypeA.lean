@@ -58,7 +58,7 @@ theorem typeA_isCrystallographic (n : ℕ) [NeZero n] :
   change (CoxeterMatrix.A n) i i' = 0 ∨ (CoxeterMatrix.A n) i i' = 2 ∨
     (CoxeterMatrix.A n) i i' = 3 ∨ (CoxeterMatrix.A n) i i' = 4 ∨ (CoxeterMatrix.A n) i i' = 6
   unfold CoxeterMatrix.A
-  simp only [Matrix.of_apply, if_neg hii']
+  simp only [Matrix.of_apply, ite_eq_right hii']
   split_ifs <;> tauto
 
 /-- Type `A`'s Coxeter-Dynkin diagram is literally the path graph on `n` vertices: two distinct
@@ -72,7 +72,7 @@ private theorem coxeterGraphMatrix_typeA_eq_pathGraph (n : ℕ) :
   simp only [Matrix.of_apply, ne_eq]
   by_cases h : i = j
   · simp [h]
-  · rw [if_neg h, if_neg (Ne.symm h)]
+  · rw [ite_eq_right h, ite_eq_right (Ne.symm h)]
     have hiff1 : ¬(if (j : ℕ) + 1 = i ∨ (i : ℕ) + 1 = j then (3 : ℕ) else 2) = 2 ↔
         ((j : ℕ) + 1 = i ∨ (i : ℕ) + 1 = j) := by
       split_ifs with hp
@@ -92,7 +92,7 @@ theorem typeA_isIrreducible (n : ℕ) : @IsIrreducible _ (typeAGroup (n + 1)) :=
   unfold IsIrreducible IsIrreducibleMatrix
   change (coxeterGraphMatrix (CoxeterMatrix.A (n + 1))).Connected
   rw [coxeterGraphMatrix_typeA_eq_pathGraph]
-  exact SimpleGraph.pathGraph_connected n
+  exact SimpleGraph.connected_pathGraph_add_one n
 
 /-! ### Positive definiteness of `bil` for type A
 
@@ -106,17 +106,16 @@ eigenvalue computation needed. -/
 private theorem bil_typeA_entries (m : ℕ) (i j : Fin (m + 1)) :
     (@bil _ (typeAGroup (m + 1))) (@stdBasis _ (typeAGroup (m + 1)) i)
       (@stdBasis _ (typeAGroup (m + 1)) j) = pathEntry (i : ℕ) (j : ℕ) := by
-  unfold bil
-  rw [Matrix.toBilin_single]
+  rw [@bil_eq _ (typeAGroup (m + 1))]
   change -Real.cos (Real.pi / ((CoxeterMatrix.A (m + 1)) i j : ℝ)) = pathEntry (i : ℕ) (j : ℕ)
   unfold CoxeterMatrix.A pathEntry
   simp only [Matrix.of_apply]
   by_cases hij : i = j
   · have hij' : (i : ℕ) = (j : ℕ) := by rw [hij]
-    rw [if_pos hij, if_pos hij']
+    rw [ite_eq_left hij, ite_eq_left hij']
     norm_num
   · have hij' : (i : ℕ) ≠ (j : ℕ) := fun h => hij (Fin.ext h)
-    rw [if_neg hij, if_neg hij']
+    rw [ite_eq_right hij, ite_eq_right hij']
     split_ifs with hadj
     · rw [show ((3 : ℕ) : ℝ) = 3 by norm_num, Real.cos_pi_div_three]; norm_num
     · rw [show ((2 : ℕ) : ℝ) = 2 by norm_num, Real.cos_pi_div_two]
@@ -129,7 +128,7 @@ private noncomputable def typeAExtend (m : ℕ) (x : Fin (m + 1) →₀ ℝ) : �
 private theorem typeAExtend_apply_fin (m : ℕ) (x : Fin (m + 1) →₀ ℝ) (i : Fin (m + 1)) :
     typeAExtend m x (i : ℕ) = x i := by
   unfold typeAExtend
-  rw [dif_pos i.isLt]
+  rw [dite_eq_left i.isLt]
 
 /-- `bil x x` for type A, spelled out as the tridiagonal quadratic form on the `ℕ`-extension of
 `x`'s coordinates. -/
@@ -243,7 +242,7 @@ noncomputable abbrev typeABilinearLattice (n : ℕ) : BilinearLattice.{0} :=
 theorem typeA_isSimplyLaced (n : ℕ) : BilinearLattice.IsSimplyLaced (CoxeterMatrix.A n) := by
   intro i j hij
   unfold CoxeterMatrix.A
-  simp only [Matrix.of_apply, if_neg hij]
+  simp only [Matrix.of_apply, ite_eq_right hij]
   split_ifs <;> simp
 
 /-- The Euler form of type `Aₙ` is nonnegative on `ℤⁿ`, since its Coxeter form is positive
@@ -284,15 +283,15 @@ private theorem typeA_S_single_last (m : ℕ) :
   ext i
   simp only [Matrix.mulVec_single_one, Matrix.col_apply, Matrix.transpose_apply, Pi.neg_apply,
     eulerMatrix_typeA_apply, Matrix.mulVec, dotProduct, mul_neg, mul_one,
-    Finset.sum_neg_distrib, Finset.sum_sub_distrib, Finset.sum_ite_eq, Finset.mem_univ, if_true]
+    Finset.sum_neg_distrib, Finset.sum_sub_distrib, Finset.sum_ite_eq, Finset.mem_univ, ite_true]
   by_cases hi : (i : ℕ) + 1 < m + 1
   · have : ∀ j : Fin (m + 1), ((i : ℕ) + 1 = j) ↔ ((⟨i + 1, hi⟩ : Fin (m + 1)) = j) := by
       intro j; rw [Fin.ext_iff]
-    simp only [this, Finset.sum_ite_eq, Finset.mem_univ, if_true]
+    simp only [this, Finset.sum_ite_eq, Finset.mem_univ, ite_true]
     simp only [Fin.ext_iff, Fin.val_last]
     split_ifs <;> omega
   · have : ∀ j : Fin (m + 1), ¬((i : ℕ) + 1 = j) := fun j ↦ by omega
-    simp only [this, if_false, Finset.sum_const_zero, Fin.ext_iff, Fin.val_last]
+    simp only [this, ite_false, Finset.sum_const_zero, Fin.ext_iff, Fin.val_last]
     split_ifs <;> omega
 
 /-- `e_0` is a cyclic vector for the Coxeter transformation of `Aₙ`: `S ^ k e_0 = e_k`. -/
@@ -302,7 +301,7 @@ private theorem typeA_S_pow_single_zero (m k : ℕ) (hk : k < m + 1) :
   induction k with
   | zero => rfl
   | succ k ih =>
-      rw [pow_succ', Module.End.mul_apply, ih (by omega)]
+      rw [pow_succ', mul_apply_eq_comp, ih (by omega)]
       exact typeA_S_single_succ (m + 1) k hk
 
 /-- The Coxeter number of `Aₙ` is `n + 1`. -/
@@ -318,7 +317,7 @@ theorem typeABilinearLattice_S_pow (n : ℕ) :
           ← Fin.sum_univ_eq_sum_range (fun k ↦ (S ^ k) (Pi.single 0 1))]
         rw [Finset.sum_congr rfl fun (k : Fin (m + 1)) _ ↦ typeA_S_pow_single_zero m k k.isLt]
         simp only [Fin.eta]
-        rw [pow_succ', Module.End.mul_apply, typeA_S_pow_single_zero m m (by omega)]
+        rw [pow_succ', mul_apply_eq_comp, typeA_S_pow_single_zero m m (by omega)]
         erw [Finset.univ_sum_single (fun _ ↦ (1 : ℤ)), typeA_S_single_last]
         exact funext fun _ ↦ add_neg_cancel (1 : ℤ)
       have hT : T = 0 := (Pi.basisFun ℤ (Fin (m + 1))).ext fun j ↦ by
@@ -327,7 +326,7 @@ theorem typeABilinearLattice_S_pow (n : ℕ) :
           exact Finset.sum_congr rfl fun k _ ↦ pow_mul_comm _ _ _
         rw [Pi.basisFun_apply, ← typeA_S_pow_single_zero m j j.isLt]
         change (T * S ^ (j : ℕ)) (Pi.single 0 1) = 0
-        rw [hcomm, Module.End.mul_apply, hT0, map_zero]
+        rw [hcomm, mul_apply_eq_comp, hT0, map_zero]
       rw [← sub_eq_zero, ← geom_sum_mul]
       change T * (S - 1) = 0
       rw [hT, zero_mul]

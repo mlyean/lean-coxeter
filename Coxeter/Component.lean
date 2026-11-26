@@ -48,10 +48,10 @@ structure IsComponentOf {W1 : Type*} (cg1 : CoxeterGroup W1) {W : Type*} (cg : C
 `cg`'s Coxeter diagram, obtained by restricting `cg.M`. -/
 def componentMatrix {W : Type*} (cg : CoxeterGroup W)
     (c : (coxeterGraphMatrix cg.M).ConnectedComponent) : CoxeterMatrix c.supp where
-  M a b := cg.M a.1 b.1
-  isSymm := Matrix.IsSymm.ext_iff.mpr (fun a b => cg.M.symmetric b.1 a.1)
-  diagonal a := cg.M.diagonal a.1
-  off_diagonal a b hab := cg.M.off_diagonal a.1 b.1 (fun h => hab (Subtype.ext h))
+  M a b := cg.M a.val b.val
+  isSymm := Matrix.IsSymm.ext_iff.mpr (fun a b => cg.M.symmetric b.val a.val)
+  diagonal a := cg.M.diagonal a.val
+  off_diagonal a b hab := cg.M.off_diagonal a.val b.val (fun h => hab (Subtype.ext h))
 
 /-- The Coxeter group of `componentMatrix cg c`, presented as the quotient of the free group on
 that component's generators by the relevant relations coming from `cg.M`. -/
@@ -73,9 +73,9 @@ noncomputable def ofComponent {W : Type*} (cg : CoxeterGroup W)
   component := c
   reindex := Equiv.refl _
   toHom := (componentMatrix cg c).toCoxeterSystem.lift
-    ⟨fun a => cg.cs.simple a.1, fun a b => cg.cs.simple_mul_simple_pow a.1 b.1⟩
+    ⟨fun a => cg.cs.simple a.val, fun a b => cg.cs.simple_mul_simple_pow a.val b.val⟩
   map_simple a := (componentMatrix cg c).toCoxeterSystem.lift_apply_simple
-    (fun a b => cg.cs.simple_mul_simple_pow a.1 b.1) a
+    (fun a b => cg.cs.simple_mul_simple_pow a.val b.val) a
 
 /-- Every connected component of `cg`'s Coxeter diagram, each paired with the witness that its
 associated Coxeter group is a component of `cg`. Assumes finitely many components. -/
@@ -110,7 +110,7 @@ theorem M_eq_two_of_connectedComponentMk_ne {W : Type*} (cg : CoxeterGroup W) {i
 of `cg.M` on component `c` is exactly `componentMatrix cg c`. -/
 theorem M_eq_componentMatrix {W : Type*} (cg : CoxeterGroup W)
     (c : (coxeterGraphMatrix cg.M).ConnectedComponent) (i i' : c.supp) :
-    cg.M i.1 i'.1 = componentMatrix cg c i i' := rfl
+    cg.M i.val i'.val = componentMatrix cg c i i' := rfl
 
 /-- `bil` is manifestly built entrywise from `cos (π / M i i')` (see `bil`'s definition via
 `Matrix.toBilin`), so — for exactly the same reason as `M_eq_two_of_connectedComponentMk_ne` — it
@@ -121,8 +121,7 @@ theorem bil_stdBasis_eq_zero_of_connectedComponentMk_ne {W : Type*} (cg : Coxete
     (h : (coxeterGraphMatrix cg.M).connectedComponentMk i ≠
       (coxeterGraphMatrix cg.M).connectedComponentMk i') :
     (@bil W cg) (stdBasis i) (stdBasis i') = 0 := by
-  unfold bil
-  rw [Matrix.toBilin_single, M_eq_two_of_connectedComponentMk_ne cg h]
+  rw [bil_eq, M_eq_two_of_connectedComponentMk_ne cg h]
   norm_num
 
 /-- The other half of the "direct sum" structure of `bil`, alongside
@@ -131,12 +130,11 @@ exactly with that component's own `bil` — again immediate from `bil`'s entrywi
 `M`, this time using `M_eq_componentMatrix` instead of `M_eq_two_of_connectedComponentMk_ne`. -/
 theorem bil_stdBasis_eq_of_mem_component {W : Type*} (cg : CoxeterGroup W)
     (c : (coxeterGraphMatrix cg.M).ConnectedComponent) (i i' : c.supp) :
-    (@bil W cg) (stdBasis i.1) (stdBasis i'.1) =
+    (@bil W cg) (stdBasis i.val) (stdBasis i'.val) =
     (@bil _ (componentCoxeterGroup cg c))
       (@stdBasis _ (componentCoxeterGroup cg c) i)
         (@stdBasis _ (componentCoxeterGroup cg c) i') := by
-  unfold bil
-  repeat rw [Matrix.toBilin_single]
+  rw [bil_eq, @bil_eq _ (componentCoxeterGroup cg c)]
   rfl
 
 open Classical in
@@ -154,24 +152,21 @@ theorem bil_toMatrix_blockEquiv_apply {W : Type*} (cg : CoxeterGroup W)
           (@bil _ (componentCoxeterGroup cg c)) i (h ▸ i')
       else 0 := by
   have key : (LinearMap.BilinForm.toMatrix (stdBasis.reindex (blockEquiv cg).symm)) (@bil W cg)
-      ⟨c, i⟩ ⟨c', i'⟩ = (@bil W cg) (stdBasis i.1) (stdBasis i'.1) := by
+      ⟨c, i⟩ ⟨c', i'⟩ = (@bil W cg) (stdBasis i.val) (stdBasis i'.val) := by
     unfold LinearMap.BilinForm.toMatrix
     simp only [Module.Basis.reindex_apply, blockEquiv]
-    simp only [Equiv.symm_symm, LinearEquiv.coe_mk, LinearMap.coe_mk, AddHom.coe_mk]
-    have keyL := Equiv.sigmaFiberEquiv_apply
-      (f:=(coxeterGraphMatrix cg.M).connectedComponentMk)
-      (x:=⟨c, i⟩)
-    have keyR := Equiv.sigmaFiberEquiv_apply
-      (f:=(coxeterGraphMatrix cg.M).connectedComponentMk)
-      (x:=⟨c', i'⟩)
-    erw [keyL, keyR]
+    simp only [LinearEquiv.coe_mk, LinearMap.coe_mk]
+    change (@bil W cg) (stdBasis (Equiv.sigmaFiberEquiv _ ⟨c, i⟩))
+      (stdBasis (Equiv.sigmaFiberEquiv _ ⟨c', i'⟩)) = _
+    rfl
   rw [key]
   by_cases h : c = c'
   · subst h
-    rw [dif_pos rfl]
+    rw [dite_eq_left rfl]
     exact bil_stdBasis_eq_of_mem_component cg c i i'
-  · rw [dif_neg h]
-    exact bil_stdBasis_eq_zero_of_connectedComponentMk_ne cg (by rw [i.2, i'.2]; exact h)
+  · rw [dite_eq_right h]
+    exact bil_stdBasis_eq_zero_of_connectedComponentMk_ne cg
+      (by rw [i.property, i'.property]; exact h)
 
 open Classical in
 /-- `bil` **is** a direct sum: the matrix of `bil` (in the `blockEquiv`-reindexed basis) is
@@ -186,9 +181,9 @@ theorem bil_toMatrix_blockEquiv_eq_blockDiagonal' {W : Type*} (cg : CoxeterGroup
   rw [bil_toMatrix_blockEquiv_apply cg c c' i i', Matrix.blockDiagonal'_apply']
   by_cases h : c = c'
   · subst h
-    rw [dif_pos rfl, dif_pos rfl]
+    rw [dite_eq_left rfl, dite_eq_left rfl]
     congr!
-  · rw [dif_neg h, dif_neg h]
+  · rw [dite_eq_right h, dite_eq_right h]
 
 /-- `P` *assembles* across connected components: whenever `cg` has finitely many components and
 `P` holds of the Coxeter group of each individual component, `P` already holds of `cg` itself.

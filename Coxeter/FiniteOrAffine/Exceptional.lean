@@ -116,7 +116,8 @@ noncomputable abbrev typeE6BilinearLattice : BilinearLattice.{0} :=
   BilinearLattice.eulerLattice CoxeterMatrix.E₆
 
 theorem typeE6_isSimplyLaced : BilinearLattice.IsSimplyLaced CoxeterMatrix.E₆ := by
-  unfold BilinearLattice.IsSimplyLaced; decide
+  unfold BilinearLattice.IsSimplyLaced
+  intro i j; fin_cases i <;> fin_cases j <;> decide
 
 /-- The Coxeter number of `E₆` is `12`. -/
 private def typeE6CoxeterTransformation : Matrix (Fin 6) (Fin 6) ℤ :=
@@ -137,7 +138,8 @@ noncomputable abbrev typeE7BilinearLattice : BilinearLattice.{0} :=
   BilinearLattice.eulerLattice CoxeterMatrix.E₇
 
 theorem typeE7_isSimplyLaced : BilinearLattice.IsSimplyLaced CoxeterMatrix.E₇ := by
-  unfold BilinearLattice.IsSimplyLaced; decide
+  unfold BilinearLattice.IsSimplyLaced
+  intro i j; fin_cases i <;> fin_cases j <;> decide
 
 /-- The Coxeter number of `E₇` is `18`. -/
 private def typeE7CoxeterTransformation : Matrix (Fin 7) (Fin 7) ℤ :=
@@ -159,7 +161,8 @@ noncomputable abbrev typeE8BilinearLattice : BilinearLattice.{0} :=
   BilinearLattice.eulerLattice CoxeterMatrix.E₈
 
 theorem typeE8_isSimplyLaced : BilinearLattice.IsSimplyLaced CoxeterMatrix.E₈ := by
-  unfold BilinearLattice.IsSimplyLaced; decide
+  unfold BilinearLattice.IsSimplyLaced
+  intro i j; fin_cases i <;> fin_cases j <;> decide
 
 /-- The Coxeter number of `E₈` is `30`. -/
 private def typeE8CoxeterTransformation : Matrix (Fin 8) (Fin 8) ℤ :=

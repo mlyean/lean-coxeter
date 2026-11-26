@@ -554,6 +554,7 @@ variable {n : ℕ}
 /-- The bilinear lattice on `Fin n → ℤ`
 with Gram matrix `C`, where `det C` is a unit.
 Its Coxeter transformation is `S = -C⁻¹ Cᵀ`. -/
+@[implicit_reducible]
 noncomputable def ofUnimodular (C : Matrix (Fin n) (Fin n) ℤ) (hC : IsUnit C.det) :
     BilinearLattice.{0} where
   carrier := Fin n → ℤ
@@ -600,7 +601,7 @@ theorem ofUnimodular_S_pow_eq_one
   (hm : Q ^ m = 1) :
   ((ofUnimodular C hC).S : Module.End ℤ (ofUnimodular C hC)) ^ m = 1 := by
   have hS : ((ofUnimodular C hC).S : Module.End ℤ (ofUnimodular C hC)) = Matrix.toLin' Q :=
-    LinearMap.ext fun x ↦
+    LinearMap.ext fun (x : Fin n → ℤ) ↦
       (ofUnimodular_S_eq_iff C hC x (Q *ᵥ x)).2 (by rw [mulVec_mulVec, hQ, neg_mulVec])
   have h := Matrix.toLin'_pow Q m
   rw [hm, Matrix.toLin'_one] at h
@@ -630,7 +631,7 @@ noncomputable def ofUnimodularWithMonoidQuasiUnipotent
     BilinearLatticeWithMonoidQuasiUnipotent where
   toBilinearLattice := ofUnimodular C hC
   P := positiveCone n
-  isQuasiUnipotent := hA.quasiUnipotent_of_nonneg fun x ↦ by
+  isQuasiUnipotent := hA.quasiUnipotent_of_nonneg fun (x : Fin n → ℤ) ↦ by
     simp only [ofUnimodular_χ_apply, hC2]
 
 end Matrix

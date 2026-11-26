@@ -17,25 +17,12 @@ from rank `4` onward.
 
 namespace Coxeter
 
-/-- The Coxeter matrix of type `Dₙ`. -/
-def mathlibFixedD (n : ℕ) : CoxeterMatrix (Fin n) where
-  M := Matrix.of fun i j : Fin n ↦
-    if i = j then 1
-      else (if i = n - 1 ∧ j = n - 3 ∨ j = n - 1 ∧ i = n - 3 then 3
-        else (if ((j : ℕ) + 1 = i ∨ (i : ℕ) + 1 = j) ∧ (i : ℕ) ≠ n - 1 ∧ (j : ℕ) ≠ n - 1
-          then 3 else 2))
-  isSymm := by unfold Matrix.IsSymm; aesop
-  diagonal := by simp
-  off_diagonal := by aesop
-
 /-- The Coxeter matrix of finite type `D` on `n` generators.
 
 For `n ≤ 3` this is normalized to the classical accidental type `Aₙ`; from rank `4` onward it is
-mathlib's `CoxeterMatrix.D n`
-(at least after the PR makes it match the above
-from the typo'd version). -/
+mathlib's `CoxeterMatrix.D n`. -/
 noncomputable def typeDMatrix (n : ℕ) : CoxeterMatrix (Fin n) :=
-  if n ≤ 3 then CoxeterMatrix.A n else mathlibFixedD n
+  if n ≤ 3 then CoxeterMatrix.A n else CoxeterMatrix.D n
 
 /-- Adjacency in the `D_(n+4)` diagram: the path `0 — ⋯ — n+2`, plus the fork edge `n+1 — n+3`. -/
 def typeDAdj (n i j : ℕ) : Prop :=
@@ -47,8 +34,8 @@ instance (n i j : ℕ) : Decidable (typeDAdj n i j) := by unfold typeDAdj; infer
 /-- The entries of `typeDMatrix (n + 4)`. -/
 theorem typeDMatrix_apply (n : ℕ) (i j : Fin (n + 4)) :
     typeDMatrix (n + 4) i j = if i = j then 1 else if typeDAdj n i j then 3 else 2 := by
-  rw [typeDMatrix, if_neg (by omega)]
-  simp only [mathlibFixedD, Matrix.of_apply, Fin.ext_iff, typeDAdj]
+  rw [typeDMatrix, ite_eq_right (by omega)]
+  simp only [CoxeterMatrix.D, Matrix.of_apply, Fin.ext_iff, typeDAdj]
   split_ifs <;> omega
 
 /-- The Coxeter group of finite type `D` on `n` generators, realized as the abstract group
@@ -68,12 +55,12 @@ theorem typeD_isCrystallographic (n : ℕ) [NeZero n] :
     (typeDMatrix n) i i' = 6
   by_cases h : n ≤ 3
   · unfold typeDMatrix
-    simp only [if_pos h]
+    simp only [ite_eq_left h]
     unfold CoxeterMatrix.A
-    simp only [Matrix.of_apply, if_neg hii']
+    simp only [Matrix.of_apply, ite_eq_right hii']
     split_ifs <;> tauto
   · obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
-    rw [typeDMatrix_apply, if_neg hii']
+    rw [typeDMatrix_apply, ite_eq_right hii']
     split_ifs <;> tauto
 
 /-- Two generators of `D_(n+4)` are joined in the Coxeter diagram exactly when `typeDAdj`. -/
@@ -132,17 +119,16 @@ private theorem typeDEntry_eq_pathEntry (n i j : ℕ) (hi : i < n + 3) (hj : j <
 private theorem bil_typeD_entries (n : ℕ) (i j : Fin (n + 4)) :
     (@bil _ (typeDGroup (n + 4))) (@stdBasis _ (typeDGroup (n + 4)) i)
       (@stdBasis _ (typeDGroup (n + 4)) j) = typeDEntry n i j := by
-  unfold bil
-  rw [Matrix.toBilin_single]
+  rw [@bil_eq _ (typeDGroup (n + 4))]
   change -Real.cos (Real.pi / ((typeDMatrix (n + 4)) i j : ℝ)) = typeDEntry n i j
   rw [typeDMatrix_apply]
   unfold typeDEntry
   by_cases hij : i = j
   · have hij' : (i : ℕ) = (j : ℕ) := by rw [hij]
-    rw [if_pos hij, if_pos hij']
+    rw [ite_eq_left hij, ite_eq_left hij']
     norm_num
   · have hij' : (i : ℕ) ≠ (j : ℕ) := fun h => hij (Fin.ext h)
-    rw [if_neg hij, if_neg hij']
+    rw [ite_eq_right hij, ite_eq_right hij']
     split_ifs
     · rw [show ((3 : ℕ) : ℝ) = 3 by norm_num, Real.cos_pi_div_three]
     · rw [show ((2 : ℕ) : ℝ) = 2 by norm_num, Real.cos_pi_div_two]
@@ -155,7 +141,7 @@ private noncomputable def typeDExtend (n : ℕ) (x : Fin (n + 4) →₀ ℝ) : �
 private theorem typeDExtend_apply_fin (n : ℕ) (x : Fin (n + 4) →₀ ℝ) (i : Fin (n + 4)) :
     typeDExtend n x (i : ℕ) = x i := by
   unfold typeDExtend
-  rw [dif_pos i.isLt]
+  rw [dite_eq_left i.isLt]
 
 /-- The double sum against `typeDEntry` is the fork's quadratic form. -/
 private theorem typeDEntry_sum_range_double (n : ℕ) (y : ℕ → ℝ) :
@@ -172,25 +158,25 @@ private theorem typeDEntry_sum_range_double (n : ℕ) (y : ℕ → ℝ) :
       = -(1 / 2) * y (n + 1) * y (n + 3) := by
     rw [Finset.sum_eq_single (n + 1)]
     · unfold typeDEntry typeDAdj
-      rw [if_neg (by omega), if_pos (by omega)]
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       ring
     · intro i hi hne
       unfold typeDEntry typeDAdj
       have := Finset.mem_range.1 hi
-      rw [if_neg (by omega), if_neg (by omega), mul_zero]
+      rw [ite_eq_right (by omega), ite_eq_right (by omega), mul_zero]
     · intro h; exact absurd (Finset.mem_range.2 (by omega)) h
   have hrow : ∑ j ∈ Finset.range (n + 3), y (n + 3) * y j * typeDEntry n (n + 3) j
       = -(1 / 2) * y (n + 1) * y (n + 3) := by
     rw [Finset.sum_eq_single (n + 1)]
     · unfold typeDEntry typeDAdj
-      rw [if_neg (by omega), if_pos (by omega)]
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
       ring
     · intro j hj hne
       unfold typeDEntry typeDAdj
       have := Finset.mem_range.1 hj
-      rw [if_neg (by omega), if_neg (by omega), mul_zero]
+      rw [ite_eq_right (by omega), ite_eq_right (by omega), mul_zero]
     · intro h; exact absurd (Finset.mem_range.2 (by omega)) h
-  have hdiag : typeDEntry n (n + 3) (n + 3) = 1 := by unfold typeDEntry; rw [if_pos rfl]
+  have hdiag : typeDEntry n (n + 3) (n + 3) = 1 := by unfold typeDEntry; rw [ite_eq_left rfl]
   change ∑ i ∈ Finset.range (n + 3 + 1), ∑ j ∈ Finset.range (n + 3 + 1),
     y i * y j * typeDEntry n i j = _
   simp only [Finset.sum_range_succ (n := n + 3), Finset.sum_add_distrib]
@@ -363,7 +349,7 @@ noncomputable abbrev typeDBilinearLattice (n : ℕ) : BilinearLattice.{0} :=
 
 theorem typeD_isSimplyLaced (n : ℕ) : BilinearLattice.IsSimplyLaced (typeDMatrix (n + 4)) := by
   intro i j hij
-  rw [typeDMatrix_apply, if_neg hij]
+  rw [typeDMatrix_apply, ite_eq_right hij]
   split_ifs <;> simp
 
 /-- The Euler matrix of `D_(n+4)` on `ℕ` indices: `1` on the diagonal and `-1` on each edge
@@ -393,11 +379,11 @@ private theorem typeDEuler_row_sum (n i : ℕ) :
         (if n + 3 < n + 4 ∧ i = n + 1 then 1 else 0) := by
   simp only [typeDEuler, Finset.sum_sub_distrib]
   rw [sum_range_eq_single (n + 4) i (fun j ↦ if j = i then 1 else 0)
-      (fun j hj ↦ if_neg hj),
+      (fun j hj ↦ ite_eq_right hj),
     sum_range_eq_single (n + 4) (i + 1) (fun j ↦ if j = i + 1 ∧ j ≠ n + 3 then 1 else 0)
-      (fun j hj ↦ if_neg (by omega)),
+      (fun j hj ↦ ite_eq_right (by omega)),
     sum_range_eq_single (n + 4) (n + 3) (fun j ↦ if j = n + 3 ∧ i = n + 1 then 1 else 0)
-      (fun j hj ↦ if_neg (by omega))]
+      (fun j hj ↦ ite_eq_right (by omega))]
   split_ifs <;> omega
 
 /-- Column sums of the Euler matrix of `D_(n+4)`. -/
@@ -405,11 +391,11 @@ private theorem typeDEuler_col_sum (n i : ℕ) (hi : i < n + 4) :
     ∑ j ∈ Finset.range (n + 4), typeDEuler n j i = if i = 0 then 1 else 0 := by
   simp only [typeDEuler, Finset.sum_sub_distrib]
   rw [sum_range_eq_single (n + 4) i (fun j ↦ if i = j then 1 else 0)
-      (fun j hj ↦ if_neg (Ne.symm hj)),
+      (fun j hj ↦ ite_eq_right (Ne.symm hj)),
     sum_range_eq_single (n + 4) (i - 1) (fun j ↦ if i = j + 1 ∧ i ≠ n + 3 then 1 else 0)
-      (fun j hj ↦ if_neg (by omega)),
+      (fun j hj ↦ ite_eq_right (by omega)),
     sum_range_eq_single (n + 4) (n + 1) (fun j ↦ if i = n + 3 ∧ j = n + 1 then 1 else 0)
-      (fun j hj ↦ if_neg (by omega))]
+      (fun j hj ↦ ite_eq_right (by omega))]
   split_ifs <;> omega
 
 /-- `S e_k = e_(k+1)` along the path, for `k ≤ n`. -/
@@ -498,21 +484,21 @@ theorem typeDBilinearLattice_S_pow (n : ℕ) :
     induction k with
     | zero => rfl
     | succ k ih =>
-        rw [pow_succ', Module.End.mul_apply, ih (by omega)]
+        rw [pow_succ', mul_apply_eq_comp, ih (by omega)]
         exact hsucc k (by omega)
   have hone : (S ^ (n + 2)) (e 0) = ones := by
-    rw [pow_succ', Module.End.mul_apply, hcyc (n + 1) le_rfl]
+    rw [pow_succ', mul_apply_eq_comp, hcyc (n + 1) le_rfl]
     exact hbranch
   -- `T = S ^ (n + 3)` negates `e_0`, hence every `S ^ k e_0`; so `U = T ^ 2` fixes them.
   have hT0 : (S ^ (n + 3)) (e 0) = -e 0 := by
-    rw [pow_succ', Module.End.mul_apply, hone]
+    rw [pow_succ', mul_apply_eq_comp, hone]
     exact hones
   have hTpow : ∀ k, (S ^ (n + 3)) ((S ^ k) (e 0)) = -(S ^ k) (e 0) := by
     intro k
-    rw [← Module.End.mul_apply, ← pow_add, add_comm, pow_add, Module.End.mul_apply, hT0, map_neg]
+    rw [← mul_apply_eq_comp, ← pow_add, add_comm, pow_add, mul_apply_eq_comp, hT0, map_neg]
   have hTT : ∀ v, (S ^ (n + 3)) v = -v → (S ^ (2 * n + 6)) v = v := by
     intro v h
-    rw [show 2 * n + 6 = (n + 3) + (n + 3) by ring, pow_add, Module.End.mul_apply, h, map_neg, h,
+    rw [show 2 * n + 6 = (n + 3) + (n + 3) by ring, pow_add, mul_apply_eq_comp, h, map_neg, h,
       neg_neg]
   have hUk : ∀ k (hk : k ≤ n + 1), (S ^ (2 * n + 6)) (e ⟨k, by omega⟩) = e ⟨k, by omega⟩ := by
     intro k hk
@@ -532,8 +518,8 @@ theorem typeDBilinearLattice_S_pow (n : ℕ) :
     induction m with
     | zero => rfl
     | succ m ih =>
-        rw [show 2 * (m + 1) = 2 * m + 1 + 1 by ring, pow_succ, Module.End.mul_apply, hd,
-          map_neg, pow_succ, Module.End.mul_apply, hd, map_neg, neg_neg, ih]
+        rw [show 2 * (m + 1) = 2 * m + 1 + 1 by ring, pow_succ, mul_apply_eq_comp, hd,
+          map_neg, pow_succ, mul_apply_eq_comp, hd, map_neg, neg_neg, ih]
   have hdU : (S ^ (2 * n + 6)) (ea - eb) = ea - eb := by
     rw [show 2 * n + 6 = 2 * (n + 3) by ring]
     exact hd2 _

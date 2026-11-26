@@ -116,7 +116,7 @@ theorem geomRepAux_stdBasis (i : B W) : geomRepAux i (stdBasis i) = -stdBasis i 
 
 section just_two
 
-private def E (i i' : B W) : Submodule ℝ (V W) := supported ℝ _ {i, i'}
+def E (i i' : B W) : Submodule ℝ (V W) := supported ℝ _ {i, i'}
 
 private theorem E_eq_span (i i' : B W) : E i i' = Submodule.span ℝ {stdBasis i, stdBasis i'} := by
   unfold E stdBasis
@@ -323,7 +323,7 @@ def e : ({i, i'} : Set (B W)) ≃ Fin 2 where
       symm
       apply index_ne
 
-private def stdBasisE : Module.Basis (Fin 2) ℝ (E i i') :=
+def stdBasisE : Module.Basis (Fin 2) ℝ (E i i') :=
   (Finsupp.basisSingleOne.map (supportedEquivFinsupp {i, i'}).symm).reindex (e i i')
 
 @[simp]
@@ -383,14 +383,14 @@ private theorem orderOf_geomRepAux_mul_geomRepAux_eq_orderOf_restrict (m : ℕ) 
           change ((geomRepAux i * geomRepAux i') ^ m) (geomRepAux i (geomRepAux i' v)) = v
           rw [geomRepAux_E_perp_right i i' v hv, geomRepAux_E_perp_left i i' v hv, ih]
 
-private instance : PreInnerProductSpace.Core ℝ (E i i') where
+instance : PreInnerProductSpace.Core ℝ (E i i') where
   inner x y := bil.restrict (E i i') x y
   conj_inner_symm x y := bil_isSymm.eq _ _
-  re_inner_nonneg := (bil_restrict_E_nonneg i i').nonneg
+  re_inner_nonneg := by exact (bil_restrict_E_nonneg i i').nonneg
   add_left := by simp
   smul_left := by simp
 
-private instance : InnerProductSpace.Core ℝ (E i i') where
+instance : InnerProductSpace.Core ℝ (E i i') where
   definite x h := by
     have h2 := (inferInstance : Fact (M i i' ≥ 2)).out
     change bil.restrict (E i i') x x = 0 at h
@@ -407,7 +407,7 @@ private instance : InnerProductSpace.Core ℝ (E i i') where
 
 instance : NormedAddCommGroup (E i i') := InnerProductSpace.Core.toNormedAddCommGroup (𝕜 := ℝ)
 
-private instance : InnerProductSpace ℝ (E i i') := InnerProductSpace.ofCore inferInstance
+instance : InnerProductSpace ℝ (E i i') := InnerProductSpace.ofCore inferInstance
 
 open scoped RealInnerProductSpace
 

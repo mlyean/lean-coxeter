@@ -103,7 +103,7 @@ def mkPiece (n : ℕ) : F.carrier n →ₗ[R] F.piece n :=
 before descending to the quotients `F.piece m`, `F.piece n`. -/
 def mulRaw (m n : ℕ) : F.carrier m →ₗ[R] F.carrier n →ₗ[R] F.piece (m + n) :=
   LinearMap.mk₂ R
-    (fun x y => F.mkPiece (m + n) ⟨(x : A) * (y : A), F.mul_mem x.2 y.2⟩)
+    (fun x y => F.mkPiece (m + n) ⟨(x : A) * (y : A), F.mul_mem x.property y.property⟩)
     (fun x₁ x₂ y => by
       simp only [← map_add]
       congr 1
@@ -125,13 +125,13 @@ theorem mulRaw_ker_left (m n : ℕ) :
     (F.below m).comap (F.carrier m).subtype ≤ (F.mulRaw m n).ker := by
   intro x hx
   ext y
-  exact (Submodule.Quotient.mk_eq_zero _).mpr (F.mul_mem_below_left hx y.2)
+  exact (Submodule.Quotient.mk_eq_zero _).mpr (F.mul_mem_below_left hx y.property)
 
 theorem mulRaw_ker_right (m n : ℕ) :
     (F.below n).comap (F.carrier n).subtype ≤ (F.mulRaw m n).flip.ker := by
   intro y hy
   ext x
-  exact (Submodule.Quotient.mk_eq_zero _).mpr (F.mul_mem_below_right x.2 hy)
+  exact (Submodule.Quotient.mk_eq_zero _).mpr (F.mul_mem_below_right x.property hy)
 
 /-- The induced multiplication `F.piece m × F.piece n → F.piece (m + n)`. -/
 def mulPiece (m n : ℕ) : F.piece m →ₗ[R] F.piece n →ₗ[R] F.piece (m + n) :=
@@ -140,7 +140,7 @@ def mulPiece (m n : ℕ) : F.piece m →ₗ[R] F.piece n →ₗ[R] F.piece (m + 
 @[simp]
 private theorem mulPiece_mk (m n : ℕ) (x : F.carrier m) (y : F.carrier n) :
     F.mulPiece m n (F.mkPiece m x) (F.mkPiece n y)
-      = F.mkPiece (m + n) ⟨(x : A) * (y : A), F.mul_mem x.2 y.2⟩ :=
+      = F.mkPiece (m + n) ⟨(x : A) * (y : A), F.mul_mem x.property y.property⟩ :=
   rfl
 
 /-- The distinguished element `1 ∈ F.piece 0`. -/
@@ -217,7 +217,8 @@ theorem piece_one_mul (a : GradedMonoid F.piece) :
   obtain ⟨a, rfl⟩ := F.mkPiece_surjective i a
   refine Sigma.ext (zero_add i) ?_
   refine HEq.trans (heq_of_eq (F.mulPiece_mk 0 i ⟨1, F.one_mem⟩ a)) ?_
-  refine HEq.trans (F.mkPiece_heq (zero_add i) ⟨(1 : A) * (a : A), F.mul_mem F.one_mem a.2⟩) ?_
+  refine HEq.trans
+    (F.mkPiece_heq (zero_add i) ⟨(1 : A) * (a : A), F.mul_mem F.one_mem a.property⟩) ?_
   apply heq_of_eq
   congr 1
   exact Subtype.ext (by rw [F.coe_carrier_cast]; exact one_mul (a : A))
@@ -250,10 +251,10 @@ theorem piece_mul_assoc (a b c : GradedMonoid F.piece) :
   refine HEq.trans (heq_of_eq (?_ : F.mulPiece (i + j) k
       (F.mulPiece i j (F.mkPiece i a) (F.mkPiece j b)) (F.mkPiece k c)
       = F.mkPiece (i + j + k) ⟨((a : A) * (b : A)) * (c : A),
-          F.mul_mem (F.mul_mem a.2 b.2) c.2⟩)) ?_
+          F.mul_mem (F.mul_mem a.property b.property) c.property⟩)) ?_
   · rw [mulPiece_mk, mulPiece_mk]
   refine HEq.trans (F.mkPiece_heq (add_assoc i j k)
-    ⟨((a : A) * (b : A)) * (c : A), F.mul_mem (F.mul_mem a.2 b.2) c.2⟩) ?_
+    ⟨((a : A) * (b : A)) * (c : A), F.mul_mem (F.mul_mem a.property b.property) c.property⟩) ?_
   refine heq_of_eq (?_ : F.mkPiece (i + (j + k)) _
       = F.mulPiece i (j + k) (F.mkPiece i a) (F.mulPiece j k (F.mkPiece j b) (F.mkPiece k c)))
   rw [mulPiece_mk, mulPiece_mk]

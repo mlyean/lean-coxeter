@@ -33,7 +33,7 @@ theorem typeBC_isCrystallographic (n : ℕ) [NeZero n] :
     (CoxeterMatrix.B n) i i' = 3 ∨ (CoxeterMatrix.B n) i i' = 4 ∨
     (CoxeterMatrix.B n) i i' = 6
   unfold CoxeterMatrix.B
-  simp only [Matrix.of_apply, if_neg hii']
+  simp only [Matrix.of_apply, ite_eq_right hii']
   split_ifs <;> tauto
 
 private theorem coxeterGraphMatrix_typeBC_eq_pathGraph (n : ℕ) :
@@ -44,7 +44,7 @@ private theorem coxeterGraphMatrix_typeBC_eq_pathGraph (n : ℕ) :
   simp only [Matrix.of_apply, ne_eq]
   by_cases h : i = j
   · simp [h]
-  · rw [if_neg h, if_neg (Ne.symm h)]
+  · rw [ite_eq_right h, ite_eq_right (Ne.symm h)]
     have key : ∀ p q : Fin n, p ≠ q →
         (¬(if (p : ℕ) = n - 1 ∧ (q : ℕ) = n - 2 ∨ (q : ℕ) = n - 1 ∧ (p : ℕ) = n - 2 then (4 : ℕ)
             else if (q : ℕ) + 1 = p ∨ (p : ℕ) + 1 = q then 3 else 2) = 2 ↔
@@ -72,7 +72,7 @@ theorem typeBC_isIrreducible (n : ℕ) : @IsIrreducible _ (typeBCGroup (n + 2)) 
   unfold IsIrreducible IsIrreducibleMatrix
   change (coxeterGraphMatrix (CoxeterMatrix.B (n + 2))).Connected
   rw [coxeterGraphMatrix_typeBC_eq_pathGraph]
-  exact SimpleGraph.pathGraph_connected (n + 1)
+  exact SimpleGraph.connected_pathGraph_add_one (n + 1)
 
 /-! ### Positive definiteness of `bil` for type B/C
 
@@ -89,7 +89,7 @@ private theorem coxeterMatrix_B_apply (n : ℕ) {i j : Fin (n + 2)} (hij : i ≠
       if (i : ℕ) = n ∧ (j : ℕ) = n + 1 ∨ (j : ℕ) = n ∧ (i : ℕ) = n + 1 then (4 : ℕ)
       else if (j : ℕ) + 1 = i ∨ (i : ℕ) + 1 = j then 3 else 2 := by
   unfold CoxeterMatrix.B
-  simp only [Matrix.of_apply, if_neg hij]
+  simp only [Matrix.of_apply, ite_eq_right hij]
   have h1 : n + 2 - 1 = n + 1 := by omega
   have h2 : n + 2 - 2 = n := by omega
   rw [h1, h2]
@@ -102,19 +102,18 @@ private theorem coxeterMatrix_B_apply (n : ℕ) {i j : Fin (n + 2)} (hij : i ≠
 private theorem bil_typeBC_entries (n : ℕ) (i j : Fin (n + 2)) :
     (@bil _ (typeBCGroup (n + 2))) (@stdBasis _ (typeBCGroup (n + 2)) i)
       (@stdBasis _ (typeBCGroup (n + 2)) j) = lastEdgeEntry n (Real.sqrt 2) (i : ℕ) (j : ℕ) := by
-  unfold bil
-  rw [Matrix.toBilin_single]
+  rw [@bil_eq _ (typeBCGroup (n + 2))]
   change -Real.cos (Real.pi / ((CoxeterMatrix.B (n + 2)) i j : ℝ))
     = lastEdgeEntry n (Real.sqrt 2) (i : ℕ) (j : ℕ)
   by_cases hij : i = j
   · have hij' : (i : ℕ) = (j : ℕ) := by rw [hij]
     unfold CoxeterMatrix.B lastEdgeEntry
-    simp only [Matrix.of_apply, if_pos hij, if_pos hij']
+    simp only [Matrix.of_apply, ite_eq_left hij, ite_eq_left hij']
     norm_num
   · have hij' : (i : ℕ) ≠ (j : ℕ) := fun h => hij (Fin.ext h)
     rw [coxeterMatrix_B_apply n hij]
     unfold lastEdgeEntry
-    rw [if_neg hij']
+    rw [ite_eq_right hij']
     split_ifs with hspec hadj
     · rw [show ((4 : ℕ) : ℝ) = 4 by norm_num, Real.cos_pi_div_four]
     · rw [show ((3 : ℕ) : ℝ) = 3 by norm_num, Real.cos_pi_div_three]
@@ -128,7 +127,7 @@ private noncomputable def typeBCExtend (n : ℕ) (x : Fin (n + 2) →₀ ℝ) : 
 private theorem typeBCExtend_apply_fin (n : ℕ) (x : Fin (n + 2) →₀ ℝ) (i : Fin (n + 2)) :
     typeBCExtend n x (i : ℕ) = x i := by
   unfold typeBCExtend
-  rw [dif_pos i.isLt]
+  rw [dite_eq_left i.isLt]
 
 /-- Sum-of-squares identity for the type-`B`/`C` (doubled) quadratic form on `n + 2` generators:
 `sos_identity_lastEdge` at `k = √2`, whose leftover `(2 - k ^ 2) * y (n + 1) ^ 2` term vanishes

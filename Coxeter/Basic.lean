@@ -106,8 +106,8 @@ theorem reverse_alternatingWord_of_odd (i i' : B W) (m : ℕ) (hm : Odd m) :
     rw [Nat.even_iff, Nat.even_iff]
     omega
   by_cases hE : Even (m + k)
-  · rw [if_pos hE, if_pos (hpar.mpr hE)]
-  · rw [if_neg hE, if_neg (fun hc => hE (hpar.mp hc))]
+  · rw [ite_eq_left hE, ite_eq_left (hpar.mpr hE)]
+  · rw [ite_eq_right hE, ite_eq_right (fun hc => hE (hpar.mp hc))]
 
 theorem reverse_alternatingWord (i i' : B W) (k : ℕ) :
   (alternatingWord i i' (2 * k)).reverse = alternatingWord i' i (2 * k) := by

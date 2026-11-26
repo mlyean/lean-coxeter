@@ -69,10 +69,10 @@ theorem pathEntry_sum_range_double (y : ℕ → ℝ) (m : ℕ) :
         by_cases hc : i = m
         · subst hc
           simp [pathEntry]
-        · rw [if_neg hc]
+        · rw [ite_eq_right hc]
           unfold pathEntry
-          rw [if_neg (by omega : ¬ i = m + 1),
-            if_neg (by omega : ¬ ((m + 1) + 1 = i ∨ i + 1 = m + 1))]
+          rw [ite_eq_right (by omega : ¬ i = m + 1),
+            ite_eq_right (by omega : ¬ ((m + 1) + 1 = i ∨ i + 1 = m + 1))]
           ring
       have hR : ∀ j ∈ Finset.range (m + 1),
           y (m + 1) * y j * pathEntry (m + 1) j =
@@ -82,10 +82,10 @@ theorem pathEntry_sum_range_double (y : ℕ → ℝ) (m : ℕ) :
         by_cases hc : j = m
         · subst hc
           simp [pathEntry]
-        · rw [if_neg hc]
+        · rw [ite_eq_right hc]
           unfold pathEntry
-          rw [if_neg (by omega : ¬ (m + 1) = j),
-            if_neg (by omega : ¬ (j + 1 = m + 1 ∨ (m + 1) + 1 = j))]
+          rw [ite_eq_right (by omega : ¬ (m + 1) = j),
+            ite_eq_right (by omega : ¬ (j + 1 = m + 1 ∨ (m + 1) + 1 = j))]
           ring
       have hmem : m ∈ Finset.range (m + 1) := Finset.self_mem_range_succ m
       have expand : ∀ i ∈ Finset.range (m + 1),
@@ -99,13 +99,13 @@ theorem pathEntry_sum_range_double (y : ℕ → ℝ) (m : ℕ) :
         Finset.sum_congr rfl expand, Finset.sum_add_distrib,
         Finset.sum_ite_eq' (Finset.range (m + 1)) m
           (fun i => y i * y (m + 1) * (-(1 / 2 : ℝ))),
-        if_pos hmem]
+        ite_eq_left hmem]
       rw [Finset.sum_range_succ (f := fun j => y (m + 1) * y j * pathEntry (m + 1) j),
         Finset.sum_congr rfl hR,
         Finset.sum_ite_eq' (Finset.range (m + 1)) m
           (fun j => y (m + 1) * y j * (-(1 / 2 : ℝ))),
-        if_pos hmem]
-      have hdiag : pathEntry (m + 1) (m + 1) = 1 := if_pos rfl
+        ite_eq_left hmem]
+      have hdiag : pathEntry (m + 1) (m + 1) = 1 := ite_eq_left rfl
       rw [hdiag, ih, Finset.sum_range_succ (f := fun i => (y i) ^ 2) (n := m + 1),
         Finset.sum_range_succ (f := fun i => y i * y (i + 1)) (n := m)]
       ring
@@ -143,25 +143,25 @@ theorem lastEdgeEntry_symm (n : ℕ) (k : ℝ) (i j : ℕ) :
   unfold lastEdgeEntry
   by_cases hij : i = j
   · simp [hij]
-  · rw [if_neg hij, if_neg (Ne.symm hij)]
+  · rw [ite_eq_right hij, ite_eq_right (Ne.symm hij)]
     by_cases hspec : (i = n ∧ j = n + 1) ∨ (j = n ∧ i = n + 1)
-    · rw [if_pos hspec, if_pos (Or.symm hspec)]
-    · rw [if_neg hspec, if_neg (fun h => hspec (Or.symm h))]
+    · rw [ite_eq_left hspec, ite_eq_left (Or.symm hspec)]
+    · rw [ite_eq_right hspec, ite_eq_right (fun h => hspec (Or.symm h))]
       by_cases hadj : j + 1 = i ∨ i + 1 = j
-      · rw [if_pos hadj, if_pos (Or.symm hadj)]
-      · rw [if_neg hadj, if_neg (fun h => hadj (Or.symm h))]
+      · rw [ite_eq_left hadj, ite_eq_left (Or.symm hadj)]
+      · rw [ite_eq_right hadj, ite_eq_right (fun h => hadj (Or.symm h))]
 
 theorem lastEdgeEntry_diag (n : ℕ) (k : ℝ) (i : ℕ) : lastEdgeEntry n k i i = 1 := by
-  unfold lastEdgeEntry; rw [if_pos rfl]
+  unfold lastEdgeEntry; rw [ite_eq_left rfl]
 
 theorem lastEdgeEntry_last_row (n : ℕ) (k : ℝ) {i : ℕ} (hi : i < n) :
     lastEdgeEntry n k i (n + 1) = 0 := by
   unfold lastEdgeEntry
-  rw [if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+  rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega)]
 
 theorem lastEdgeEntry_special (n : ℕ) (k : ℝ) : lastEdgeEntry n k n (n + 1) = -(k / 2) := by
   unfold lastEdgeEntry
-  rw [if_neg (by omega), if_pos (Or.inl ⟨rfl, rfl⟩)]
+  rw [ite_eq_right (by omega), ite_eq_left (Or.inl ⟨rfl, rfl⟩)]
 
 /-- Away from the last edge, `lastEdgeEntry` agrees with `pathEntry`. -/
 theorem lastEdgeEntry_eq_pathEntry (n : ℕ) (k : ℝ) {i j : ℕ} (hi : i < n + 1) (hj : j < n + 1) :
@@ -170,7 +170,7 @@ theorem lastEdgeEntry_eq_pathEntry (n : ℕ) (k : ℝ) {i j : ℕ} (hi : i < n +
   have hspec : ¬((i = n ∧ j = n + 1) ∨ (j = n ∧ i = n + 1)) := by omega
   by_cases hij : i = j
   · simp [hij]
-  · rw [if_neg hij, if_neg hij, if_neg hspec]
+  · rw [ite_eq_right hij, ite_eq_right hij, ite_eq_right hspec]
     split_ifs <;> norm_num
 
 /-- The double sum against `lastEdgeEntry` collapses to the tridiagonal quadratic form from
@@ -193,13 +193,13 @@ theorem lastEdgeEntry_sum_range_double (n : ℕ) (k : ℝ) (y : ℕ → ℝ) :
     intro i hi
     simp only [Finset.mem_range] at hi
     by_cases hc : i = n
-    · rw [if_pos hc, hc, lastEdgeEntry_special]
-    · rw [if_neg hc, lastEdgeEntry_last_row n k (show i < n by omega)]; ring
+    · rw [ite_eq_left hc, hc, lastEdgeEntry_special]
+    · rw [ite_eq_right hc, lastEdgeEntry_last_row n k (show i < n by omega)]; ring
   have hrow : ∑ i ∈ Finset.range (n + 1), y i * y (n + 1) * lastEdgeEntry n k i (n + 1)
       = y n * y (n + 1) * (-(k / 2)) := by
     rw [Finset.sum_congr rfl hcorner,
       Finset.sum_ite_eq' (Finset.range (n + 1)) n (fun i => y i * y (n + 1) * (-(k / 2))),
-      if_pos (Finset.self_mem_range_succ n)]
+      ite_eq_left (Finset.self_mem_range_succ n)]
   have hcol : ∑ j ∈ Finset.range (n + 1), y (n + 1) * y j * lastEdgeEntry n k (n + 1) j
       = y n * y (n + 1) * (-(k / 2)) := by
     rw [← hrow]
