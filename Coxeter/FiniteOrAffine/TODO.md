@@ -17,11 +17,6 @@ every `x` with `bil x x = 0` a multiple of `v`), as in `AffineExceptional.lean`:
 sum-of-squares decomposition with a single zero coefficient, `bil x x = 0` forces every other
 linear form to vanish, which pins `x` to a multiple of the null root.
 
-### AffineTypeA.lean
-- `proof_wanted affineTypeA_isIrreducibleAffineCoxeter (n : ℕ) [NeZero n] : @IsIrreducibleAffineCoxeter _ (affineTypeAGroup n)`
-- `proof_wanted affineTypeA_isIrreducibleAffineWeyl (n : ℕ) [NeZero n] : @IsIrreducibleAffineWeyl _ (affineTypeAGroup n)`
-  — the diagram is a cycle; the null root is `(1, …, 1)`.
-
 ### AffineTypeB.lean
 - `proof_wanted affineTypeB_isIrreducibleAffineCoxeter (n : ℕ) (hn : 2 ≤ n) : @IsIrreducibleAffineCoxeter _ (affineTypeBGroup n hn)`
 - `proof_wanted affineTypeB_isIrreducibleAffineWeyl (n : ℕ) (hn : 2 ≤ n) : @IsIrreducibleAffineWeyl _ (affineTypeBGroup n hn)`
@@ -39,6 +34,6 @@ linear form to vanish, which pins `x` to a multiple of the null root.
 
 ## Suggested order of attack
 
-1. The `Ãₙ`, `B̃ₙ`, `C̃ₙ`, `D̃ₙ` `IsIrreducibleAffineCoxeter` goals — need general-`n`
-   sum-of-squares identities.
+1. The `B̃ₙ`, `C̃ₙ`, `D̃ₙ` `IsIrreducibleAffineCoxeter` goals — need general-`n` sum-of-squares
+   identities (see `affineTypeA_bil_eq` for the cycle).
 2. Their `IsIrreducibleAffineWeyl` goals, via `isPolyAffineWeyl_of_isotropic`.

@@ -6,9 +6,10 @@ public import Coxeter.SpecialFeatures
 /-!
 # Affine Coxeter groups of type A
 
-This file defines the affine type `A` Coxeter matrix and Coxeter group, and the Euler lattice of
-`Ãₙ` for `n ≥ 2`, whose Coxeter transformation is quasi-unipotent of index exactly `2`. The
-classification statements are left as `proof_wanted`.
+This file defines the affine type `A` Coxeter matrix and Coxeter group, proves that `Ãₙ` is an
+irreducible affine Coxeter group and an irreducible affine Weyl group for `n ≥ 1`, and defines the
+Euler lattice of `Ãₙ` for `n ≥ 2`, whose Coxeter transformation is quasi-unipotent of index exactly
+`2`.
 
 ## Main definitions
 
@@ -17,6 +18,7 @@ classification statements are left as `proof_wanted`.
 
 ## Main statements
 
+* `Coxeter.affineTypeA_isIrreducibleAffineCoxeter`, `Coxeter.affineTypeA_isIrreducibleAffineWeyl`
 * `Coxeter.affineTypeABilinearLattice_isQuasiUnipotent`
 
 ## Implementation notes
@@ -52,11 +54,149 @@ def affineTypeAMatrix (n : ℕ) : CoxeterMatrix (Fin (n + 1)) where
   M := affineTypeAMatrix n
   cs := (affineTypeAMatrix n).toCoxeterSystem
 
-proof_wanted affineTypeA_isIrreducibleAffineCoxeter (n : ℕ) [NeZero n] :
-    @IsIrreducibleAffineCoxeter _ (affineTypeAGroup n)
+/-! ### `Ãₙ` is an irreducible affine Weyl group
 
-proof_wanted affineTypeA_isIrreducibleAffineWeyl (n : ℕ) [NeZero n] :
-    @IsIrreducibleAffineWeyl _ (affineTypeAGroup n)
+Indexing the cycle by `Fin (n + 1)`, whose addition wraps around, the neighbours of `i` are
+`i + 1` and `i - 1`, and `bil x x = ½ ∑ᵢ (xᵢ - xᵢ₊₁)²`. -/
+
+section Classification
+
+variable {n : ℕ} [NeZero n]
+
+/-- The Gram entries of `bil` for `Ãₙ`, `n ≥ 1`: `1` on the diagonal and `-½` for each of the two
+cyclic neighbours. For `n = 1` the two neighbours coincide, giving `-1` (the edge labelled `∞`). -/
+private theorem affineTypeA_gram (i j : Fin (n + 1)) :
+    -Real.cos (Real.pi / (affineTypeAMatrix n i j : ℝ)) =
+      (if j = i then 1 else 0) - (if j = i + 1 then 1 / 2 else 0) -
+        (if j = i - 1 then 1 / 2 else 0) := by
+  have hn := NeZero.ne n
+  have hi := i.isLt
+  have hj := j.isLt
+  have h0 : j = i ↔ (j : ℕ) = i := Fin.ext_iff
+  have h1 : j = i + 1 ↔ ((i : ℕ) + 1 = j ∨ ((i : ℕ) = n ∧ (j : ℕ) = 0)) := by
+    rw [Fin.ext_iff, Fin.val_add_one]
+    split_ifs with h <;> simp only [Fin.ext_iff, Fin.val_last] at h <;> omega
+  have h2 : j = i - 1 ↔ ((j : ℕ) + 1 = i ∨ ((i : ℕ) = 0 ∧ (j : ℕ) = n)) := by
+    rw [Fin.ext_iff, Fin.coe_sub_one]
+    split_ifs with h <;> simp only [Fin.ext_iff, Fin.val_zero] at h <;> omega
+  simp only [h0, h1, h2]
+  unfold affineTypeAMatrix
+  simp only [Matrix.of_apply, Fin.ext_iff]
+  split_ifs <;> first
+    | omega
+    | norm_num [Real.cos_pi_div_three]
+
+/-- `bil x x = ½ ∑ᵢ (xᵢ - xᵢ₊₁)²` around the cycle. -/
+private theorem affineTypeA_bil_eq (x : Fin (n + 1) →₀ ℝ) :
+    (@bil _ (affineTypeAGroup n)) x x = (∑ i, (x i - x (i + 1)) ^ 2) / 2 := by
+  rw [@bil_self_eq_sum _ (affineTypeAGroup n) (Fin.fintype (n + 1))]
+  change ∑ i : Fin (n + 1), ∑ j : Fin (n + 1),
+    x i * x j * -Real.cos (Real.pi / (affineTypeAMatrix n i j : ℝ)) = _
+  simp only [affineTypeA_gram, mul_sub, mul_ite, mul_one, mul_zero, Finset.sum_sub_distrib,
+    Finset.sum_ite_eq', Finset.mem_univ, ite_true]
+  have hshift : ∑ i : Fin (n + 1), x i * x (i - 1) * (1 / 2) =
+      ∑ i : Fin (n + 1), x i * x (i + 1) * (1 / 2) := by
+    rw [← Equiv.sum_comp (Equiv.addRight (1 : Fin (n + 1)))]
+    simp only [Equiv.coe_addRight, add_sub_cancel_right]
+    exact Finset.sum_congr rfl fun i _ ↦ by ring
+  have hsq : ∑ i : Fin (n + 1), x (i + 1) ^ 2 = ∑ i : Fin (n + 1), x i ^ 2 :=
+    Equiv.sum_comp (Equiv.addRight (1 : Fin (n + 1))) fun i ↦ x i ^ 2
+  have hexp : ∑ i : Fin (n + 1), (x i - x (i + 1)) ^ 2 =
+      2 * ∑ i : Fin (n + 1), x i ^ 2 - 2 * ∑ i : Fin (n + 1), x i * x (i + 1) := by
+    simp only [sub_sq, Finset.sum_add_distrib, Finset.sum_sub_distrib, hsq, mul_assoc,
+      ← Finset.mul_sum]
+    ring
+  rw [hshift, hexp, ← Finset.sum_mul]
+  simp only [sq]
+  ring
+
+private theorem affineTypeA_bil_nonneg (x : Fin (n + 1) →₀ ℝ) :
+    0 ≤ (@bil _ (affineTypeAGroup n)) x x := by
+  rw [affineTypeA_bil_eq]
+  positivity
+
+/-- The null root of `Ãₙ`: `(1, …, 1)`. -/
+private noncomputable def affineTypeANull : Fin (n + 1) →₀ ℝ :=
+  Finsupp.equivFunOnFinite.symm fun _ ↦ 1
+
+omit [NeZero n] in
+private theorem affineTypeANull_apply (i : Fin (n + 1)) : affineTypeANull (n := n) i = 1 := by
+  simp [affineTypeANull]
+
+private theorem affineTypeA_bil_null (j : Fin (n + 1)) :
+    (@bil _ (affineTypeAGroup n)) affineTypeANull (@stdBasis _ (affineTypeAGroup n) j) = 0 := by
+  rw [@bil_stdBasis_right_eq_sum _ (affineTypeAGroup n) (Fin.fintype (n + 1))]
+  change ∑ i : Fin (n + 1),
+    affineTypeANull i * -Real.cos (Real.pi / (affineTypeAMatrix n i j : ℝ)) = 0
+  have h1 : ∀ i : Fin (n + 1), j = i + 1 ↔ i = j - 1 := fun i ↦ by
+    rw [eq_sub_iff_add_eq, eq_comm]
+  have h2 : ∀ i : Fin (n + 1), j = i - 1 ↔ i = j + 1 := fun i ↦ by
+    rw [eq_sub_iff_add_eq, eq_comm]
+  simp only [affineTypeA_gram, affineTypeANull_apply, one_mul, h1, h2, Finset.sum_sub_distrib,
+    Finset.sum_ite_eq, Finset.mem_univ, ite_true]
+  norm_num
+
+/-- A vector isotropic for `bil` of type `Ãₙ` is constant, hence a multiple of the null root. -/
+private theorem affineTypeA_bil_isotropic (x : Fin (n + 1) →₀ ℝ)
+    (hx : (@bil _ (affineTypeAGroup n)) x x = 0) : ∃ a : ℝ, x = a • affineTypeANull := by
+  rw [affineTypeA_bil_eq, div_eq_zero_iff, or_iff_left two_ne_zero,
+    Finset.sum_eq_zero_iff_of_nonneg fun i _ ↦ sq_nonneg _] at hx
+  have hstep : ∀ i, x (i + 1) = x i := fun i ↦
+    (sub_eq_zero.mp (pow_eq_zero_iff two_ne_zero |>.mp (hx i (Finset.mem_univ _)))).symm
+  have hconst : ∀ k (hk : k < n + 1), x ⟨k, hk⟩ = x 0 := by
+    intro k
+    induction k with
+    | zero => exact fun _ ↦ rfl
+    | succ k ih =>
+        intro hk
+        have hk' : (⟨k + 1, hk⟩ : Fin (n + 1)) = ⟨k, by omega⟩ + 1 := by
+          rw [Fin.ext_iff, Fin.val_add_one, ite_eq_right fun h ↦ by
+            simp only [Fin.ext_iff, Fin.val_last] at h; omega]
+        rw [hk', hstep, ih]
+  refine ⟨x 0, ?_⟩
+  ext i
+  rw [Finsupp.smul_apply, affineTypeANull_apply, smul_eq_mul, mul_one]
+  exact hconst i i.isLt
+
+private theorem affineTypeA_isIrreducible' : @IsIrreducible _ (affineTypeAGroup n) := by
+  refine isIrreducibleMatrix_of_exists_lt (affineTypeAMatrix n) fun i hi ↦ ?_
+  have hi0 : (i : ℕ) ≠ 0 := fun h ↦ hi (Fin.ext h)
+  refine ⟨⟨i - 1, by omega⟩, Fin.lt_def.mpr (by simp only; omega), ?_⟩
+  unfold affineTypeAMatrix
+  simp only [Matrix.of_apply, Fin.ext_iff]
+  split_ifs <;> omega
+
+private theorem affineTypeA_isCrystallographic' : @IsCrystallographic _ (affineTypeAGroup n) := by
+  intro i i' hii'
+  change affineTypeAMatrix n i i' = 0 ∨ affineTypeAMatrix n i i' = 2 ∨
+    affineTypeAMatrix n i i' = 3 ∨ affineTypeAMatrix n i i' = 4 ∨ affineTypeAMatrix n i i' = 6
+  unfold affineTypeAMatrix
+  simp only [Matrix.of_apply]
+  split_ifs <;> simp_all
+
+private theorem affineTypeA_isAffineCoxeter' : @IsAffineCoxeter _ (affineTypeAGroup n) :=
+  isAffineCoxeter_of_nonneg_of_radical (fun x ↦ affineTypeA_bil_nonneg x) affineTypeANull
+    (fun h ↦ by simpa [affineTypeANull_apply] using congrArg (fun f : Fin (n + 1) →₀ ℝ ↦ f 0) h)
+    affineTypeA_bil_null
+
+end Classification
+
+theorem affineTypeA_isIrreducible (n : ℕ) [NeZero n] : @IsIrreducible _ (affineTypeAGroup n) :=
+  affineTypeA_isIrreducible'
+
+theorem affineTypeA_isCrystallographic (n : ℕ) [NeZero n] :
+    @IsCrystallographic _ (affineTypeAGroup n) :=
+  affineTypeA_isCrystallographic'
+
+theorem affineTypeA_isIrreducibleAffineCoxeter (n : ℕ) [NeZero n] :
+    @IsIrreducibleAffineCoxeter _ (affineTypeAGroup n) :=
+  ⟨affineTypeA_isAffineCoxeter', affineTypeA_isIrreducible'⟩
+
+theorem affineTypeA_isIrreducibleAffineWeyl (n : ℕ) [NeZero n] :
+    @IsIrreducibleAffineWeyl _ (affineTypeAGroup n) :=
+  ⟨isPolyAffineWeyl_of_isotropic affineTypeA_isAffineCoxeter'.1 affineTypeA_isCrystallographic'
+    (0 : Fin (n + 1)) affineTypeANull (affineTypeANull_apply 0) affineTypeA_bil_null
+    fun x hx ↦ affineTypeA_bil_isotropic x hx, affineTypeA_isIrreducible'⟩
 
 
 /-! ### Euler lattice -/
