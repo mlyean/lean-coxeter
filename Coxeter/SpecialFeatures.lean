@@ -501,6 +501,30 @@ def IsPolyAffineWeyl : Prop :=
   ∃ i₀ : B W, ∃ δ ∈ supported ℝ ℝ ({i₀}ᶜ : Set (B W)),
     LinearMap.ker (@bil W _) = Submodule.span ℝ {stdBasis i₀ + δ}
 
+/-- `IsPolyAffineWeyl` from a positive semidefinite crystallographic `bil` with a null vector `v`,
+`v i₀ = 1`, orthogonal to every `stdBasis i`, such that every `x` with `bil x x = 0` is a multiple
+of `v`. -/
+theorem isPolyAffineWeyl_of_isotropic (hpsd : (@bil W cg).IsPosSemidef)
+    (hcr : @IsCrystallographic W cg) (i₀ : @B W cg) (v : @V W cg) (hv : v i₀ = 1)
+    (hrad : ∀ i, @bil W cg v (@stdBasis W cg i) = 0)
+    (hiso : ∀ x : @V W cg, @bil W cg x x = 0 → ∃ a : ℝ, x = a • v) :
+    @IsPolyAffineWeyl W cg := by
+  let := cg
+  have hzero : bil v = 0 := stdBasis.ext fun i ↦ by rw [hrad i, LinearMap.zero_apply]
+  refine ⟨hpsd, hcr, i₀, v - stdBasis i₀, ?_, ?_⟩
+  · rw [mem_supported, Set.subset_compl_singleton_iff, Finset.mem_coe, Finsupp.mem_support_iff,
+      not_not, Finsupp.sub_apply, hv]
+    simp [stdBasis]
+  · rw [add_sub_cancel]
+    ext x
+    rw [LinearMap.mem_ker, Submodule.mem_span_singleton]
+    constructor
+    · intro hx
+      obtain ⟨a, rfl⟩ := hiso x (by rw [hx, LinearMap.zero_apply])
+      exact ⟨a, rfl⟩
+    · rintro ⟨a, rfl⟩
+      rw [map_smul, hzero, smul_zero]
+
 /-- `W` is an *irreducible affine Weyl group*: `IsPolyAffineWeyl` together with `IsIrreducible`
 (the Coxeter diagram is connected) — the genuine, single (not a product) case.
 

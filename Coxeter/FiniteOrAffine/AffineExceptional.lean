@@ -7,8 +7,8 @@ public import Coxeter.SpecialFeatures
 # Exceptional affine Coxeter groups
 
 This file defines the affine Coxeter matrices of types `Ẽ₆`, `Ẽ₇`, `Ẽ₈`, `F̃₄`, `G̃₂`, proves
-that they are irreducible affine Coxeter groups, and defines the Euler lattices of the simply laced
-ones. The `IsIrreducibleAffineWeyl` statements are left as `proof_wanted`.
+that they are irreducible affine Coxeter groups and irreducible affine Weyl groups, and defines the
+Euler lattices of the simply laced ones.
 
 ## Implementation notes
 
@@ -127,25 +127,27 @@ def affineTypeG2Matrix : CoxeterMatrix (Fin 3) where
   M := affineTypeG2Matrix
   cs := affineTypeG2Matrix.toCoxeterSystem
 
-/-- `bil` of type `Ẽ₆` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
-decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
-private theorem bil_affineTypeE6_nonneg (x : Fin 7 →₀ ℝ) :
-    0 ≤ (@bil _ affineTypeE6Group) x x := by
-  have hsos : (@bil _ affineTypeE6Group) x x =
-        (1) * (x 0 - x 2/2) ^ 2 +
+/-- `bil` of type `Ẽ₆` as a sum of squares: an `LDLᵀ` decomposition of its Gram matrix,
+whose last pivot is `0`. -/
+private theorem bil_affineTypeE6_eq (x : Fin 7 →₀ ℝ) :
+    (@bil _ affineTypeE6Group) x x =
+      (1) * (x 0 - x 2/2) ^ 2 +
         (1) * (x 1 - x 3/2 - x 6/2) ^ 2 +
         (3/4) * (x 2 - 2*x 3/3) ^ 2 +
         (5/12) * (x 3 - 6*x 4/5 - 3*x 6/5) ^ 2 +
         (2/5) * (x 4 - 5*x 5/4 - 3*x 6/4) ^ 2 +
         (3/8) * (x 5 - x 6) ^ 2 := by
-    rw [@bil_self_eq_sum _ affineTypeE6Group (Fin.fintype 7)]
-    change ∑ i : Fin 7, ∑ i' : Fin 7,
-      x i * x i' * -Real.cos (Real.pi / (affineTypeE6Matrix i i' : ℝ)) = _
-    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
-      Fin.reduceSucc]
-    norm_num [affineTypeE6Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
-    ring
-  rw [hsos]
+  rw [@bil_self_eq_sum _ affineTypeE6Group (Fin.fintype 7)]
+  change ∑ i : Fin 7, ∑ i' : Fin 7,
+    x i * x i' * -Real.cos (Real.pi / (affineTypeE6Matrix i i' : ℝ)) = _
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+    Fin.reduceSucc]
+  norm_num [affineTypeE6Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+  ring
+
+private theorem bil_affineTypeE6_nonneg (x : Fin 7 →₀ ℝ) :
+    0 ≤ (@bil _ affineTypeE6Group) x x := by
+  rw [bil_affineTypeE6_eq]
   positivity
 
 /-- The null root of `Ẽ₆`, in the coordinates of `V`. -/
@@ -183,26 +185,99 @@ theorem affineTypeE6_isIrreducibleAffineCoxeter :
     @IsIrreducibleAffineCoxeter _ affineTypeE6Group :=
   ⟨affineTypeE6_isAffineCoxeter, affineTypeE6_isIrreducible⟩
 
-/-- `bil` of type `Ẽ₇` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
-decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
-private theorem bil_affineTypeE7_nonneg (x : Fin 8 →₀ ℝ) :
-    0 ≤ (@bil _ affineTypeE7Group) x x := by
-  have hsos : (@bil _ affineTypeE7Group) x x =
-        (1) * (x 0 - x 2/2 - x 7/2) ^ 2 +
+theorem affineTypeE6_isCrystallographic : @IsCrystallographic _ affineTypeE6Group := by
+  intro i i' hii'
+  change Fin 7 at i
+  change Fin 7 at i'
+  change affineTypeE6Matrix i i' = 0 ∨ affineTypeE6Matrix i i' = 2 ∨
+    affineTypeE6Matrix i i' = 3 ∨ affineTypeE6Matrix i i' = 4 ∨ affineTypeE6Matrix i i' = 6
+  fin_cases i <;> fin_cases i' <;> simp at hii' <;> norm_num [affineTypeE6Matrix]
+
+/-- A vector isotropic for `bil` of type `Ẽ₆` is a multiple of the null root: every square
+of `bil_affineTypeE6_eq` vanishes, and back-substitution expresses each coordinate through the
+last one. -/
+private theorem bil_affineTypeE6_isotropic (x : Fin 7 →₀ ℝ)
+    (hx : (@bil _ affineTypeE6Group) x x = 0) : ∃ a : ℝ, x = a • affineTypeE6Null := by
+  rw [bil_affineTypeE6_eq] at hx
+  have h0 : x 0 - x 2/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2 - x 6/2),
+        sq_nonneg (x 2 - 2*x 3/3), sq_nonneg (x 3 - 6*x 4/5 - 3*x 6/5),
+        sq_nonneg (x 4 - 5*x 5/4 - 3*x 6/4), sq_nonneg (x 5 - x 6)])
+      (sq_nonneg _)
+  have h1 : x 1 - x 3/2 - x 6/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2 - x 6/2),
+        sq_nonneg (x 2 - 2*x 3/3), sq_nonneg (x 3 - 6*x 4/5 - 3*x 6/5),
+        sq_nonneg (x 4 - 5*x 5/4 - 3*x 6/4), sq_nonneg (x 5 - x 6)])
+      (sq_nonneg _)
+  have h2 : x 2 - 2*x 3/3 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2 - x 6/2),
+        sq_nonneg (x 2 - 2*x 3/3), sq_nonneg (x 3 - 6*x 4/5 - 3*x 6/5),
+        sq_nonneg (x 4 - 5*x 5/4 - 3*x 6/4), sq_nonneg (x 5 - x 6)])
+      (sq_nonneg _)
+  have h3 : x 3 - 6*x 4/5 - 3*x 6/5 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2 - x 6/2),
+        sq_nonneg (x 2 - 2*x 3/3), sq_nonneg (x 3 - 6*x 4/5 - 3*x 6/5),
+        sq_nonneg (x 4 - 5*x 5/4 - 3*x 6/4), sq_nonneg (x 5 - x 6)])
+      (sq_nonneg _)
+  have h4 : x 4 - 5*x 5/4 - 3*x 6/4 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2 - x 6/2),
+        sq_nonneg (x 2 - 2*x 3/3), sq_nonneg (x 3 - 6*x 4/5 - 3*x 6/5),
+        sq_nonneg (x 4 - 5*x 5/4 - 3*x 6/4), sq_nonneg (x 5 - x 6)])
+      (sq_nonneg _)
+  have h5 : x 5 - x 6 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2 - x 6/2),
+        sq_nonneg (x 2 - 2*x 3/3), sq_nonneg (x 3 - 6*x 4/5 - 3*x 6/5),
+        sq_nonneg (x 4 - 5*x 5/4 - 3*x 6/4), sq_nonneg (x 5 - x 6)])
+      (sq_nonneg _)
+  have e0 : x 0 = 1 * x 6 := by
+    linear_combination (1) * h0 + (1/2) * h2 + (1/3) * h3 + (2/5) * h4 + (1/2) * h5
+  have e1 : x 1 = 2 * x 6 := by
+    linear_combination (1) * h1 + (1/2) * h3 + (3/5) * h4 + (3/4) * h5
+  have e2 : x 2 = 2 * x 6 := by
+    linear_combination (1) * h2 + (2/3) * h3 + (4/5) * h4 + (1) * h5
+  have e3 : x 3 = 3 * x 6 := by
+    linear_combination (1) * h3 + (6/5) * h4 + (3/2) * h5
+  have e4 : x 4 = 2 * x 6 := by
+    linear_combination (1) * h4 + (5/4) * h5
+  have e5 : x 5 = 1 * x 6 := by
+    linear_combination (1) * h5
+  refine ⟨x 6, ?_⟩
+  ext i
+  fin_cases i <;> simp [affineTypeE6Null] <;> linarith
+
+theorem affineTypeE6_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeE6Group :=
+  ⟨isPolyAffineWeyl_of_isotropic affineTypeE6_isAffineCoxeter.1 affineTypeE6_isCrystallographic
+    (6 : Fin 7) affineTypeE6Null (by simp [affineTypeE6Null]) bil_affineTypeE6Null
+    fun x hx ↦ bil_affineTypeE6_isotropic x hx, affineTypeE6_isIrreducible⟩
+
+/-- `bil` of type `Ẽ₇` as a sum of squares: an `LDLᵀ` decomposition of its Gram matrix,
+whose last pivot is `0`. -/
+private theorem bil_affineTypeE7_eq (x : Fin 8 →₀ ℝ) :
+    (@bil _ affineTypeE7Group) x x =
+      (1) * (x 0 - x 2/2 - x 7/2) ^ 2 +
         (1) * (x 1 - x 3/2) ^ 2 +
         (3/4) * (x 2 - 2*x 3/3 - x 7/3) ^ 2 +
         (5/12) * (x 3 - 6*x 4/5 - 2*x 7/5) ^ 2 +
         (2/5) * (x 4 - 5*x 5/4 - x 7/2) ^ 2 +
         (3/8) * (x 5 - 4*x 6/3 - 2*x 7/3) ^ 2 +
         (1/3) * (x 6 - x 7) ^ 2 := by
-    rw [@bil_self_eq_sum _ affineTypeE7Group (Fin.fintype 8)]
-    change ∑ i : Fin 8, ∑ i' : Fin 8,
-      x i * x i' * -Real.cos (Real.pi / (affineTypeE7Matrix i i' : ℝ)) = _
-    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
-      Fin.reduceSucc]
-    norm_num [affineTypeE7Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
-    ring
-  rw [hsos]
+  rw [@bil_self_eq_sum _ affineTypeE7Group (Fin.fintype 8)]
+  change ∑ i : Fin 8, ∑ i' : Fin 8,
+    x i * x i' * -Real.cos (Real.pi / (affineTypeE7Matrix i i' : ℝ)) = _
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+    Fin.reduceSucc]
+  norm_num [affineTypeE7Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+  ring
+
+private theorem bil_affineTypeE7_nonneg (x : Fin 8 →₀ ℝ) :
+    0 ≤ (@bil _ affineTypeE7Group) x x := by
+  rw [bil_affineTypeE7_eq]
   positivity
 
 /-- The null root of `Ẽ₇`, in the coordinates of `V`. -/
@@ -241,12 +316,97 @@ theorem affineTypeE7_isIrreducibleAffineCoxeter :
     @IsIrreducibleAffineCoxeter _ affineTypeE7Group :=
   ⟨affineTypeE7_isAffineCoxeter, affineTypeE7_isIrreducible⟩
 
-/-- `bil` of type `Ẽ₈` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
-decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
-private theorem bil_affineTypeE8_nonneg (x : Fin 9 →₀ ℝ) :
-    0 ≤ (@bil _ affineTypeE8Group) x x := by
-  have hsos : (@bil _ affineTypeE8Group) x x =
-        (1) * (x 0 - x 2/2) ^ 2 +
+theorem affineTypeE7_isCrystallographic : @IsCrystallographic _ affineTypeE7Group := by
+  intro i i' hii'
+  change Fin 8 at i
+  change Fin 8 at i'
+  change affineTypeE7Matrix i i' = 0 ∨ affineTypeE7Matrix i i' = 2 ∨
+    affineTypeE7Matrix i i' = 3 ∨ affineTypeE7Matrix i i' = 4 ∨ affineTypeE7Matrix i i' = 6
+  fin_cases i <;> fin_cases i' <;> simp at hii' <;> norm_num [affineTypeE7Matrix]
+
+/-- A vector isotropic for `bil` of type `Ẽ₇` is a multiple of the null root: every square
+of `bil_affineTypeE7_eq` vanishes, and back-substitution expresses each coordinate through the
+last one. -/
+private theorem bil_affineTypeE7_isotropic (x : Fin 8 →₀ ℝ)
+    (hx : (@bil _ affineTypeE7Group) x x = 0) : ∃ a : ℝ, x = a • affineTypeE7Null := by
+  rw [bil_affineTypeE7_eq] at hx
+  have h0 : x 0 - x 2/2 - x 7/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2 - x 7/2), sq_nonneg (x 1 - x 3/2),
+        sq_nonneg (x 2 - 2*x 3/3 - x 7/3), sq_nonneg (x 3 - 6*x 4/5 - 2*x 7/5),
+        sq_nonneg (x 4 - 5*x 5/4 - x 7/2), sq_nonneg (x 5 - 4*x 6/3 - 2*x 7/3),
+        sq_nonneg (x 6 - x 7)])
+      (sq_nonneg _)
+  have h1 : x 1 - x 3/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2 - x 7/2), sq_nonneg (x 1 - x 3/2),
+        sq_nonneg (x 2 - 2*x 3/3 - x 7/3), sq_nonneg (x 3 - 6*x 4/5 - 2*x 7/5),
+        sq_nonneg (x 4 - 5*x 5/4 - x 7/2), sq_nonneg (x 5 - 4*x 6/3 - 2*x 7/3),
+        sq_nonneg (x 6 - x 7)])
+      (sq_nonneg _)
+  have h2 : x 2 - 2*x 3/3 - x 7/3 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2 - x 7/2), sq_nonneg (x 1 - x 3/2),
+        sq_nonneg (x 2 - 2*x 3/3 - x 7/3), sq_nonneg (x 3 - 6*x 4/5 - 2*x 7/5),
+        sq_nonneg (x 4 - 5*x 5/4 - x 7/2), sq_nonneg (x 5 - 4*x 6/3 - 2*x 7/3),
+        sq_nonneg (x 6 - x 7)])
+      (sq_nonneg _)
+  have h3 : x 3 - 6*x 4/5 - 2*x 7/5 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2 - x 7/2), sq_nonneg (x 1 - x 3/2),
+        sq_nonneg (x 2 - 2*x 3/3 - x 7/3), sq_nonneg (x 3 - 6*x 4/5 - 2*x 7/5),
+        sq_nonneg (x 4 - 5*x 5/4 - x 7/2), sq_nonneg (x 5 - 4*x 6/3 - 2*x 7/3),
+        sq_nonneg (x 6 - x 7)])
+      (sq_nonneg _)
+  have h4 : x 4 - 5*x 5/4 - x 7/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2 - x 7/2), sq_nonneg (x 1 - x 3/2),
+        sq_nonneg (x 2 - 2*x 3/3 - x 7/3), sq_nonneg (x 3 - 6*x 4/5 - 2*x 7/5),
+        sq_nonneg (x 4 - 5*x 5/4 - x 7/2), sq_nonneg (x 5 - 4*x 6/3 - 2*x 7/3),
+        sq_nonneg (x 6 - x 7)])
+      (sq_nonneg _)
+  have h5 : x 5 - 4*x 6/3 - 2*x 7/3 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2 - x 7/2), sq_nonneg (x 1 - x 3/2),
+        sq_nonneg (x 2 - 2*x 3/3 - x 7/3), sq_nonneg (x 3 - 6*x 4/5 - 2*x 7/5),
+        sq_nonneg (x 4 - 5*x 5/4 - x 7/2), sq_nonneg (x 5 - 4*x 6/3 - 2*x 7/3),
+        sq_nonneg (x 6 - x 7)])
+      (sq_nonneg _)
+  have h6 : x 6 - x 7 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2 - x 7/2), sq_nonneg (x 1 - x 3/2),
+        sq_nonneg (x 2 - 2*x 3/3 - x 7/3), sq_nonneg (x 3 - 6*x 4/5 - 2*x 7/5),
+        sq_nonneg (x 4 - 5*x 5/4 - x 7/2), sq_nonneg (x 5 - 4*x 6/3 - 2*x 7/3),
+        sq_nonneg (x 6 - x 7)])
+      (sq_nonneg _)
+  have e0 : x 0 = 2 * x 7 := by
+    linear_combination (1) * h0 + (1/2) * h2 + (1/3) * h3 + (2/5) * h4 + (1/2) * h5 + (2/3) * h6
+  have e1 : x 1 = 2 * x 7 := by
+    linear_combination (1) * h1 + (1/2) * h3 + (3/5) * h4 + (3/4) * h5 + (1) * h6
+  have e2 : x 2 = 3 * x 7 := by
+    linear_combination (1) * h2 + (2/3) * h3 + (4/5) * h4 + (1) * h5 + (4/3) * h6
+  have e3 : x 3 = 4 * x 7 := by
+    linear_combination (1) * h3 + (6/5) * h4 + (3/2) * h5 + (2) * h6
+  have e4 : x 4 = 3 * x 7 := by
+    linear_combination (1) * h4 + (5/4) * h5 + (5/3) * h6
+  have e5 : x 5 = 2 * x 7 := by
+    linear_combination (1) * h5 + (4/3) * h6
+  have e6 : x 6 = 1 * x 7 := by
+    linear_combination (1) * h6
+  refine ⟨x 7, ?_⟩
+  ext i
+  fin_cases i <;> simp [affineTypeE7Null] <;> linarith
+
+theorem affineTypeE7_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeE7Group :=
+  ⟨isPolyAffineWeyl_of_isotropic affineTypeE7_isAffineCoxeter.1 affineTypeE7_isCrystallographic
+    (7 : Fin 8) affineTypeE7Null (by simp [affineTypeE7Null]) bil_affineTypeE7Null
+    fun x hx ↦ bil_affineTypeE7_isotropic x hx, affineTypeE7_isIrreducible⟩
+
+/-- `bil` of type `Ẽ₈` as a sum of squares: an `LDLᵀ` decomposition of its Gram matrix,
+whose last pivot is `0`. -/
+private theorem bil_affineTypeE8_eq (x : Fin 9 →₀ ℝ) :
+    (@bil _ affineTypeE8Group) x x =
+      (1) * (x 0 - x 2/2) ^ 2 +
         (1) * (x 1 - x 3/2) ^ 2 +
         (3/4) * (x 2 - 2*x 3/3) ^ 2 +
         (5/12) * (x 3 - 6*x 4/5) ^ 2 +
@@ -254,14 +414,17 @@ private theorem bil_affineTypeE8_nonneg (x : Fin 9 →₀ ℝ) :
         (3/8) * (x 5 - 4*x 6/3) ^ 2 +
         (1/3) * (x 6 - 3*x 7/2) ^ 2 +
         (1/4) * (x 7 - 2*x 8) ^ 2 := by
-    rw [@bil_self_eq_sum _ affineTypeE8Group (Fin.fintype 9)]
-    change ∑ i : Fin 9, ∑ i' : Fin 9,
-      x i * x i' * -Real.cos (Real.pi / (affineTypeE8Matrix i i' : ℝ)) = _
-    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
-      Fin.reduceSucc]
-    norm_num [affineTypeE8Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
-    ring
-  rw [hsos]
+  rw [@bil_self_eq_sum _ affineTypeE8Group (Fin.fintype 9)]
+  change ∑ i : Fin 9, ∑ i' : Fin 9,
+    x i * x i' * -Real.cos (Real.pi / (affineTypeE8Matrix i i' : ℝ)) = _
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+    Fin.reduceSucc]
+  norm_num [affineTypeE8Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+  ring
+
+private theorem bil_affineTypeE8_nonneg (x : Fin 9 →₀ ℝ) :
+    0 ≤ (@bil _ affineTypeE8Group) x x := by
+  rw [bil_affineTypeE8_eq]
   positivity
 
 /-- The null root of `Ẽ₈`, in the coordinates of `V`. -/
@@ -301,24 +464,114 @@ theorem affineTypeE8_isIrreducibleAffineCoxeter :
     @IsIrreducibleAffineCoxeter _ affineTypeE8Group :=
   ⟨affineTypeE8_isAffineCoxeter, affineTypeE8_isIrreducible⟩
 
-/-- `bil` of type `F̃₄` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
-decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
-private theorem bil_affineTypeF4_nonneg (x : Fin 5 →₀ ℝ) :
-    0 ≤ (@bil _ affineTypeF4Group) x x := by
-  have hs2 : Real.sqrt 2 ^ 2 = 2 := Real.sq_sqrt (by norm_num)
-  have hsos : (@bil _ affineTypeF4Group) x x =
-        (1) * (x 0 - x 1/2 - x 4/2) ^ 2 +
+theorem affineTypeE8_isCrystallographic : @IsCrystallographic _ affineTypeE8Group := by
+  intro i i' hii'
+  change Fin 9 at i
+  change Fin 9 at i'
+  change affineTypeE8Matrix i i' = 0 ∨ affineTypeE8Matrix i i' = 2 ∨
+    affineTypeE8Matrix i i' = 3 ∨ affineTypeE8Matrix i i' = 4 ∨ affineTypeE8Matrix i i' = 6
+  fin_cases i <;> fin_cases i' <;> simp at hii' <;> norm_num [affineTypeE8Matrix]
+
+/-- A vector isotropic for `bil` of type `Ẽ₈` is a multiple of the null root: every square
+of `bil_affineTypeE8_eq` vanishes, and back-substitution expresses each coordinate through the
+last one. -/
+private theorem bil_affineTypeE8_isotropic (x : Fin 9 →₀ ℝ)
+    (hx : (@bil _ affineTypeE8Group) x x = 0) : ∃ a : ℝ, x = a • affineTypeE8Null := by
+  rw [bil_affineTypeE8_eq] at hx
+  have h0 : x 0 - x 2/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2), sq_nonneg (x 2 - 2*x 3/3),
+        sq_nonneg (x 3 - 6*x 4/5), sq_nonneg (x 4 - 5*x 5/4), sq_nonneg (x 5 - 4*x 6/3),
+        sq_nonneg (x 6 - 3*x 7/2), sq_nonneg (x 7 - 2*x 8)])
+      (sq_nonneg _)
+  have h1 : x 1 - x 3/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2), sq_nonneg (x 2 - 2*x 3/3),
+        sq_nonneg (x 3 - 6*x 4/5), sq_nonneg (x 4 - 5*x 5/4), sq_nonneg (x 5 - 4*x 6/3),
+        sq_nonneg (x 6 - 3*x 7/2), sq_nonneg (x 7 - 2*x 8)])
+      (sq_nonneg _)
+  have h2 : x 2 - 2*x 3/3 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2), sq_nonneg (x 2 - 2*x 3/3),
+        sq_nonneg (x 3 - 6*x 4/5), sq_nonneg (x 4 - 5*x 5/4), sq_nonneg (x 5 - 4*x 6/3),
+        sq_nonneg (x 6 - 3*x 7/2), sq_nonneg (x 7 - 2*x 8)])
+      (sq_nonneg _)
+  have h3 : x 3 - 6*x 4/5 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2), sq_nonneg (x 2 - 2*x 3/3),
+        sq_nonneg (x 3 - 6*x 4/5), sq_nonneg (x 4 - 5*x 5/4), sq_nonneg (x 5 - 4*x 6/3),
+        sq_nonneg (x 6 - 3*x 7/2), sq_nonneg (x 7 - 2*x 8)])
+      (sq_nonneg _)
+  have h4 : x 4 - 5*x 5/4 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2), sq_nonneg (x 2 - 2*x 3/3),
+        sq_nonneg (x 3 - 6*x 4/5), sq_nonneg (x 4 - 5*x 5/4), sq_nonneg (x 5 - 4*x 6/3),
+        sq_nonneg (x 6 - 3*x 7/2), sq_nonneg (x 7 - 2*x 8)])
+      (sq_nonneg _)
+  have h5 : x 5 - 4*x 6/3 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2), sq_nonneg (x 2 - 2*x 3/3),
+        sq_nonneg (x 3 - 6*x 4/5), sq_nonneg (x 4 - 5*x 5/4), sq_nonneg (x 5 - 4*x 6/3),
+        sq_nonneg (x 6 - 3*x 7/2), sq_nonneg (x 7 - 2*x 8)])
+      (sq_nonneg _)
+  have h6 : x 6 - 3*x 7/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2), sq_nonneg (x 2 - 2*x 3/3),
+        sq_nonneg (x 3 - 6*x 4/5), sq_nonneg (x 4 - 5*x 5/4), sq_nonneg (x 5 - 4*x 6/3),
+        sq_nonneg (x 6 - 3*x 7/2), sq_nonneg (x 7 - 2*x 8)])
+      (sq_nonneg _)
+  have h7 : x 7 - 2*x 8 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 2/2), sq_nonneg (x 1 - x 3/2), sq_nonneg (x 2 - 2*x 3/3),
+        sq_nonneg (x 3 - 6*x 4/5), sq_nonneg (x 4 - 5*x 5/4), sq_nonneg (x 5 - 4*x 6/3),
+        sq_nonneg (x 6 - 3*x 7/2), sq_nonneg (x 7 - 2*x 8)])
+      (sq_nonneg _)
+  have e0 : x 0 = 2 * x 8 := by
+    linear_combination (1) * h0 + (1/2) * h2 + (1/3) * h3 + (2/5) * h4 + (1/2) * h5 + (2/3) * h6 +
+      (1) * h7
+  have e1 : x 1 = 3 * x 8 := by
+    linear_combination (1) * h1 + (1/2) * h3 + (3/5) * h4 + (3/4) * h5 + (1) * h6 + (3/2) * h7
+  have e2 : x 2 = 4 * x 8 := by
+    linear_combination (1) * h2 + (2/3) * h3 + (4/5) * h4 + (1) * h5 + (4/3) * h6 + (2) * h7
+  have e3 : x 3 = 6 * x 8 := by
+    linear_combination (1) * h3 + (6/5) * h4 + (3/2) * h5 + (2) * h6 + (3) * h7
+  have e4 : x 4 = 5 * x 8 := by
+    linear_combination (1) * h4 + (5/4) * h5 + (5/3) * h6 + (5/2) * h7
+  have e5 : x 5 = 4 * x 8 := by
+    linear_combination (1) * h5 + (4/3) * h6 + (2) * h7
+  have e6 : x 6 = 3 * x 8 := by
+    linear_combination (1) * h6 + (3/2) * h7
+  have e7 : x 7 = 2 * x 8 := by
+    linear_combination (1) * h7
+  refine ⟨x 8, ?_⟩
+  ext i
+  fin_cases i <;> simp [affineTypeE8Null] <;> linarith
+
+theorem affineTypeE8_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeE8Group :=
+  ⟨isPolyAffineWeyl_of_isotropic affineTypeE8_isAffineCoxeter.1 affineTypeE8_isCrystallographic
+    (8 : Fin 9) affineTypeE8Null (by simp [affineTypeE8Null]) bil_affineTypeE8Null
+    fun x hx ↦ bil_affineTypeE8_isotropic x hx, affineTypeE8_isIrreducible⟩
+
+/-- `bil` of type `F̃₄` as a sum of squares: an `LDLᵀ` decomposition of its Gram matrix,
+whose last pivot is `0`. -/
+private theorem bil_affineTypeF4_eq (x : Fin 5 →₀ ℝ) :
+    (@bil _ affineTypeF4Group) x x =
+      (1) * (x 0 - x 1/2 - x 4/2) ^ 2 +
         (3/4) * (-2*Real.sqrt 2*x 2/3 + x 1 - x 4/3) ^ 2 +
         (1/3) * (-Real.sqrt 2*x 4/2 + x 2 - 3*x 3/2) ^ 2 +
         (1/4) * (-Real.sqrt 2*x 4 + x 3) ^ 2 := by
-    rw [@bil_self_eq_sum _ affineTypeF4Group (Fin.fintype 5)]
-    change ∑ i : Fin 5, ∑ i' : Fin 5,
-      x i * x i' * -Real.cos (Real.pi / (affineTypeF4Matrix i i' : ℝ)) = _
-    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
-      Fin.reduceSucc]
-    norm_num [affineTypeF4Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
-    linear_combination (-x 2^2/3 - x 4^2/3) * hs2
-  rw [hsos]
+  have hs2 : Real.sqrt 2 ^ 2 = 2 := Real.sq_sqrt (by norm_num)
+  rw [@bil_self_eq_sum _ affineTypeF4Group (Fin.fintype 5)]
+  change ∑ i : Fin 5, ∑ i' : Fin 5,
+    x i * x i' * -Real.cos (Real.pi / (affineTypeF4Matrix i i' : ℝ)) = _
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+    Fin.reduceSucc]
+  norm_num [affineTypeF4Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+  linear_combination (-x 2^2/3 - x 4^2/3) * hs2
+
+private theorem bil_affineTypeF4_nonneg (x : Fin 5 →₀ ℝ) :
+    0 ≤ (@bil _ affineTypeF4Group) x x := by
+  rw [bil_affineTypeF4_eq]
   positivity
 
 /-- The null root of `F̃₄`, in the coordinates of `V`. -/
@@ -356,21 +609,80 @@ theorem affineTypeF4_isIrreducibleAffineCoxeter :
     @IsIrreducibleAffineCoxeter _ affineTypeF4Group :=
   ⟨affineTypeF4_isAffineCoxeter, affineTypeF4_isIrreducible⟩
 
-/-- `bil` of type `G̃₂` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
-decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
+theorem affineTypeF4_isCrystallographic : @IsCrystallographic _ affineTypeF4Group := by
+  intro i i' hii'
+  change Fin 5 at i
+  change Fin 5 at i'
+  change affineTypeF4Matrix i i' = 0 ∨ affineTypeF4Matrix i i' = 2 ∨
+    affineTypeF4Matrix i i' = 3 ∨ affineTypeF4Matrix i i' = 4 ∨ affineTypeF4Matrix i i' = 6
+  fin_cases i <;> fin_cases i' <;> simp at hii' <;> norm_num [affineTypeF4Matrix]
+
+/-- A vector isotropic for `bil` of type `F̃₄` is a multiple of the null root: every square
+of `bil_affineTypeF4_eq` vanishes, and back-substitution expresses each coordinate through the
+last one. -/
+private theorem bil_affineTypeF4_isotropic (x : Fin 5 →₀ ℝ)
+    (hx : (@bil _ affineTypeF4Group) x x = 0) : ∃ a : ℝ, x = a • affineTypeF4Null := by
+  have hs2 : Real.sqrt 2 ^ 2 = 2 := Real.sq_sqrt (by norm_num)
+  rw [bil_affineTypeF4_eq] at hx
+  have h0 : x 0 - x 1/2 - x 4/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 1/2 - x 4/2),
+        sq_nonneg (-2*Real.sqrt 2*x 2/3 + x 1 - x 4/3),
+        sq_nonneg (-Real.sqrt 2*x 4/2 + x 2 - 3*x 3/2), sq_nonneg (-Real.sqrt 2*x 4 + x 3)])
+      (sq_nonneg _)
+  have h1 : -2*Real.sqrt 2*x 2/3 + x 1 - x 4/3 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 1/2 - x 4/2),
+        sq_nonneg (-2*Real.sqrt 2*x 2/3 + x 1 - x 4/3),
+        sq_nonneg (-Real.sqrt 2*x 4/2 + x 2 - 3*x 3/2), sq_nonneg (-Real.sqrt 2*x 4 + x 3)])
+      (sq_nonneg _)
+  have h2 : -Real.sqrt 2*x 4/2 + x 2 - 3*x 3/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 1/2 - x 4/2),
+        sq_nonneg (-2*Real.sqrt 2*x 2/3 + x 1 - x 4/3),
+        sq_nonneg (-Real.sqrt 2*x 4/2 + x 2 - 3*x 3/2), sq_nonneg (-Real.sqrt 2*x 4 + x 3)])
+      (sq_nonneg _)
+  have h3 : -Real.sqrt 2*x 4 + x 3 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (x 0 - x 1/2 - x 4/2),
+        sq_nonneg (-2*Real.sqrt 2*x 2/3 + x 1 - x 4/3),
+        sq_nonneg (-Real.sqrt 2*x 4/2 + x 2 - 3*x 3/2), sq_nonneg (-Real.sqrt 2*x 4 + x 3)])
+      (sq_nonneg _)
+  have e0 : x 0 = 2 * x 4 := by
+    linear_combination (1) * h0 + (1/2) * h1 + (Real.sqrt 2/3) * h2 + (Real.sqrt 2/2) * h3 +
+      (2*x 4/3) * hs2
+  have e1 : x 1 = 3 * x 4 := by
+    linear_combination (1) * h1 + (2*Real.sqrt 2/3) * h2 + (Real.sqrt 2) * h3 + (4*x 4/3) * hs2
+  have e2 : x 2 = 2*Real.sqrt 2 * x 4 := by
+    linear_combination (1) * h2 + (3/2) * h3
+  have e3 : x 3 = Real.sqrt 2 * x 4 := by
+    linear_combination (1) * h3
+  refine ⟨x 4, ?_⟩
+  ext i
+  fin_cases i <;> simp [affineTypeF4Null] <;> linarith
+
+theorem affineTypeF4_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeF4Group :=
+  ⟨isPolyAffineWeyl_of_isotropic affineTypeF4_isAffineCoxeter.1 affineTypeF4_isCrystallographic
+    (4 : Fin 5) affineTypeF4Null (by simp [affineTypeF4Null]) bil_affineTypeF4Null
+    fun x hx ↦ bil_affineTypeF4_isotropic x hx, affineTypeF4_isIrreducible⟩
+
+/-- `bil` of type `G̃₂` as a sum of squares: an `LDLᵀ` decomposition of its Gram matrix,
+whose last pivot is `0`. -/
+private theorem bil_affineTypeG2_eq (x : Fin 3 →₀ ℝ) :
+    (@bil _ affineTypeG2Group) x x =
+      (1) * (-Real.sqrt 3*x 1/2 + x 0 - x 2/2) ^ 2 +
+        (1/4) * (-Real.sqrt 3*x 2 + x 1) ^ 2 := by
+  have hs3 : Real.sqrt 3 ^ 2 = 3 := Real.sq_sqrt (by norm_num)
+  rw [@bil_self_eq_sum _ affineTypeG2Group (Fin.fintype 3)]
+  change ∑ i : Fin 3, ∑ i' : Fin 3,
+    x i * x i' * -Real.cos (Real.pi / (affineTypeG2Matrix i i' : ℝ)) = _
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two]
+  norm_num [affineTypeG2Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+  linear_combination (-x 1^2/4 - x 2^2/4) * hs3
+
 private theorem bil_affineTypeG2_nonneg (x : Fin 3 →₀ ℝ) :
     0 ≤ (@bil _ affineTypeG2Group) x x := by
-  have hs3 : Real.sqrt 3 ^ 2 = 3 := Real.sq_sqrt (by norm_num)
-  have hsos : (@bil _ affineTypeG2Group) x x =
-        (1) * (-Real.sqrt 3*x 1/2 + x 0 - x 2/2) ^ 2 +
-        (1/4) * (-Real.sqrt 3*x 2 + x 1) ^ 2 := by
-    rw [@bil_self_eq_sum _ affineTypeG2Group (Fin.fintype 3)]
-    change ∑ i : Fin 3, ∑ i' : Fin 3,
-      x i * x i' * -Real.cos (Real.pi / (affineTypeG2Matrix i i' : ℝ)) = _
-    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two]
-    norm_num [affineTypeG2Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
-    linear_combination (-x 1^2/4 - x 2^2/4) * hs3
-  rw [hsos]
+  rw [bil_affineTypeG2_eq]
   positivity
 
 /-- The null root of `G̃₂`, in the coordinates of `V`. -/
@@ -405,16 +717,43 @@ theorem affineTypeG2_isIrreducibleAffineCoxeter :
     @IsIrreducibleAffineCoxeter _ affineTypeG2Group :=
   ⟨affineTypeG2_isAffineCoxeter, affineTypeG2_isIrreducible⟩
 
-proof_wanted affineTypeE6_isIrreducibleAffineWeyl :
-    @IsIrreducibleAffineWeyl _ affineTypeE6Group
-proof_wanted affineTypeE7_isIrreducibleAffineWeyl :
-    @IsIrreducibleAffineWeyl _ affineTypeE7Group
-proof_wanted affineTypeE8_isIrreducibleAffineWeyl :
-    @IsIrreducibleAffineWeyl _ affineTypeE8Group
-proof_wanted affineTypeF4_isIrreducibleAffineWeyl :
-    @IsIrreducibleAffineWeyl _ affineTypeF4Group
-proof_wanted affineTypeG2_isIrreducibleAffineWeyl :
-    @IsIrreducibleAffineWeyl _ affineTypeG2Group
+theorem affineTypeG2_isCrystallographic : @IsCrystallographic _ affineTypeG2Group := by
+  intro i i' hii'
+  change Fin 3 at i
+  change Fin 3 at i'
+  change affineTypeG2Matrix i i' = 0 ∨ affineTypeG2Matrix i i' = 2 ∨
+    affineTypeG2Matrix i i' = 3 ∨ affineTypeG2Matrix i i' = 4 ∨ affineTypeG2Matrix i i' = 6
+  fin_cases i <;> fin_cases i' <;> simp at hii' <;> norm_num [affineTypeG2Matrix]
+
+/-- A vector isotropic for `bil` of type `G̃₂` is a multiple of the null root: every square
+of `bil_affineTypeG2_eq` vanishes, and back-substitution expresses each coordinate through the
+last one. -/
+private theorem bil_affineTypeG2_isotropic (x : Fin 3 →₀ ℝ)
+    (hx : (@bil _ affineTypeG2Group) x x = 0) : ∃ a : ℝ, x = a • affineTypeG2Null := by
+  have hs3 : Real.sqrt 3 ^ 2 = 3 := Real.sq_sqrt (by norm_num)
+  rw [bil_affineTypeG2_eq] at hx
+  have h0 : -Real.sqrt 3*x 1/2 + x 0 - x 2/2 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (-Real.sqrt 3*x 1/2 + x 0 - x 2/2),
+        sq_nonneg (-Real.sqrt 3*x 2 + x 1)])
+      (sq_nonneg _)
+  have h1 : -Real.sqrt 3*x 2 + x 1 = 0 :=
+    pow_eq_zero_iff two_ne_zero |>.mp <| le_antisymm
+      (by linarith [sq_nonneg (-Real.sqrt 3*x 1/2 + x 0 - x 2/2),
+        sq_nonneg (-Real.sqrt 3*x 2 + x 1)])
+      (sq_nonneg _)
+  have e0 : x 0 = 2 * x 2 := by
+    linear_combination (1) * h0 + (Real.sqrt 3/2) * h1 + (x 2/2) * hs3
+  have e1 : x 1 = Real.sqrt 3 * x 2 := by
+    linear_combination (1) * h1
+  refine ⟨x 2, ?_⟩
+  ext i
+  fin_cases i <;> simp [affineTypeG2Null] <;> linarith
+
+theorem affineTypeG2_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeG2Group :=
+  ⟨isPolyAffineWeyl_of_isotropic affineTypeG2_isAffineCoxeter.1 affineTypeG2_isCrystallographic
+    (2 : Fin 3) affineTypeG2Null (by simp [affineTypeG2Null]) bil_affineTypeG2Null
+    fun x hx ↦ bil_affineTypeG2_isotropic x hx, affineTypeG2_isIrreducible⟩
 
 
 /-! ### Euler lattices of `Ẽ₆`, `Ẽ₇`, `Ẽ₈` -/
