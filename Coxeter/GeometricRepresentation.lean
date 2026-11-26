@@ -88,7 +88,7 @@ theorem bil_stdBasis_right_eq_sum [Fintype (B W)] (x : V W) (i' : B W) :
   refine Finset.sum_congr rfl fun i _ ↦ ?_
   rw [Finsupp.sum_single_index (by simp), smul_eq_mul, one_smul, bil_eq]
 
-private theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis i') ≤ 0 := by
+theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis i') ≤ 0 := by
   rw [bil_eq, neg_nonpos]
   apply cos_nonneg_of_neg_pi_div_two_le_of_le
   · rw [neg_le_iff_add_nonneg]
@@ -103,6 +103,68 @@ private theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (
         gcongr
         norm_num
         lia
+
+/-- Off the diagonal, the Gram entry of `bil` is strictly negative exactly when the two generators
+are joined in the Coxeter diagram (`M i i' ≠ 2`): `M i i' = 0` gives `-cos 0 = -1`, and
+`M i i' ≥ 3` gives `π / M i i' < π / 2`. -/
+theorem bil_off_diag_lt (i i' : B W) (h : i ≠ i') (h2 : M i i' ≠ 2) :
+    bil (stdBasis i) (stdBasis i') < 0 := by
+  rw [bil_eq, neg_lt_zero]
+  have h1 := M.off_diagonal i i' h
+  rcases Nat.eq_zero_or_pos (M i i') with h0 | h0
+  · rw [h0]
+    norm_num
+  · apply cos_pos_of_mem_Ioo
+    constructor
+    · have : 0 < π / M i i' := by positivity
+      linarith [pi_pos]
+    · rw [div_lt_div_iff_of_pos_left pi_pos (by positivity) (by norm_num)]
+      have : 3 ≤ M i i' := by lia
+      exact_mod_cast (show 2 < M i i' by lia)
+
+/-- Given a null vector `δ` of `bil` with no zero coordinate, `bil x x` is a weighted sum of squared
+differences of the ratios `x i / δ i`, over pairs of generators weighted by their Gram entries. -/
+theorem bil_self_eq_of_null [Fintype (B W)] (δ : V W) (hδ : ∀ i, δ i ≠ 0)
+    (hrad : ∀ i', bil δ (stdBasis i') = 0) (x : V W) :
+    bil x x = -(1 / 2) * ∑ i, ∑ i',
+      -cos (π / M i i') * (δ i * δ i') * (x i / δ i - x i' / δ i') ^ 2 := by
+  have hcol : ∀ i', ∑ i, -cos (π / M i i') * δ i = 0 := fun i' ↦ by
+    rw [← hrad i', bil_stdBasis_right_eq_sum]
+    exact Finset.sum_congr rfl fun i _ ↦ mul_comm _ _
+  have hrow : ∀ i, ∑ i', -cos (π / M i i') * δ i' = 0 := fun i ↦ by
+    rw [← hcol i]
+    exact Finset.sum_congr rfl fun i' _ ↦ by rw [M.symmetric]
+  have hterm : ∀ i i', -cos (π / M i i') * (δ i * δ i') * (x i / δ i - x i' / δ i') ^ 2 =
+      -cos (π / M i i') * δ i' * (x i ^ 2 / δ i) - 2 * (x i * x i' * -cos (π / M i i')) +
+        -cos (π / M i i') * δ i * (x i' ^ 2 / δ i') := fun i i' ↦ by
+    have := hδ i
+    have := hδ i'
+    field_simp
+    ring
+  have hA : ∑ i, ∑ i', -cos (π / M i i') * δ i' * (x i ^ 2 / δ i) = 0 :=
+    Finset.sum_eq_zero fun i _ ↦ by rw [← Finset.sum_mul, hrow, zero_mul]
+  have hB : ∑ i, ∑ i', -cos (π / M i i') * δ i * (x i' ^ 2 / δ i') = 0 := by
+    rw [Finset.sum_comm]
+    exact Finset.sum_eq_zero fun i' _ ↦ by rw [← Finset.sum_mul, hcol, zero_mul]
+  simp only [hterm, Finset.sum_add_distrib, Finset.sum_sub_distrib, hA, hB, ← Finset.mul_sum]
+  rw [bil_self_eq_sum]
+  ring
+
+/-- A null vector of `bil` with positive coordinates makes `bil` nonnegative: every term of
+`bil_self_eq_of_null` is nonpositive before the factor `-½`. -/
+theorem bil_nonneg_of_null [Finite (B W)] (δ : V W) (hδ : ∀ i, 0 < δ i)
+    (hrad : ∀ i', bil δ (stdBasis i') = 0) (x : V W) : 0 ≤ bil x x := by
+  have := Fintype.ofFinite (B W)
+  rw [bil_self_eq_of_null δ (fun i ↦ (hδ i).ne') hrad]
+  have hS : ∑ i, ∑ i', -cos (π / M i i') * (δ i * δ i') * (x i / δ i - x i' / δ i') ^ 2 ≤ 0 :=
+    Finset.sum_nonpos fun i _ ↦ Finset.sum_nonpos fun i' _ ↦ by
+      by_cases hii : i = i'
+      · rw [hii, sub_self, sq, mul_zero, mul_zero]
+      · have hG := bil_off_diag_le i i' hii
+        rw [bil_eq] at hG
+        exact mul_nonpos_of_nonpos_of_nonneg
+          (mul_nonpos_of_nonpos_of_nonneg hG (mul_pos (hδ i) (hδ i')).le) (sq_nonneg _)
+  linarith
 
 def geomRepAux (i : B W) : V W ≃ₗ[ℝ] V W where
   toFun x := x - (2 * bil (stdBasis i) x) • stdBasis i

@@ -534,4 +534,78 @@ theorem isPolyAffineWeyl_of_isotropic (hpsd : (@bil W cg).IsPosSemidef)
 def IsIrreducibleAffineWeyl : Prop :=
   @IsPolyAffineWeyl W cg ∧ @IsIrreducible W cg
 
+/-- For an irreducible Coxeter system with a null vector `δ` of `bil` with positive coordinates,
+every isotropic vector is a multiple of `δ`: by `bil_self_eq_of_null` it makes `x i / δ i` agree
+across every edge of the (connected) Coxeter diagram. -/
+theorem bil_isotropic_of_null [Finite (@B W cg)] (hirr : @IsIrreducible W cg) (δ : @V W cg)
+    (hpos : ∀ i, 0 < δ i) (hrad : ∀ i', @bil W cg δ (@stdBasis W cg i') = 0) (x : @V W cg)
+    (hx : @bil W cg x x = 0) : ∃ a : ℝ, x = a • δ := by
+  let := cg
+  have := Fintype.ofFinite (B W)
+  rw [bil_self_eq_of_null δ (fun i ↦ (hpos i).ne') hrad] at hx
+  set t : B W → B W → ℝ := fun i i' ↦
+    -Real.cos (Real.pi / M i i') * (δ i * δ i') * (x i / δ i - x i' / δ i') ^ 2 with ht
+  have hnonpos : ∀ i i', t i i' ≤ 0 := fun i i' ↦ by
+    by_cases hii : i = i'
+    · simp only [ht, hii, sub_self, sq, mul_zero, le_refl]
+    · have hG := bil_off_diag_le i i' hii
+      rw [bil_eq] at hG
+      exact mul_nonpos_of_nonpos_of_nonneg
+        (mul_nonpos_of_nonpos_of_nonneg hG (mul_pos (hpos i) (hpos i')).le) (sq_nonneg _)
+  have hS : ∑ i, ∑ i', t i i' = 0 := by
+    have := mul_eq_zero.mp hx
+    exact this.resolve_left (by norm_num)
+  have hzero : ∀ i i', t i i' = 0 := fun i i' ↦
+    (Finset.sum_eq_zero_iff_of_nonpos fun i' _ ↦ hnonpos i i').mp
+      ((Finset.sum_eq_zero_iff_of_nonpos fun i _ ↦ Finset.sum_nonpos fun i' _ ↦ hnonpos i i').mp
+        hS i (Finset.mem_univ _)) i' (Finset.mem_univ _)
+  have hadj : ∀ i i', (coxeterGraphMatrix M).Adj i i' → x i / δ i = x i' / δ i' := by
+    intro i i' h
+    rw [coxeterGraphMatrix, SimpleGraph.fromRel_adj] at h
+    obtain ⟨hne, h2⟩ := h
+    have hM : M i i' ≠ 2 := h2.elim id fun h ↦ by rwa [M.symmetric]
+    have hG := bil_off_diag_lt i i' hne hM
+    rw [bil_eq] at hG
+    have hsq : (x i / δ i - x i' / δ i') ^ 2 = 0 :=
+      (mul_eq_zero.mp (hzero i i')).resolve_left (mul_neg_of_neg_of_pos hG
+        (mul_pos (hpos i) (hpos i'))).ne
+    exact sub_eq_zero.mp (pow_eq_zero_iff two_ne_zero |>.mp hsq)
+  have hc : (coxeterGraphMatrix M).Connected := hirr
+  obtain ⟨i₀⟩ := hc.nonempty
+  refine ⟨x i₀ / δ i₀, ?_⟩
+  ext i
+  have h : x i₀ / δ i₀ = x i / δ i :=
+    (hc.preconnected i₀ i).eq_of_forall_adj (f := fun i ↦ x i / δ i) hadj
+  rw [Finsupp.smul_apply, smul_eq_mul, h]
+  field_simp [(hpos i).ne']
+
+/-- An irreducible Coxeter system whose `bil` has a null vector with positive coordinates is an
+irreducible affine Coxeter group. -/
+theorem isIrreducibleAffineCoxeter_of_null [Finite (@B W cg)] (hirr : @IsIrreducible W cg)
+    (δ : @V W cg) (hpos : ∀ i, 0 < δ i) (hrad : ∀ i', @bil W cg δ (@stdBasis W cg i') = 0) :
+    @IsIrreducibleAffineCoxeter W cg := by
+  let := cg
+  have hc : (coxeterGraphMatrix M).Connected := hirr
+  obtain ⟨i₀⟩ := hc.nonempty
+  refine ⟨isAffineCoxeter_of_nonneg_of_radical (bil_nonneg_of_null δ hpos hrad) δ
+    (fun h ↦ (hpos i₀).ne' (by rw [h, Finsupp.coe_zero, Pi.zero_apply])) hrad, hirr⟩
+
+/-- An irreducible crystallographic Coxeter system whose `bil` has a null vector with positive
+coordinates is an irreducible affine Weyl group. -/
+theorem isIrreducibleAffineWeyl_of_null [Finite (@B W cg)] (hirr : @IsIrreducible W cg)
+    (hcr : @IsCrystallographic W cg) (δ : @V W cg) (hpos : ∀ i, 0 < δ i)
+    (hrad : ∀ i', @bil W cg δ (@stdBasis W cg i') = 0) : @IsIrreducibleAffineWeyl W cg := by
+  let := cg
+  have hc : (coxeterGraphMatrix M).Connected := hirr
+  obtain ⟨i₀⟩ := hc.nonempty
+  have hδ₀ := (hpos i₀).ne'
+  refine ⟨isPolyAffineWeyl_of_isotropic (isIrreducibleAffineCoxeter_of_null hirr δ hpos hrad).1.1
+    hcr i₀ ((δ i₀)⁻¹ • δ) ?_ ?_ ?_, hirr⟩
+  · rw [Finsupp.smul_apply, smul_eq_mul, inv_mul_cancel₀ hδ₀]
+  · intro i
+    rw [map_smul, LinearMap.smul_apply, hrad, smul_zero]
+  · intro x hx
+    obtain ⟨a, rfl⟩ := bil_isotropic_of_null hirr δ hpos hrad x hx
+    exact ⟨a * δ i₀, by rw [smul_smul, mul_assoc, mul_inv_cancel₀ hδ₀, mul_one]⟩
+
 end Coxeter
