@@ -210,8 +210,9 @@ theorem typeI_isPolyFiniteWeyl (m : ℕ) (hm : m = 0 ∨ m = 1 ∨ m = 2 ∨ m =
   ⟨typeI_isFiniteCoxeter m, typeI_isCrystallographic m hm⟩
 
 /-- `I₂(m + 2)` is an irreducible finite Weyl group when `m + 2 ∈ {3, 4, 6}` (`A₂`, `B₂`, `G₂`). -/
-theorem typeI_isIrreducibleFiniteWeyl (m : ℕ) [NeZero m] (hm : m = 1 ∨ m = 2 ∨ m = 4) :
+theorem typeI_isIrreducibleFiniteWeyl (m : ℕ) (hm : m = 1 ∨ m = 2 ∨ m = 4) :
     @IsIrreducibleFiniteWeyl _ (typeIGroup m) :=
+  have : NeZero m := ⟨by omega⟩
   ⟨typeI_isPolyFiniteWeyl m (Or.inr hm), typeI_isIrreducible m⟩
 
 end Coxeter

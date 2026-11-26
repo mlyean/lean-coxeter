@@ -1,6 +1,7 @@
 module
 
 public import Coxeter.BilinearLatticeDynkins
+public import Coxeter.Data.Fin
 public import Coxeter.SpecialFeatures
 
 /-!
@@ -59,7 +60,7 @@ def affineTypeDMatrix (n : ℕ) : CoxeterMatrix (Fin (n + 1)) where
     simp only [Matrix.of_apply, h, ite_false]
     split_ifs <;> omega
 
-@[reducible] noncomputable def affineTypeDGroup (n : ℕ) [NeZero n] :
+@[reducible] noncomputable def affineTypeDGroup (n : ℕ) (_ : 4 ≤ n) :
     CoxeterGroup (affineTypeDMatrix n).Group where
   B := Fin (n + 1)
   M := affineTypeDMatrix n
@@ -74,26 +75,6 @@ crystallographic, and the null root `δ = (1, 2, …, 2, 1, 1, 1)` (`1` at the f
 section Classification
 
 variable {m : ℕ}
-
-/-- `y` read at a natural-number index, `0` out of range. -/
-private def affDN_get (y : Fin (m + 4 + 1) → ℝ) (k : ℕ) : ℝ :=
-  if h : k < m + 4 + 1 then y ⟨k, h⟩ else 0
-
-/-- Summing against the indicator of a single index, given by its value in `ℕ`. -/
-private theorem affDN_sum_ite (P : Prop) [Decidable P] (k : ℕ) (f : Fin (m + 4 + 1) → ℝ) :
-    (∑ i : Fin (m + 4 + 1), if P ∧ (i : ℕ) = k then f i else 0) =
-      if P then affDN_get f k else 0 := by
-  by_cases hP : P
-  · simp only [hP, true_and, ↓reduceIte, affDN_get]
-    split_ifs with h
-    · rw [Finset.sum_eq_single ⟨k, h⟩ (fun j _ hj ↦ ite_eq_right fun hjk ↦ hj (Fin.ext hjk))
-        (fun h' ↦ absurd (Finset.mem_univ _) h'), ite_eq_left rfl]
-    · exact Finset.sum_eq_zero fun j _ ↦ ite_eq_right (by omega)
-  · simp only [hP, false_and, ↓reduceIte, Finset.sum_const_zero]
-
-private theorem affDN_sum_val (k : ℕ) (f : Fin (m + 4 + 1) → ℝ) :
-    (∑ i : Fin (m + 4 + 1), if (i : ℕ) = k then f i else 0) = affDN_get f k := by
-  simpa using affDN_sum_ite True k f
 
 /-- Column `j` of the Gram matrix of `bil` for `D̃_(m+4)`: one indicator per possible neighbour. -/
 private theorem affineTypeD_gram (i j : Fin (m + 4 + 1)) :
@@ -129,25 +110,25 @@ private theorem affineTypeDNull_pos (i : Fin (m + 4 + 1)) : 0 < affineTypeDNull 
   simp only [affineTypeDNull, Finsupp.coe_equivFunOnFinite_symm]
   split_ifs <;> norm_num
 
-private theorem affDN_get_null (k : ℕ) :
-    affDN_get (affineTypeDNull (m := m)) k =
+private theorem finNatGet_affineTypeDNull (k : ℕ) :
+    finNatGet (affineTypeDNull (m := m)) k =
       if k < m + 4 + 1 then (if k = 0 ∨ m + 2 ≤ k then 1 else 2) else 0 := by
-  unfold affDN_get
+  unfold finNatGet
   split_ifs <;> simp_all [affineTypeDNull]
 
 private theorem affineTypeD_bil_null (j : Fin (m + 4 + 1)) :
-    (@bil _ (affineTypeDGroup (m + 4))) affineTypeDNull
-      (@stdBasis _ (affineTypeDGroup (m + 4)) j) = 0 := by
-  rw [@bil_stdBasis_right_eq_sum _ (affineTypeDGroup (m + 4)) (Fin.fintype (m + 4 + 1))]
+    (@bil _ (affineTypeDGroup (m + 4) (by omega))) affineTypeDNull
+      (@stdBasis _ (affineTypeDGroup (m + 4) (by omega)) j) = 0 := by
+  rw [@bil_stdBasis_right_eq_sum _ (affineTypeDGroup (m + 4) (by omega))
+    (Fin.fintype (m + 4 + 1))]
   change ∑ i : Fin (m + 4 + 1),
     affineTypeDNull i * -Real.cos (Real.pi / (affineTypeDMatrix (m + 4) i j : ℝ)) = 0
   simp only [affineTypeD_gram, mul_sub, mul_ite, mul_one, mul_zero, Finset.sum_sub_distrib,
-    affDN_sum_ite, affDN_sum_val]
-  have hmul : ∀ k, affDN_get (m := m) (fun i ↦ affineTypeDNull (m := m) i * (1 / 2)) k =
-      affDN_get (m := m) affineTypeDNull k * (1 / 2) := fun k ↦ by
-    unfold affDN_get
-    split_ifs <;> simp
-  simp only [hmul, affDN_get_null]
+    sum_ite_and_val_eq, sum_ite_val_eq]
+  have hmul : ∀ k,
+      finNatGet (fun i : Fin (m + 4 + 1) ↦ affineTypeDNull (m := m) i * (1 / 2)) k =
+        finNatGet affineTypeDNull k * (1 / 2) := fun k ↦ finNatGet_mul_const _ _ k
+  simp only [hmul, finNatGet_affineTypeDNull]
   obtain ⟨j, hj⟩ := j
   simp only
   rcases Nat.lt_or_ge j 2 with hj2 | hj2
@@ -166,7 +147,7 @@ private theorem affineTypeD_bil_null (j : Fin (m + 4 + 1)) :
         norm_num
 
 private theorem affineTypeD_isIrreducible' :
-    @IsIrreducible _ (affineTypeDGroup (m + 4)) := by
+    @IsIrreducible _ (affineTypeDGroup (m + 4) (by omega)) := by
   refine isIrreducibleMatrix_of_exists_lt (affineTypeDMatrix (m + 4)) fun i hi ↦ ?_
   obtain ⟨i, hi'⟩ := i
   have hi0 : i ≠ 0 := fun h ↦ hi (Fin.ext h)
@@ -187,7 +168,7 @@ private theorem affineTypeD_isIrreducible' :
         key _ (by simp only; omega) (Or.inr (Or.inr ⟨rfl, rfl⟩))⟩
 
 private theorem affineTypeD_isCrystallographic' :
-    @IsCrystallographic _ (affineTypeDGroup (m + 4)) := by
+    @IsCrystallographic _ (affineTypeDGroup (m + 4) (by omega)) := by
   intro i i' hii'
   change affineTypeDMatrix (m + 4) i i' = 0 ∨ affineTypeDMatrix (m + 4) i i' = 2 ∨
     affineTypeDMatrix (m + 4) i i' = 3 ∨ affineTypeDMatrix (m + 4) i i' = 4 ∨
@@ -199,29 +180,29 @@ private theorem affineTypeD_isCrystallographic' :
 end Classification
 
 theorem affineTypeD_isIrreducible (n : ℕ) (hn : 4 ≤ n) :
-    @IsIrreducible _ (@affineTypeDGroup n ⟨by omega⟩) := by
+    @IsIrreducible _ (affineTypeDGroup n hn) := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
   exact affineTypeD_isIrreducible'
 
 theorem affineTypeD_isCrystallographic (n : ℕ) (hn : 4 ≤ n) :
-    @IsCrystallographic _ (@affineTypeDGroup n ⟨by omega⟩) := by
+    @IsCrystallographic _ (affineTypeDGroup n hn) := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
   exact affineTypeD_isCrystallographic'
 
 /-- `D̃ₙ` is an irreducible affine Coxeter group (`n ≥ 4`; for smaller `n`, `affineTypeDMatrix n`
 is not `D̃ₙ`). -/
 theorem affineTypeD_isIrreducibleAffineCoxeter (n : ℕ) (hn : 4 ≤ n) :
-    @IsIrreducibleAffineCoxeter _ (@affineTypeDGroup n ⟨by omega⟩) := by
+    @IsIrreducibleAffineCoxeter _ (affineTypeDGroup n hn) := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
-  exact @isIrreducibleAffineCoxeter_of_null _ (affineTypeDGroup (m + 4))
+  exact @isIrreducibleAffineCoxeter_of_null _ (affineTypeDGroup (m + 4) (by omega))
     (Finite.of_fintype (Fin (m + 4 + 1))) affineTypeD_isIrreducible' affineTypeDNull
     (fun i ↦ affineTypeDNull_pos i) affineTypeD_bil_null
 
 /-- `D̃ₙ` is an irreducible affine Weyl group (`n ≥ 4`). -/
 theorem affineTypeD_isIrreducibleAffineWeyl (n : ℕ) (hn : 4 ≤ n) :
-    @IsIrreducibleAffineWeyl _ (@affineTypeDGroup n ⟨by omega⟩) := by
+    @IsIrreducibleAffineWeyl _ (affineTypeDGroup n hn) := by
   obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
-  exact @isIrreducibleAffineWeyl_of_null _ (affineTypeDGroup (m + 4))
+  exact @isIrreducibleAffineWeyl_of_null _ (affineTypeDGroup (m + 4) (by omega))
     (Finite.of_fintype (Fin (m + 4 + 1))) affineTypeD_isIrreducible' affineTypeD_isCrystallographic'
     affineTypeDNull (fun i ↦ affineTypeDNull_pos i) affineTypeD_bil_null
 
@@ -269,16 +250,9 @@ private theorem affineTypeD4_isQuasiUnipotent (hn : 4 ≤ 4) :
 
 variable {m : ℕ}
 
-/-- `x` read at a natural-number index, `0` out of range. -/
-private def affD_get (x : Fin (m + 5 + 1) → ℤ) (k : ℕ) : ℤ :=
-  if h : k < m + 5 + 1 then x ⟨k, h⟩ else 0
-
-private theorem affD_get_val (x : Fin (m + 5 + 1) → ℤ) (i : Fin (m + 5 + 1)) :
-    affD_get x i = x i := dite_eq_left i.isLt
-
 private theorem affD_get_add_smul (x y : Fin (m + 5 + 1) → ℤ) (t : ℤ) (k : ℕ) :
-    affD_get (x + t • y) k = affD_get x k + t * affD_get y k := by
-  unfold affD_get
+    finNatGet (x + t • y) k = finNatGet x k + t * finNatGet y k := by
+  unfold finNatGet
   split_ifs <;> simp
 
 /-- The Euler matrix of `D̃_(m+5)`. -/
@@ -300,56 +274,40 @@ private theorem eulerMatrix_affD_transpose_apply (i j : Fin (m + 5 + 1)) :
   rw [transpose_apply, eulerMatrix_affD_apply]
   split_ifs <;> omega
 
-/-- Summing against the indicator of a single index, given by its value in `ℕ`. -/
-private theorem affD_sum_ite (P : Prop) [Decidable P] (k : ℕ) (f : Fin (m + 5 + 1) → ℤ) :
-    (∑ j : Fin (m + 5 + 1), if P ∧ (j : ℕ) = k then f j else 0) =
-      if P then affD_get f k else 0 := by
-  by_cases hP : P
-  · simp only [hP, true_and, ↓reduceIte, affD_get]
-    split_ifs with h
-    · rw [Finset.sum_eq_single ⟨k, h⟩ (fun j _ hj ↦ ite_eq_right fun hjk ↦ hj (Fin.ext hjk))
-        (fun h' ↦ absurd (Finset.mem_univ _) h'), ite_eq_left rfl]
-    · exact Finset.sum_eq_zero fun j _ ↦ ite_eq_right (by omega)
-  · simp only [hP, false_and, ↓reduceIte, Finset.sum_const_zero]
-
-private theorem affD_sum_val (k : ℕ) (f : Fin (m + 5 + 1) → ℤ) :
-    (∑ j : Fin (m + 5 + 1), if (j : ℕ) = k then f j else 0) = affD_get f k := by
-  simpa using affD_sum_ite True k f
-
 private theorem affD_mulVec (z : Fin (m + 5 + 1) → ℤ) (i : Fin (m + 5 + 1)) :
     (BilinearLattice.eulerMatrix (affineTypeDMatrix (m + 5)) *ᵥ z) i =
-      affD_get z i - (if (i : ℕ) + 1 ≤ m + 3 then affD_get z (i + 1) else 0) -
-        (if (i : ℕ) = m + 2 then affD_get z (m + 4) else 0) -
-        (if (i : ℕ) = 1 then affD_get z (m + 5) else 0) := by
+      finNatGet z i - (if (i : ℕ) + 1 ≤ m + 3 then finNatGet z (i + 1) else 0) -
+        (if (i : ℕ) = m + 2 then finNatGet z (m + 4) else 0) -
+        (if (i : ℕ) = 1 then finNatGet z (m + 5) else 0) := by
   simp only [mulVec, dotProduct, eulerMatrix_affD_apply, sub_mul, ite_mul, one_mul, zero_mul,
-    Finset.sum_sub_distrib, affD_sum_ite, affD_sum_val]
+    Finset.sum_sub_distrib, sum_ite_and_val_eq, sum_ite_val_eq]
 
 private theorem affD_transpose_mulVec (x : Fin (m + 5 + 1) → ℤ) (i : Fin (m + 5 + 1)) :
     ((BilinearLattice.eulerMatrix (affineTypeDMatrix (m + 5)))ᵀ *ᵥ x) i =
-      affD_get x i - (if 1 ≤ (i : ℕ) ∧ (i : ℕ) ≤ m + 3 then affD_get x (i - 1) else 0) -
-        (if (i : ℕ) = m + 4 then affD_get x (m + 2) else 0) -
-        (if (i : ℕ) = m + 5 then affD_get x 1 else 0) := by
+      finNatGet x i - (if 1 ≤ (i : ℕ) ∧ (i : ℕ) ≤ m + 3 then finNatGet x (i - 1) else 0) -
+        (if (i : ℕ) = m + 4 then finNatGet x (m + 2) else 0) -
+        (if (i : ℕ) = m + 5 then finNatGet x 1 else 0) := by
   simp only [mulVec, dotProduct, eulerMatrix_affD_transpose_apply, sub_mul, ite_mul, one_mul,
-    zero_mul, Finset.sum_sub_distrib, affD_sum_ite, affD_sum_val]
+    zero_mul, Finset.sum_sub_distrib, sum_ite_and_val_eq, sum_ite_val_eq]
 
 /-- The Coxeter transformation of `D̃_(m+5)`, coordinatewise; `α = x_{m+2} - x_{m+3} - x_{m+4}`. -/
 private def affD_q (x : Fin (m + 5 + 1) → ℤ) (i : ℕ) : ℤ :=
   if i = 0 then
-    affD_get x 1 + (affD_get x (m + 2) - affD_get x (m + 3) - affD_get x (m + 4)) -
-      affD_get x (m + 5)
+    finNatGet x 1 + (finNatGet x (m + 2) - finNatGet x (m + 3) - finNatGet x (m + 4)) -
+      finNatGet x (m + 5)
   else if i = 1 then
-    affD_get x 0 + affD_get x 1 +
-      (affD_get x (m + 2) - affD_get x (m + 3) - affD_get x (m + 4)) - affD_get x (m + 5)
+    finNatGet x 0 + finNatGet x 1 +
+      (finNatGet x (m + 2) - finNatGet x (m + 3) - finNatGet x (m + 4)) - finNatGet x (m + 5)
   else if i ≤ m + 2 then
-    affD_get x (i - 1) + (affD_get x (m + 2) - affD_get x (m + 3) - affD_get x (m + 4))
-  else if i = m + 3 then affD_get x (m + 2) - affD_get x (m + 3)
-  else if i = m + 4 then affD_get x (m + 2) - affD_get x (m + 4)
-  else affD_get x 1 - affD_get x (m + 5)
+    finNatGet x (i - 1) + (finNatGet x (m + 2) - finNatGet x (m + 3) - finNatGet x (m + 4))
+  else if i = m + 3 then finNatGet x (m + 2) - finNatGet x (m + 3)
+  else if i = m + 4 then finNatGet x (m + 2) - finNatGet x (m + 4)
+  else finNatGet x 1 - finNatGet x (m + 5)
 
 private theorem affD_get_q (x : Fin (m + 5 + 1) → ℤ) (k : ℕ) :
-    affD_get (fun i : Fin (m + 5 + 1) ↦ affD_q x i) k =
+    finNatGet (fun i : Fin (m + 5 + 1) ↦ affD_q x i) k =
       if k < m + 5 + 1 then affD_q x k else 0 := by
-  unfold affD_get
+  unfold finNatGet
   split_ifs <;> rfl
 
 private theorem affineTypeD_S_eq (hn : 4 ≤ m + 5) (x : Fin (m + 5 + 1) → ℤ) :
@@ -382,21 +340,22 @@ open Fin.NatCast
 
 /-- The rotating coordinates, indexed by `ℕ`. -/
 private def affD_gN (x : Fin (m + 5 + 1) → ℤ) (j : ℕ) : ℤ :=
-  if j = 0 then affD_get x (m + 5) - affD_get x 0
-  else if j ≤ m + 1 then affD_get x (j + 1) - affD_get x j
-  else affD_get x (m + 3) - affD_get x (m + 2) + affD_get x (m + 4)
+  if j = 0 then finNatGet x (m + 5) - finNatGet x 0
+  else if j ≤ m + 1 then finNatGet x (j + 1) - finNatGet x j
+  else finNatGet x (m + 3) - finNatGet x (m + 2) + finNatGet x (m + 4)
 
 /-- The rotating coordinates. -/
 private def affD_g (x : Fin (m + 5 + 1) → ℤ) (a : Fin (m + 3)) : ℤ := affD_gN x a
 
 /-- A negated coordinate. -/
-private def affD_a (x : Fin (m + 5 + 1) → ℤ) : ℤ := affD_get x 1 - affD_get x 0 - affD_get x (m + 5)
+private def affD_a (x : Fin (m + 5 + 1) → ℤ) : ℤ :=
+  finNatGet x 1 - finNatGet x 0 - finNatGet x (m + 5)
 
 /-- The other negated coordinate. -/
-private def affD_b (x : Fin (m + 5 + 1) → ℤ) : ℤ := affD_get x (m + 4) - affD_get x (m + 3)
+private def affD_b (x : Fin (m + 5 + 1) → ℤ) : ℤ := finNatGet x (m + 4) - finNatGet x (m + 3)
 
 /-- The `δ`-coordinate. -/
-private def affD_k (x : Fin (m + 5 + 1) → ℤ) : ℤ := affD_get x (m + 5)
+private def affD_k (x : Fin (m + 5 + 1) → ℤ) : ℤ := finNatGet x (m + 5)
 
 private theorem affD_gN_q (x : Fin (m + 5 + 1) → ℤ) (j : ℕ) (hj : j ≤ m + 2) :
     affD_gN (fun i : Fin (m + 5 + 1) ↦ affD_q x i) j =
@@ -460,17 +419,17 @@ private theorem affD_ext {x y : Fin (m + 5 + 1) → ℤ} (hg : ∀ a, affD_g x a
   unfold affD_a at ha
   unfold affD_b at hb
   unfold affD_k at hk
-  have h0 : affD_get x 0 = affD_get y 0 := by
+  have h0 : finNatGet x 0 = finNatGet y 0 := by
     have := hgN 0 (by omega)
     simp only [affD_gN, ↓reduceIte] at this
     omega
-  have hmid : ∀ j ≤ m + 2, affD_get x j = affD_get y j := by
+  have hmid : ∀ j ≤ m + 2, finNatGet x j = finNatGet y j := by
     intro j hj
     induction j with
     | zero => exact h0
     | succ j ih =>
         rcases j with _ | j
-        · change affD_get x 1 = affD_get y 1
+        · change finNatGet x 1 = finNatGet y 1
           omega
         · have := hgN (j + 1) (by omega)
           simp only [affD_gN, Nat.add_one_ne_zero, ↓reduceIte,
@@ -482,7 +441,7 @@ private theorem affD_ext {x y : Fin (m + 5 + 1) → ℤ} (hg : ∀ a, affD_g x a
     ↓reduceIte] at hlast
   have h2 := hmid (m + 2) le_rfl
   funext ⟨k, hk'⟩
-  rw [← affD_get_val x, ← affD_get_val y]
+  rw [← finNatGet_val x, ← finNatGet_val y]
   simp only
   rcases Nat.lt_or_ge k (m + 3) with hk3 | hk3
   · exact hmid k (by omega)
@@ -499,8 +458,8 @@ private theorem affD_gN_add_smul (x y : Fin (m + 5 + 1) → ℤ) (t : ℤ) (j : 
 private def affD_δ : Fin (m + 5 + 1) → ℤ := fun i ↦ if (i : ℕ) = 0 ∨ m + 3 ≤ (i : ℕ) then 1 else 2
 
 private theorem affD_get_δ (k : ℕ) (hk : k < m + 5 + 1) :
-    affD_get (affD_δ (m := m)) k = if k = 0 ∨ m + 3 ≤ k then 1 else 2 := by
-  simp only [affD_get, hk, ↓reduceDIte, affD_δ]
+    finNatGet (affD_δ (m := m)) k = if k = 0 ∨ m + 3 ≤ k then 1 else 2 := by
+  simp only [finNatGet, hk, ↓reduceDIte, affD_δ]
 
 private theorem affD_gN_δ (j : ℕ) (hj : j ≤ m + 2) : affD_gN (affD_δ (m := m)) j = 0 := by
   unfold affD_gN
@@ -510,7 +469,7 @@ private theorem affD_gN_δ (j : ℕ) (hj : j ≤ m + 2) : affD_gN (affD_δ (m :=
     norm_num
 
 private theorem affD_gN_zero (j : ℕ) : affD_gN (0 : Fin (m + 5 + 1) → ℤ) j = 0 := by
-  unfold affD_gN affD_get
+  unfold affD_gN finNatGet
   split_ifs <;> simp
 
 private theorem affD_gN_smul_δ (t : ℤ) (j : ℕ) (hj : j ≤ m + 2) :
@@ -594,8 +553,8 @@ private theorem affineTypeD_S_pow_eq (hn : 4 ≤ m + 5) (x : Fin (m + 5 + 1) →
     ring
 
 private theorem affD_get_single (k : ℕ) :
-    affD_get (Pi.single 0 1 : Fin (m + 5 + 1) → ℤ) k = if k = 0 then 1 else 0 := by
-  unfold affD_get
+    finNatGet (Pi.single 0 1 : Fin (m + 5 + 1) → ℤ) k = if k = 0 then 1 else 0 := by
+  unfold finNatGet
   split_ifs with h1 h2 <;> simp_all [Pi.single_apply, Fin.ext_iff]
 
 private theorem affD_c_single_pos : 0 < affD_c (Pi.single 0 1 : Fin (m + 5 + 1) → ℤ) := by
@@ -676,19 +635,19 @@ end EulerLattice
 /-! ### Special features -/
 
 theorem affineTypeD_isAffineCoxeter (n : ℕ) (hn : 4 ≤ n) :
-    @IsAffineCoxeter _ (@affineTypeDGroup n ⟨by omega⟩) :=
+    @IsAffineCoxeter _ (affineTypeDGroup n hn) :=
   (affineTypeD_isIrreducibleAffineCoxeter n hn).1
 
 theorem affineTypeD_isAffineCoxeterOrEmpty (n : ℕ) (hn : 4 ≤ n) :
-    @IsAffineCoxeterOrEmpty _ (@affineTypeDGroup n ⟨by omega⟩) :=
+    @IsAffineCoxeterOrEmpty _ (affineTypeDGroup n hn) :=
   Or.inr (affineTypeD_isAffineCoxeter n hn)
 
 theorem affineTypeD_isPolyAffineWeyl (n : ℕ) (hn : 4 ≤ n) :
-    @IsPolyAffineWeyl _ (@affineTypeDGroup n ⟨by omega⟩) :=
+    @IsPolyAffineWeyl _ (affineTypeDGroup n hn) :=
   (affineTypeD_isIrreducibleAffineWeyl n hn).1
 
 theorem affineTypeD_hasGeneralizedCartanMatrix (n : ℕ) (hn : 4 ≤ n) :
-    @HasGeneralizedCartanMatrix _ (@affineTypeDGroup n ⟨by omega⟩) :=
+    @HasGeneralizedCartanMatrix _ (affineTypeDGroup n hn) :=
   hasGeneralizedCartanMatrix_of_entries fun i i' hne ↦
     Or.inr (affineTypeD_isSimplyLaced n hn i i' hne)
 

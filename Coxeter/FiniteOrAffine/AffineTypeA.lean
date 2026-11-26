@@ -1,6 +1,7 @@
 module
 
 public import Coxeter.BilinearLatticeDynkins
+public import Coxeter.Data.Fin
 public import Coxeter.SpecialFeatures
 
 /-!
@@ -236,24 +237,15 @@ private theorem eulerMatrix_affineTypeA_transpose_apply (hn : 2 ≤ n) (i j : Fi
   rw [Matrix.transpose_apply, eulerMatrix_affineTypeA_apply hn]
   split_ifs <;> omega
 
-/-- Summing against the indicator of a single index, given by its value in `ℕ`. -/
-private theorem sum_ite_val_eq (k : ℕ) (f : Fin (n + 1) → ℤ) :
-    (∑ j : Fin (n + 1), if (j : ℕ) = k then f j else 0) =
-      if h : k < n + 1 then f ⟨k, h⟩ else 0 := by
-  split_ifs with h
-  · rw [Finset.sum_eq_single ⟨k, h⟩ (fun j _ hj ↦ ite_eq_right fun hjk ↦ hj (Fin.ext hjk))
-      (fun h' ↦ absurd (Finset.mem_univ _) h'), ite_eq_left rfl]
-  · exact Finset.sum_eq_zero fun j _ ↦ ite_eq_right (by omega)
-
 private theorem eulerMatrix_affineTypeA_mulVec (hn : 2 ≤ n) (z : Fin (n + 1) → ℤ)
     (i : Fin (n + 1)) :
     (BilinearLattice.eulerMatrix (affineTypeAMatrix n) *ᵥ z) i =
       z i - (if h : (i : ℕ) + 1 < n + 1 then z ⟨i + 1, h⟩ else 0) -
         (if (i : ℕ) = 0 then z (Fin.last n) else 0) := by
   simp only [Matrix.mulVec, dotProduct, eulerMatrix_affineTypeA_apply hn, sub_mul, ite_mul,
-    one_mul, zero_mul, Finset.sum_sub_distrib, sum_ite_val_eq, i.isLt, dite_true]
+    one_mul, zero_mul, Finset.sum_sub_distrib, sum_ite_val_eq, finNatGet, i.isLt, dite_true]
   by_cases hi : (i : ℕ) = 0
-  · simp only [hi, true_and, sum_ite_val_eq, lt_add_one, dite_true, ite_true]
+  · simp only [hi, true_and, sum_ite_val_eq, finNatGet, lt_add_one, dite_true, ite_true]
     obtain rfl : i = 0 := Fin.ext hi
     rfl
   · simp only [hi, false_and, ite_false, Finset.sum_const_zero]
@@ -264,25 +256,25 @@ private theorem eulerMatrix_affineTypeA_transpose_mulVec (hn : 2 ≤ n) (x : Fin
       x i - (if h : 0 < (i : ℕ) then x ⟨i - 1, by omega⟩ else 0) -
         (if (i : ℕ) = n then x 0 else 0) := by
   simp only [Matrix.mulVec, dotProduct, eulerMatrix_affineTypeA_transpose_apply hn, sub_mul,
-    ite_mul, one_mul, zero_mul, Finset.sum_sub_distrib, sum_ite_val_eq, i.isLt, dite_true]
+    ite_mul, one_mul, zero_mul, Finset.sum_sub_distrib, sum_ite_val_eq, finNatGet, i.isLt,
+    dite_true]
   congr 1
   · by_cases hi : 0 < (i : ℕ)
-    · simp only [hi, true_and, sum_ite_val_eq, show (i : ℕ) - 1 < n + 1 by omega, dite_true]
+    · simp only [hi, true_and, sum_ite_val_eq, finNatGet, show (i : ℕ) - 1 < n + 1 by omega,
+        dite_true]
     · simp only [hi, false_and, ite_false, Finset.sum_const_zero, dite_false]
   · by_cases hi : (i : ℕ) = n
-    · simp only [hi, true_and, sum_ite_val_eq, show 0 < n + 1 by omega, dite_true, ite_true]
+    · simp only [hi, true_and, sum_ite_val_eq, finNatGet, show 0 < n + 1 by omega, dite_true,
+        ite_true]
       rfl
     · simp only [hi, false_and, ite_false, Finset.sum_const_zero]
 
 /-- `φ(x) = x₀ - xₙ`, which the Coxeter transformation of `Ãₙ` preserves. -/
 private def affA_φ (x : Fin (n + 1) → ℤ) : ℤ := x 0 - x (Fin.last n)
 
-/-- `x` read at a natural-number index, `0` out of range. -/
-private def affA_get (x : Fin (n + 1) → ℤ) (k : ℕ) : ℤ := if h : k < n + 1 then x ⟨k, h⟩ else 0
-
 /-- The quasi-periodic extension `X (j) = x (j mod n) - ⌊j / n⌋ φ(x)` of `x` to `ℤ`. -/
 private def affA_ext (n : ℕ) (x : Fin (n + 1) → ℤ) (j : ℤ) : ℤ :=
-  affA_get x (j % n).toNat - (j / n) * affA_φ x
+  finNatGet x (j % n).toNat - (j / n) * affA_φ x
 
 private theorem affA_ext_add_mul (hn : 2 ≤ n) (x : Fin (n + 1) → ℤ) (j q : ℤ) :
     affA_ext n x (j + n * q) = affA_ext n x j - q * affA_φ x := by
@@ -293,7 +285,7 @@ private theorem affA_ext_add_mul (hn : 2 ≤ n) (x : Fin (n + 1) → ℤ) (j q :
 
 private theorem affA_ext_natCast_of_lt (x : Fin (n + 1) → ℤ) (k : ℕ) (hk : k < n) :
     affA_ext n x k = x ⟨k, by omega⟩ := by
-  unfold affA_ext affA_get
+  unfold affA_ext finNatGet
   rw [Int.emod_eq_of_lt (by omega) (by omega), Int.ediv_eq_zero_of_lt (by omega) (by omega),
     Int.toNat_natCast, dite_eq_left (by omega)]
   ring
@@ -392,8 +384,8 @@ private theorem affineTypeA_S_pow_apply (hn : 2 ≤ n) (k : ℕ) (x : Fin (n + 1
         have := Int.emod_nonneg j hn0.ne'
         omega
       have hy : affA_ext n y j = k * affA_φ x + affA_ext n x (j - k) := by
-        change affA_get y (j % n).toNat - (j / n) * affA_φ y = _
-        rw [hφ, affA_get, dite_eq_left hj, ih, Int.toNat_of_nonneg (Int.emod_nonneg j hn0.ne')]
+        change finNatGet y (j % n).toNat - (j / n) * affA_φ y = _
+        rw [hφ, finNatGet, dite_eq_left hj, ih, Int.toNat_of_nonneg (Int.emod_nonneg j hn0.ne')]
         have h := affA_ext_add_mul hn x (j % n - k) (j / n)
         rw [show j % n - k + n * (j / n) = j - k by
           linear_combination Int.emod_add_mul_ediv j n] at h
