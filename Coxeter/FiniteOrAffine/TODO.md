@@ -57,18 +57,11 @@ semidefinite but degenerate `bil`, with radical spanned by the null root.
   are.
 
 ### AffineTypeD.lean
-- `axiom affineTypeDMatrix (n : ℕ) : CoxeterMatrix (Fin (n + 1))`
 - `proof_wanted affineTypeD_isIrreducibleAffineCoxeter (n : ℕ) [NeZero n] : @IsIrreducibleAffineCoxeter _ (affineTypeDGroup n)`
 - `proof_wanted affineTypeD_isIrreducibleAffineWeyl (n : ℕ) [NeZero n] : @IsIrreducibleAffineWeyl _ (affineTypeDGroup n)`
-- `proof_wanted affineTypeD_isSimplyLaced (n : ℕ) (_ : 4 ≤ n) : BilinearLattice.IsSimplyLaced (affineTypeDMatrix n)`
-- `theorem affineTypeDBilinearLattice_isQuasiUnipotent (n : ℕ) (hn : 4 ≤ n) : IsQuasiUnipotentOfIndex S 2 ∧ ¬ IsQuasiUnipotentOfIndex S 1`
-  — `sorry` (not `proof_wanted`) since the `…WithMonoidQuasiUnipotent` object uses its first
-  half. Index exactly `2`: the null root gives a Jordan block of size `2` at eigenvalue `1`, so
-  `S` is not of finite order. Needs the matrix defined, then a general-`n` closed form for a
-  power `S ^ m` of the form `x ↦ x + c(x) • δ` with `c(δ) = 0`; the infinite-order half then
-  follows from `Module.End.not_isQuasiUnipotentOfIndex_one_of_pow_apply`, as in
-  `AffineTypeA.lean`.
-  These use `4 ≤ n` rather than the `[NeZero n]` of the other two goals in this file.
+  — the null root is `(1, 2, …, 2, 1, 1, 1)` (`1` at nodes `0`, `n - 2`, `n - 1`, `n`). The
+  statements use `[NeZero n]`, but `affineTypeDMatrix n` is only `D̃ₙ` for `n ≥ 4`; the
+  hypothesis likely needs strengthening to `4 ≤ n`.
 
 ### AffineExceptional.lean
 - `axiom affineTypeF4Matrix : CoxeterMatrix (Fin 5)`
@@ -96,7 +89,6 @@ semidefinite but degenerate `bil`, with radical spanned by the null root.
    tractable than a general argument; the rank-2 machinery in `Coxeter.GeometricRepresentation`
    (`bil_restrict_E_diag`/`bil_restrict_E_isPosSemidef`/`bil_restrict_E_nondegenerate_iff`)
    generalizes to any pair of generators, not just rank-2 whole diagrams, and may help.
-3. The `Ãₙ` and `Ẽ₆`–`Ẽ₈` `IsIrreducibleAffineCoxeter`/`IsIrreducibleAffineWeyl` goals, whose
-   matrices are already defined.
-4. Define the remaining affine matrices (`B̃`, `C̃`, `D̃`, `F̃₄`, `G̃₂`), then their goals,
-   including the `D̃ₙ` quasi-unipotence `sorry`.
+3. The `Ãₙ`, `D̃ₙ` and `Ẽ₆`–`Ẽ₈` `IsIrreducibleAffineCoxeter`/`IsIrreducibleAffineWeyl` goals,
+   whose matrices are already defined.
+4. Define the remaining affine matrices (`B̃`, `C̃`, `F̃₄`, `G̃₂`), then their goals.
