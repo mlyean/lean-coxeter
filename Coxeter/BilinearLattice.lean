@@ -83,6 +83,28 @@ lemma pow_mul_sub_one_sq_eq_zero {f : Module.End R M} {m : ℕ} (hf : (f ^ m - 1
     _ = g * (f ^ m - 1) ^ 2 * g := by rw [sq]; simp only [mul_assoc]
     _ = 0 := by rw [hf, mul_zero, zero_mul]
 
+/-- A witness that `f` has infinite order: if `f ^ h` fixes `δ ≠ 0` and translates `v` by `δ`,
+then `f ^ (h * k)` translates `v` by `k • δ`, so no power of `f` is `1` (in a torsion-free
+module). Hence `f` is not quasi-unipotent of index `1`. -/
+theorem not_isQuasiUnipotentOfIndex_one_of_pow_apply [IsAddTorsionFree M] (f : Module.End R M)
+    {h : ℕ} (v δ : M) (hδ : (f ^ h) δ = δ) (hv : (f ^ h) v = v + δ) (hδ0 : δ ≠ 0) :
+    ¬ IsQuasiUnipotentOfIndex f 1 := by
+  rintro ⟨m, hm, h1⟩
+  rw [pow_one, sub_eq_zero] at h1
+  have hδk : ∀ k : ℕ, ((f ^ h) ^ k) δ = δ := by
+    intro k
+    induction k with
+    | zero => rw [pow_zero, one_apply_eq_self]
+    | succ k ih => rw [pow_succ, mul_apply_eq_comp, hδ, ih]
+  have hvk : ∀ k : ℕ, ((f ^ h) ^ k) v = v + k • δ := by
+    intro k
+    induction k with
+    | zero => rw [pow_zero, one_apply_eq_self, zero_smul, add_zero]
+    | succ k ih => rw [pow_succ, mul_apply_eq_comp, hv, map_add, ih, hδk, succ_nsmul, add_assoc]
+  have hvm := hvk m
+  rw [← pow_mul, mul_comm, pow_mul, h1, one_pow, one_apply_eq_self, left_eq_add] at hvm
+  exact hδ0 ((nsmul_eq_zero_iff_right hm.ne').mp hvm)
+
 /-- An endomorphism of finite order is quasi-unipotent of every positive index. -/
 theorem isQuasiUnipotentOfIndex_of_pow_eq_one {f : Module.End R M} {m k : ℕ} (hm : 0 < m)
     (hf : f ^ m = 1) (hk : 0 < k) : IsQuasiUnipotentOfIndex f k :=
