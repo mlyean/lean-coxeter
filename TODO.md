@@ -1,8 +1,5 @@
 # Project-wide TODO
 
-For the finite/affine Coxeter-type classification stubs, see
-[Coxeter/FiniteOrAffine/TODO.md](Coxeter/FiniteOrAffine/TODO.md).
-
 ## General parabolic subgroups
 
 Not started. `Coxeter/Dihedral.lean` only covers the rank-two case (`rankTwoSubgroup i i'`,
