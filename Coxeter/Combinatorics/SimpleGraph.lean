@@ -37,6 +37,14 @@ theorem connected_of_exists_adj_rank_lt {V : Type*} (G : SimpleGraph V) (r : V) 
   have : Nonempty V := ⟨r⟩
   exact ⟨fun u v ↦ (hr _ u rfl).symm.trans (hr _ v rfl)⟩
 
+/-- A function that agrees across every edge agrees between any two reachable vertices. -/
+theorem Reachable.eq_of_forall_adj {V α : Type*} {G : SimpleGraph V} {f : V → α}
+    (h : ∀ u v, G.Adj u v → f u = f v) {u v : V} (huv : G.Reachable u v) : f u = f v := by
+  obtain ⟨p⟩ := huv
+  induction p with
+  | nil => rfl
+  | cons hadj _ ih => exact (h _ _ hadj).trans ih
+
 /-- A graph on `Fin (n + 1)` is connected if every nonzero vertex is adjacent to some smaller
 vertex. -/
 theorem connected_of_exists_adj_lt {n : ℕ} (G : SimpleGraph (Fin (n + 1)))
