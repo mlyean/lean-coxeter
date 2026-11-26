@@ -6,6 +6,7 @@ public import Coxeter.BilinearLatticeDynkins
 public import Coxeter.BraidGroup
 public import Coxeter.Bruhat
 public import Coxeter.CartanMatrix
+public import Coxeter.Combinatorics.SimpleGraph
 public import Coxeter.Component
 public import Coxeter.Dihedral
 public import Coxeter.Data.List.Lemmas

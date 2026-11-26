@@ -3,34 +3,19 @@
 Everything in this directory that is not yet a real proof, grouped by file; each item names the
 declaration and what's needed to close it.
 
-## Finite types
-
-### Exceptional.lean
-- `proof_wanted typeE6_isIrreducibleFiniteWeyl : @IsIrreducibleFiniteWeyl _ typeE6Group`
-- `proof_wanted typeE7_isIrreducibleFiniteWeyl : @IsIrreducibleFiniteWeyl _ typeE7Group`
-- `proof_wanted typeE8_isIrreducibleFiniteWeyl : @IsIrreducibleFiniteWeyl _ typeE8Group`
-- `proof_wanted typeF4_isIrreducibleFiniteWeyl : @IsIrreducibleFiniteWeyl _ typeF4Group`
-- `proof_wanted typeG2_isIrreducibleFiniteWeyl : @IsIrreducibleFiniteWeyl _ typeG2Group`
-  — each needs `IsIrreducible` (diagram connectivity, checkable by `fin_cases`/`decide` since
-  these are small fixed-rank matrices) plus `IsPolyFiniteWeyl` (`IsFiniteCoxeter ∧
-  IsCrystallographic`; crystallographic is already proved for all five). `IsFiniteCoxeter` needs
-  positive-definiteness of `bil` — these are fixed, small finite matrices (rank ≤ 8), so in
-  principle decidable/computable rather than needing a general SOS argument.
-- `proof_wanted typeH3_isIrreducible : @IsIrreducible _ typeH3Group`
-- `proof_wanted typeH4_isIrreducible : @IsIrreducible _ typeH4Group` — diagram connectivity,
-  should be straightforward (`fin_cases`/`decide` on the fixed rank-3/4 matrix).
-- `proof_wanted typeH3_isFiniteCoxeter : @IsFiniteCoxeter _ typeH3Group`
-- `proof_wanted typeH4_isFiniteCoxeter : @IsFiniteCoxeter _ typeH4Group` — `H₃`/`H₄` are
-  *non-crystallographic* (golden-ratio entries, `cos(π/5)`), so this needs its own
-  positive-definiteness argument; not crystallographic, so no `IsPolyFiniteWeyl`/Weyl statement
-  applies to these two, only `IsIrreducible ∧ IsFiniteCoxeter` (there's no
-  `typeH3_isIrreducibleFiniteWeyl` target, consistent with `H₃`/`H₄` not being Weyl groups).
-
 ## Affine types
 
-For the `IsIrreducibleAffineCoxeter`/`IsIrreducibleAffineWeyl` goals: irreducibility is
-connectivity of the diagram (as in `typeD_isIrreducible`), and the affine condition is positive
-semidefinite but degenerate `bil`, with radical spanned by the null root.
+For the `IsIrreducibleAffineCoxeter` goals use `isAffineCoxeter_of_nonneg_of_radical` (nonnegative
+`bil` plus a nonzero null vector orthogonal to every `stdBasis i`) and
+`isIrreducibleMatrix_of_exists_rank_lt` for connectivity, as in `AffineExceptional.lean`. For a
+general `n` the nonnegativity needs a sum-of-squares identity in `n` (as `sos_identity_fork` does
+for finite `Dₙ`) rather than a fixed `LDLᵀ` decomposition.
+
+The `IsIrreducibleAffineWeyl` goals additionally need `IsPolyAffineWeyl`: crystallographic entries
+and `LinearMap.ker bil = Submodule.span ℝ {stdBasis i₀ + δ}` with `δ i₀ = 0`, i.e. the radical is
+exactly the line through the null root. From an `LDLᵀ` decomposition with a single zero pivot
+(the last one), `bil x x = 0` forces every other linear form to vanish, which pins `x` to a
+multiple of the null root.
 
 ### AffineTypeA.lean
 - `proof_wanted affineTypeA_isIrreducibleAffineCoxeter (n : ℕ) [NeZero n] : @IsIrreducibleAffineCoxeter _ (affineTypeAGroup n)`
@@ -53,27 +38,21 @@ semidefinite but degenerate `bil`, with radical spanned by the null root.
   hypothesis likely needs strengthening to `4 ≤ n`.
 
 ### AffineExceptional.lean
-- `proof_wanted affineTypeE6_isIrreducibleAffineCoxeter : @IsIrreducibleAffineCoxeter _ affineTypeE6Group`
-- `proof_wanted affineTypeE7_isIrreducibleAffineCoxeter : @IsIrreducibleAffineCoxeter _ affineTypeE7Group`
-- `proof_wanted affineTypeE8_isIrreducibleAffineCoxeter : @IsIrreducibleAffineCoxeter _ affineTypeE8Group`
-- `proof_wanted affineTypeF4_isIrreducibleAffineCoxeter : @IsIrreducibleAffineCoxeter _ affineTypeF4Group`
-- `proof_wanted affineTypeG2_isIrreducibleAffineCoxeter : @IsIrreducibleAffineCoxeter _ affineTypeG2Group`
 - `proof_wanted affineTypeE6_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeE6Group`
 - `proof_wanted affineTypeE7_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeE7Group`
 - `proof_wanted affineTypeE8_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeE8Group`
 - `proof_wanted affineTypeF4_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeF4Group`
 - `proof_wanted affineTypeG2_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeG2Group`
-  — all five matrices are fixed, so connectivity is a finite check. For `Ẽ₆`–`Ẽ₈` the null root
-  is (a multiple of) the `δ` in the quasi-unipotence proofs. `F̃₄`/`G̃₂` are not simply laced, so
-  `bil` has irrational entries (`cos (π / 4)`, `cos (π / 6)`) and they have no Euler lattice here
-  (they need valued quivers).
+  — fixed matrices: positive semidefiniteness, the null roots `affineType*Null` and irreducibility
+  are already available (`affineType*_isIrreducibleAffineCoxeter`), and the entries are
+  crystallographic by a finite check. What remains is the kernel equality, from the existing
+  `LDLᵀ` decompositions (the last pivot is the only zero one). The null roots have `1` at the extra
+  node, so `i₀` can be taken to be the extra node.
 
 ## Suggested order of attack
 
-1. `Exceptional.lean`'s `IsIrreducible` goals for `H₃`/`H₄` — connectivity only, cheap.
-2. `Exceptional.lean`'s five `IsIrreducibleFiniteWeyl` goals and two `H₃`/`H₄` `IsFiniteCoxeter`
-   goals — fixed small rank, so brute-force/`decide`-style positive-definiteness may be more
-   tractable than a general argument; the rank-2 machinery in `Coxeter.GeometricRepresentation`
-   (`bil_restrict_E_diag`/`bil_restrict_E_isPosSemidef`/`bil_restrict_E_nondegenerate_iff`)
-   generalizes to any pair of generators, not just rank-2 whole diagrams, and may help.
-3. The affine `IsIrreducibleAffineCoxeter`/`IsIrreducibleAffineWeyl` goals.
+1. The `AffineExceptional.lean` `IsIrreducibleAffineWeyl` goals — fixed matrices, with the
+   decompositions already in place.
+2. The `Ãₙ`, `B̃ₙ`, `C̃ₙ`, `D̃ₙ` `IsIrreducibleAffineCoxeter` goals — need general-`n`
+   sum-of-squares identities.
+3. Their `IsIrreducibleAffineWeyl` goals.

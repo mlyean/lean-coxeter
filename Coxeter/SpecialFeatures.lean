@@ -1,6 +1,7 @@
 module
 
 public import Coxeter.GeometricRepresentation
+public import Coxeter.Combinatorics.SimpleGraph
 public import Coxeter.Component
 public import Mathlib.Combinatorics.SimpleGraph.Connectivity.Connected
 
@@ -267,6 +268,23 @@ lemma assembles_hasGeneralizedCartanMatrix :
 def IsIrreducibleMatrix {B1 : Type*} (M1 : CoxeterMatrix B1) : Prop :=
   (coxeterGraphMatrix M1).Connected
 
+/-- A Coxeter matrix on `Fin (n + 1)` is irreducible if every nonzero generator is joined in the
+Coxeter diagram to some smaller one. For a fixed matrix this is finitely many entry checks. -/
+theorem isIrreducibleMatrix_of_exists_lt {n : ℕ} (M1 : CoxeterMatrix (Fin (n + 1)))
+    (h : ∀ i : Fin (n + 1), i ≠ 0 → ∃ j < i, M1 j i ≠ 2) : IsIrreducibleMatrix M1 :=
+  SimpleGraph.connected_of_exists_adj_lt _ fun i hi ↦
+    let ⟨j, hj, hM⟩ := h i hi
+    ⟨j, hj, (SimpleGraph.fromRel_adj _ _ _).mpr ⟨hj.ne, Or.inl hM⟩⟩
+
+/-- A Coxeter matrix is irreducible if, for some root generator `r` and rank function `rank`,
+every other generator is joined in the Coxeter diagram to one of smaller rank. -/
+theorem isIrreducibleMatrix_of_exists_rank_lt {B1 : Type*} (M1 : CoxeterMatrix B1) (r : B1)
+    (rank : B1 → ℕ) (h : ∀ i, i ≠ r → ∃ j, rank j < rank i ∧ M1 j i ≠ 2) :
+    IsIrreducibleMatrix M1 :=
+  SimpleGraph.connected_of_exists_adj_rank_lt _ r rank fun i hi ↦
+    let ⟨j, hj, hM⟩ := h i hi
+    ⟨j, hj, (SimpleGraph.fromRel_adj _ _ _).mpr ⟨fun hji ↦ hj.ne (hji ▸ rfl), Or.inl hM⟩⟩
+
 /-- - Descent: holds, but vacuously — a connected component is connected by definition, so
     `component_cg.IsIrreducible` holds unconditionally, whether or not `cg.IsIrreducible` does.
   - Assembly: fails. "Every component is connected" is always true and carries no information
@@ -298,6 +316,20 @@ def IsFiniteCoxeter : Prop :=
   Finite W ∨ (
     (@bil W _).IsPosSemidef ∧ (@bil W _).Nondegenerate
   )
+
+/-- `bil` being positive definite, `bil x x > 0` for `x ≠ 0`, gives `IsFiniteCoxeter`. -/
+theorem isFiniteCoxeter_of_pos (h : ∀ x : @V W cg, x ≠ 0 → 0 < @bil W cg x x) :
+    @IsFiniteCoxeter W cg := by
+  let := cg
+  have hnn : (@bil W _).IsNonneg := LinearMap.BilinForm.isNonneg_def.mpr fun x ↦ by
+    by_cases hx : x = 0
+    · simp [hx]
+    · exact (h x hx).le
+  refine Or.inr ⟨⟨bil_isSymm, hnn⟩, ?_⟩
+  unfold LinearMap.BilinForm.Nondegenerate
+  rw [LinearMap.BilinForm.nondegenerate_iff' (hs := hnn.nonneg)
+    (hB := LinearMap.BilinForm.isSymm_iff.mp bil_isSymm)]
+  exact h
 
 /-- `W` is a *product of finite Weyl groups*:
 `IsFiniteCoxeter` together with `IsCrystallographic`.
@@ -339,6 +371,16 @@ crystallographic entries or a finite Weyl part. Use `IsIrreducibleAffineWeyl` fo
 root-system/Weyl refinement. -/
 def IsIrreducibleAffineCoxeter : Prop :=
   @IsAffineCoxeter W cg ∧ @IsIrreducible W cg
+
+/-- `bil` nonnegative, with a nonzero `δ` orthogonal to every standard basis vector, gives
+`IsAffineCoxeter`. -/
+theorem isAffineCoxeter_of_nonneg_of_radical (hnn : ∀ x : @V W cg, 0 ≤ @bil W cg x x)
+    (δ : @V W cg) (hδ : δ ≠ 0) (hrad : ∀ i, @bil W cg δ (@stdBasis W cg i) = 0) :
+    @IsAffineCoxeter W cg := by
+  let := cg
+  have hzero : bil δ = 0 := stdBasis.ext fun i ↦ by rw [hrad i, LinearMap.zero_apply]
+  refine ⟨⟨bil_isSymm, LinearMap.BilinForm.isNonneg_def.mpr hnn⟩, fun hnd ↦ hδ ?_⟩
+  exact hnd.1 δ fun y ↦ by rw [hzero, LinearMap.zero_apply]
 
 /-- `IsAffineCoxeter`, or `cg` has no generators at all. Plain `IsAffineCoxeter` isn't an instance
 of `Assembles`: on the empty diagram (zero components), `V W` is the trivial module, on which `bil`

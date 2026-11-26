@@ -64,6 +64,30 @@ theorem bil_isSymm : (@bil W _).IsSymm := by
 @[simp]
 theorem bil_diag (i : B W) : bil (stdBasis i) (stdBasis i) = 1 := by simp
 
+/-- With finitely many generators, `bil x x` is the double sum of its Gram entries
+`-cos (π / M i i')` against the coordinates of `x`. -/
+theorem bil_self_eq_sum [Fintype (B W)] (x : V W) :
+    bil x x = ∑ i, ∑ i', x i * x i' * -cos (π / M i i') := by
+  have hrepr : (stdBasis (W := W)).repr x = x := rfl
+  rw [← LinearMap.BilinForm.sum_repr_mul_repr_mul stdBasis x x, hrepr,
+    Finsupp.sum_fintype x _ fun i ↦ by simp]
+  refine Finset.sum_congr rfl fun i _ ↦ ?_
+  rw [Finsupp.sum_fintype x _ fun i' ↦ by simp]
+  refine Finset.sum_congr rfl fun i' _ ↦ ?_
+  rw [smul_eq_mul, smul_eq_mul, bil_eq]
+  ring
+
+/-- With finitely many generators, `bil x (stdBasis i')` is the sum of the Gram entries
+`-cos (π / M i i')` against the coordinates of `x`. -/
+theorem bil_stdBasis_right_eq_sum [Fintype (B W)] (x : V W) (i' : B W) :
+    bil x (stdBasis i') = ∑ i, x i * -cos (π / M i i') := by
+  have hrepr : (stdBasis (W := W)).repr x = x := rfl
+  have hrepr' : (stdBasis (W := W)).repr (stdBasis i') = Finsupp.single i' 1 := rfl
+  rw [← LinearMap.BilinForm.sum_repr_mul_repr_mul stdBasis x (stdBasis i'), hrepr, hrepr',
+    Finsupp.sum_fintype x _ fun i ↦ by simp]
+  refine Finset.sum_congr rfl fun i _ ↦ ?_
+  rw [Finsupp.sum_single_index (by simp), smul_eq_mul, one_smul, bil_eq]
+
 private theorem bil_off_diag_le (i i' : B W) (h : i ≠ i') : bil (stdBasis i) (stdBasis i') ≤ 0 := by
   rw [bil_eq, neg_nonpos]
   apply cos_nonneg_of_neg_pi_div_two_le_of_le

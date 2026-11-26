@@ -6,9 +6,14 @@ public import Coxeter.SpecialFeatures
 /-!
 # Exceptional affine Coxeter groups
 
-This file defines the affine Coxeter matrices of types `Ẽ₆`, `Ẽ₇`, `Ẽ₈`, `F̃₄`, `G̃₂`, and the
-Euler lattices of the simply laced ones. The classification proofs are intentionally left as
-stubs.
+This file defines the affine Coxeter matrices of types `Ẽ₆`, `Ẽ₇`, `Ẽ₈`, `F̃₄`, `G̃₂`, proves
+that they are irreducible affine Coxeter groups, and defines the Euler lattices of the simply laced
+ones. The `IsIrreducibleAffineWeyl` statements are left as `proof_wanted`.
+
+## Implementation notes
+
+Positive semidefiniteness of `bil` is proved from an explicit `LDLᵀ` decomposition of its Gram
+matrix as a sum of squares (the last pivot is `0`), and degeneracy by exhibiting the null root.
 -/
 
 @[expose] public section
@@ -122,16 +127,283 @@ def affineTypeG2Matrix : CoxeterMatrix (Fin 3) where
   M := affineTypeG2Matrix
   cs := affineTypeG2Matrix.toCoxeterSystem
 
-proof_wanted affineTypeE6_isIrreducibleAffineCoxeter :
-    @IsIrreducibleAffineCoxeter _ affineTypeE6Group
-proof_wanted affineTypeE7_isIrreducibleAffineCoxeter :
-    @IsIrreducibleAffineCoxeter _ affineTypeE7Group
-proof_wanted affineTypeE8_isIrreducibleAffineCoxeter :
-    @IsIrreducibleAffineCoxeter _ affineTypeE8Group
-proof_wanted affineTypeF4_isIrreducibleAffineCoxeter :
-    @IsIrreducibleAffineCoxeter _ affineTypeF4Group
-proof_wanted affineTypeG2_isIrreducibleAffineCoxeter :
-    @IsIrreducibleAffineCoxeter _ affineTypeG2Group
+/-- `bil` of type `Ẽ₆` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
+decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
+private theorem bil_affineTypeE6_nonneg (x : Fin 7 →₀ ℝ) :
+    0 ≤ (@bil _ affineTypeE6Group) x x := by
+  have hsos : (@bil _ affineTypeE6Group) x x =
+        (1) * (x 0 - x 2/2) ^ 2 +
+        (1) * (x 1 - x 3/2 - x 6/2) ^ 2 +
+        (3/4) * (x 2 - 2*x 3/3) ^ 2 +
+        (5/12) * (x 3 - 6*x 4/5 - 3*x 6/5) ^ 2 +
+        (2/5) * (x 4 - 5*x 5/4 - 3*x 6/4) ^ 2 +
+        (3/8) * (x 5 - x 6) ^ 2 := by
+    rw [@bil_self_eq_sum _ affineTypeE6Group (Fin.fintype 7)]
+    change ∑ i : Fin 7, ∑ i' : Fin 7,
+      x i * x i' * -Real.cos (Real.pi / (affineTypeE6Matrix i i' : ℝ)) = _
+    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+      Fin.reduceSucc]
+    norm_num [affineTypeE6Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+    ring
+  rw [hsos]
+  positivity
+
+/-- The null root of `Ẽ₆`, in the coordinates of `V`. -/
+private noncomputable def affineTypeE6Null : Fin 7 →₀ ℝ :=
+  Finsupp.equivFunOnFinite.symm ![1, 2, 2, 3, 2, 1, 1]
+
+private theorem bil_affineTypeE6Null (i : Fin 7) :
+    (@bil _ affineTypeE6Group) affineTypeE6Null (@stdBasis _ affineTypeE6Group i) = 0 := by
+  rw [@bil_stdBasis_right_eq_sum _ affineTypeE6Group (Fin.fintype 7)]
+  change ∑ j : Fin 7, affineTypeE6Null j * -Real.cos (Real.pi / (affineTypeE6Matrix j i : ℝ)) = 0
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+    Fin.reduceSucc]
+  fin_cases i <;>
+    norm_num [affineTypeE6Null, affineTypeE6Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four,
+      Real.cos_pi_div_six]
+
+theorem affineTypeE6_isAffineCoxeter : @IsAffineCoxeter _ affineTypeE6Group :=
+  isAffineCoxeter_of_nonneg_of_radical (fun x ↦ bil_affineTypeE6_nonneg x) affineTypeE6Null
+    (fun h ↦ by simpa [affineTypeE6Null] using congrArg (fun f : Fin 7 →₀ ℝ ↦ f 0) h)
+    bil_affineTypeE6Null
+
+theorem affineTypeE6_isIrreducible : @IsIrreducible _ affineTypeE6Group := by
+  refine isIrreducibleMatrix_of_exists_rank_lt (B1 := Fin 7) affineTypeE6Matrix 3
+    ![2, 1, 1, 0, 1, 2, 2] fun i hi ↦ ?_
+  fin_cases i
+  · exact ⟨2, by decide, by decide⟩
+  · exact ⟨3, by decide, by decide⟩
+  · exact ⟨3, by decide, by decide⟩
+  · exact absurd rfl hi
+  · exact ⟨3, by decide, by decide⟩
+  · exact ⟨4, by decide, by decide⟩
+  · exact ⟨1, by decide, by decide⟩
+
+theorem affineTypeE6_isIrreducibleAffineCoxeter :
+    @IsIrreducibleAffineCoxeter _ affineTypeE6Group :=
+  ⟨affineTypeE6_isAffineCoxeter, affineTypeE6_isIrreducible⟩
+
+/-- `bil` of type `Ẽ₇` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
+decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
+private theorem bil_affineTypeE7_nonneg (x : Fin 8 →₀ ℝ) :
+    0 ≤ (@bil _ affineTypeE7Group) x x := by
+  have hsos : (@bil _ affineTypeE7Group) x x =
+        (1) * (x 0 - x 2/2 - x 7/2) ^ 2 +
+        (1) * (x 1 - x 3/2) ^ 2 +
+        (3/4) * (x 2 - 2*x 3/3 - x 7/3) ^ 2 +
+        (5/12) * (x 3 - 6*x 4/5 - 2*x 7/5) ^ 2 +
+        (2/5) * (x 4 - 5*x 5/4 - x 7/2) ^ 2 +
+        (3/8) * (x 5 - 4*x 6/3 - 2*x 7/3) ^ 2 +
+        (1/3) * (x 6 - x 7) ^ 2 := by
+    rw [@bil_self_eq_sum _ affineTypeE7Group (Fin.fintype 8)]
+    change ∑ i : Fin 8, ∑ i' : Fin 8,
+      x i * x i' * -Real.cos (Real.pi / (affineTypeE7Matrix i i' : ℝ)) = _
+    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+      Fin.reduceSucc]
+    norm_num [affineTypeE7Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+    ring
+  rw [hsos]
+  positivity
+
+/-- The null root of `Ẽ₇`, in the coordinates of `V`. -/
+private noncomputable def affineTypeE7Null : Fin 8 →₀ ℝ :=
+  Finsupp.equivFunOnFinite.symm ![2, 2, 3, 4, 3, 2, 1, 1]
+
+private theorem bil_affineTypeE7Null (i : Fin 8) :
+    (@bil _ affineTypeE7Group) affineTypeE7Null (@stdBasis _ affineTypeE7Group i) = 0 := by
+  rw [@bil_stdBasis_right_eq_sum _ affineTypeE7Group (Fin.fintype 8)]
+  change ∑ j : Fin 8, affineTypeE7Null j * -Real.cos (Real.pi / (affineTypeE7Matrix j i : ℝ)) = 0
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+    Fin.reduceSucc]
+  fin_cases i <;>
+    norm_num [affineTypeE7Null, affineTypeE7Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four,
+      Real.cos_pi_div_six]
+
+theorem affineTypeE7_isAffineCoxeter : @IsAffineCoxeter _ affineTypeE7Group :=
+  isAffineCoxeter_of_nonneg_of_radical (fun x ↦ bil_affineTypeE7_nonneg x) affineTypeE7Null
+    (fun h ↦ by simpa [affineTypeE7Null] using congrArg (fun f : Fin 8 →₀ ℝ ↦ f 0) h)
+    bil_affineTypeE7Null
+
+theorem affineTypeE7_isIrreducible : @IsIrreducible _ affineTypeE7Group := by
+  refine isIrreducibleMatrix_of_exists_rank_lt (B1 := Fin 8) affineTypeE7Matrix 3
+    ![2, 1, 1, 0, 1, 2, 3, 3] fun i hi ↦ ?_
+  fin_cases i
+  · exact ⟨2, by decide, by decide⟩
+  · exact ⟨3, by decide, by decide⟩
+  · exact ⟨3, by decide, by decide⟩
+  · exact absurd rfl hi
+  · exact ⟨3, by decide, by decide⟩
+  · exact ⟨4, by decide, by decide⟩
+  · exact ⟨5, by decide, by decide⟩
+  · exact ⟨0, by decide, by decide⟩
+
+theorem affineTypeE7_isIrreducibleAffineCoxeter :
+    @IsIrreducibleAffineCoxeter _ affineTypeE7Group :=
+  ⟨affineTypeE7_isAffineCoxeter, affineTypeE7_isIrreducible⟩
+
+/-- `bil` of type `Ẽ₈` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
+decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
+private theorem bil_affineTypeE8_nonneg (x : Fin 9 →₀ ℝ) :
+    0 ≤ (@bil _ affineTypeE8Group) x x := by
+  have hsos : (@bil _ affineTypeE8Group) x x =
+        (1) * (x 0 - x 2/2) ^ 2 +
+        (1) * (x 1 - x 3/2) ^ 2 +
+        (3/4) * (x 2 - 2*x 3/3) ^ 2 +
+        (5/12) * (x 3 - 6*x 4/5) ^ 2 +
+        (2/5) * (x 4 - 5*x 5/4) ^ 2 +
+        (3/8) * (x 5 - 4*x 6/3) ^ 2 +
+        (1/3) * (x 6 - 3*x 7/2) ^ 2 +
+        (1/4) * (x 7 - 2*x 8) ^ 2 := by
+    rw [@bil_self_eq_sum _ affineTypeE8Group (Fin.fintype 9)]
+    change ∑ i : Fin 9, ∑ i' : Fin 9,
+      x i * x i' * -Real.cos (Real.pi / (affineTypeE8Matrix i i' : ℝ)) = _
+    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+      Fin.reduceSucc]
+    norm_num [affineTypeE8Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+    ring
+  rw [hsos]
+  positivity
+
+/-- The null root of `Ẽ₈`, in the coordinates of `V`. -/
+private noncomputable def affineTypeE8Null : Fin 9 →₀ ℝ :=
+  Finsupp.equivFunOnFinite.symm ![2, 3, 4, 6, 5, 4, 3, 2, 1]
+
+private theorem bil_affineTypeE8Null (i : Fin 9) :
+    (@bil _ affineTypeE8Group) affineTypeE8Null (@stdBasis _ affineTypeE8Group i) = 0 := by
+  rw [@bil_stdBasis_right_eq_sum _ affineTypeE8Group (Fin.fintype 9)]
+  change ∑ j : Fin 9, affineTypeE8Null j * -Real.cos (Real.pi / (affineTypeE8Matrix j i : ℝ)) = 0
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+    Fin.reduceSucc]
+  fin_cases i <;>
+    norm_num [affineTypeE8Null, affineTypeE8Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four,
+      Real.cos_pi_div_six]
+
+theorem affineTypeE8_isAffineCoxeter : @IsAffineCoxeter _ affineTypeE8Group :=
+  isAffineCoxeter_of_nonneg_of_radical (fun x ↦ bil_affineTypeE8_nonneg x) affineTypeE8Null
+    (fun h ↦ by simpa [affineTypeE8Null] using congrArg (fun f : Fin 9 →₀ ℝ ↦ f 0) h)
+    bil_affineTypeE8Null
+
+theorem affineTypeE8_isIrreducible : @IsIrreducible _ affineTypeE8Group := by
+  refine isIrreducibleMatrix_of_exists_rank_lt (B1 := Fin 9) affineTypeE8Matrix 3
+    ![2, 1, 1, 0, 1, 2, 3, 4, 5] fun i hi ↦ ?_
+  fin_cases i
+  · exact ⟨2, by decide, by decide⟩
+  · exact ⟨3, by decide, by decide⟩
+  · exact ⟨3, by decide, by decide⟩
+  · exact absurd rfl hi
+  · exact ⟨3, by decide, by decide⟩
+  · exact ⟨4, by decide, by decide⟩
+  · exact ⟨5, by decide, by decide⟩
+  · exact ⟨6, by decide, by decide⟩
+  · exact ⟨7, by decide, by decide⟩
+
+theorem affineTypeE8_isIrreducibleAffineCoxeter :
+    @IsIrreducibleAffineCoxeter _ affineTypeE8Group :=
+  ⟨affineTypeE8_isAffineCoxeter, affineTypeE8_isIrreducible⟩
+
+/-- `bil` of type `F̃₄` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
+decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
+private theorem bil_affineTypeF4_nonneg (x : Fin 5 →₀ ℝ) :
+    0 ≤ (@bil _ affineTypeF4Group) x x := by
+  have hs2 : Real.sqrt 2 ^ 2 = 2 := Real.sq_sqrt (by norm_num)
+  have hsos : (@bil _ affineTypeF4Group) x x =
+        (1) * (x 0 - x 1/2 - x 4/2) ^ 2 +
+        (3/4) * (-2*Real.sqrt 2*x 2/3 + x 1 - x 4/3) ^ 2 +
+        (1/3) * (-Real.sqrt 2*x 4/2 + x 2 - 3*x 3/2) ^ 2 +
+        (1/4) * (-Real.sqrt 2*x 4 + x 3) ^ 2 := by
+    rw [@bil_self_eq_sum _ affineTypeF4Group (Fin.fintype 5)]
+    change ∑ i : Fin 5, ∑ i' : Fin 5,
+      x i * x i' * -Real.cos (Real.pi / (affineTypeF4Matrix i i' : ℝ)) = _
+    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+      Fin.reduceSucc]
+    norm_num [affineTypeF4Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+    linear_combination (-x 2^2/3 - x 4^2/3) * hs2
+  rw [hsos]
+  positivity
+
+/-- The null root of `F̃₄`, in the coordinates of `V`. -/
+private noncomputable def affineTypeF4Null : Fin 5 →₀ ℝ :=
+  Finsupp.equivFunOnFinite.symm ![2, 3, 2*Real.sqrt 2, Real.sqrt 2, 1]
+
+private theorem bil_affineTypeF4Null (i : Fin 5) :
+    (@bil _ affineTypeF4Group) affineTypeF4Null (@stdBasis _ affineTypeF4Group i) = 0 := by
+  rw [@bil_stdBasis_right_eq_sum _ affineTypeF4Group (Fin.fintype 5)]
+  change ∑ j : Fin 5, affineTypeF4Null j * -Real.cos (Real.pi / (affineTypeF4Matrix j i : ℝ)) = 0
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two,
+    Fin.reduceSucc]
+  fin_cases i <;>
+    norm_num [affineTypeF4Null, affineTypeF4Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four,
+      Real.cos_pi_div_six]
+  all_goals ring_nf
+  norm_num
+
+theorem affineTypeF4_isAffineCoxeter : @IsAffineCoxeter _ affineTypeF4Group :=
+  isAffineCoxeter_of_nonneg_of_radical (fun x ↦ bil_affineTypeF4_nonneg x) affineTypeF4Null
+    (fun h ↦ by simpa [affineTypeF4Null] using congrArg (fun f : Fin 5 →₀ ℝ ↦ f 0) h)
+    bil_affineTypeF4Null
+
+theorem affineTypeF4_isIrreducible : @IsIrreducible _ affineTypeF4Group := by
+  refine isIrreducibleMatrix_of_exists_rank_lt (B1 := Fin 5) affineTypeF4Matrix 0
+    ![0, 1, 2, 3, 1] fun i hi ↦ ?_
+  fin_cases i
+  · exact absurd rfl hi
+  · exact ⟨0, by decide, by decide⟩
+  · exact ⟨1, by decide, by decide⟩
+  · exact ⟨2, by decide, by decide⟩
+  · exact ⟨0, by decide, by decide⟩
+
+theorem affineTypeF4_isIrreducibleAffineCoxeter :
+    @IsIrreducibleAffineCoxeter _ affineTypeF4Group :=
+  ⟨affineTypeF4_isAffineCoxeter, affineTypeF4_isIrreducible⟩
+
+/-- `bil` of type `G̃₂` is positive semidefinite: it is a sum of squares (an `LDLᵀ`
+decomposition of its Gram matrix, whose last pivot is `0`) with nonnegative coefficients. -/
+private theorem bil_affineTypeG2_nonneg (x : Fin 3 →₀ ℝ) :
+    0 ≤ (@bil _ affineTypeG2Group) x x := by
+  have hs3 : Real.sqrt 3 ^ 2 = 3 := Real.sq_sqrt (by norm_num)
+  have hsos : (@bil _ affineTypeG2Group) x x =
+        (1) * (-Real.sqrt 3*x 1/2 + x 0 - x 2/2) ^ 2 +
+        (1/4) * (-Real.sqrt 3*x 2 + x 1) ^ 2 := by
+    rw [@bil_self_eq_sum _ affineTypeG2Group (Fin.fintype 3)]
+    change ∑ i : Fin 3, ∑ i' : Fin 3,
+      x i * x i' * -Real.cos (Real.pi / (affineTypeG2Matrix i i' : ℝ)) = _
+    simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two]
+    norm_num [affineTypeG2Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four, Real.cos_pi_div_six]
+    linear_combination (-x 1^2/4 - x 2^2/4) * hs3
+  rw [hsos]
+  positivity
+
+/-- The null root of `G̃₂`, in the coordinates of `V`. -/
+private noncomputable def affineTypeG2Null : Fin 3 →₀ ℝ :=
+  Finsupp.equivFunOnFinite.symm ![2, Real.sqrt 3, 1]
+
+private theorem bil_affineTypeG2Null (i : Fin 3) :
+    (@bil _ affineTypeG2Group) affineTypeG2Null (@stdBasis _ affineTypeG2Group i) = 0 := by
+  rw [@bil_stdBasis_right_eq_sum _ affineTypeG2Group (Fin.fintype 3)]
+  change ∑ j : Fin 3, affineTypeG2Null j * -Real.cos (Real.pi / (affineTypeG2Matrix j i : ℝ)) = 0
+  simp only [Fin.sum_univ_succ, Fin.sum_univ_zero, Fin.succ_zero_eq_one, Fin.succ_one_eq_two]
+  fin_cases i <;>
+    norm_num [affineTypeG2Null, affineTypeG2Matrix, Real.cos_pi_div_three, Real.cos_pi_div_four,
+      Real.cos_pi_div_six]
+  all_goals ring_nf
+  norm_num
+
+theorem affineTypeG2_isAffineCoxeter : @IsAffineCoxeter _ affineTypeG2Group :=
+  isAffineCoxeter_of_nonneg_of_radical (fun x ↦ bil_affineTypeG2_nonneg x) affineTypeG2Null
+    (fun h ↦ by simpa [affineTypeG2Null] using congrArg (fun f : Fin 3 →₀ ℝ ↦ f 0) h)
+    bil_affineTypeG2Null
+
+theorem affineTypeG2_isIrreducible : @IsIrreducible _ affineTypeG2Group := by
+  refine isIrreducibleMatrix_of_exists_rank_lt (B1 := Fin 3) affineTypeG2Matrix 0
+    ![0, 1, 1] fun i hi ↦ ?_
+  fin_cases i
+  · exact absurd rfl hi
+  · exact ⟨0, by decide, by decide⟩
+  · exact ⟨0, by decide, by decide⟩
+
+theorem affineTypeG2_isIrreducibleAffineCoxeter :
+    @IsIrreducibleAffineCoxeter _ affineTypeG2Group :=
+  ⟨affineTypeG2_isAffineCoxeter, affineTypeG2_isIrreducible⟩
 
 proof_wanted affineTypeE6_isIrreducibleAffineWeyl :
     @IsIrreducibleAffineWeyl _ affineTypeE6Group
