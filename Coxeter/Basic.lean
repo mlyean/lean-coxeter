@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 Ming Yean Lim. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Ming Yean Lim
+-/
 module
 
 public import Mathlib.GroupTheory.Coxeter.Inversion
@@ -5,7 +10,7 @@ public import Mathlib.GroupTheory.Coxeter.Inversion
 /-!
 # Coxeter groups
 
-We build upon the the theory of Coxeter systems currently available in `mathlib`.
+We build upon the theory of Coxeter systems currently available in `mathlib`.
 
 ## Main definitions
 
@@ -21,10 +26,6 @@ class CoxeterGroup (W : Type*) extends Group W where
   B : Type*
   M : CoxeterMatrix B
   cs : CoxeterSystem M W
-
-end Coxeter
-
-namespace Coxeter
 
 open List CoxeterSystem CoxeterGroup
 
@@ -48,8 +49,7 @@ theorem isReduced_cons {ω : List (B W)} (hω : cs.IsReduced ω) (i : B W) :
   rw [not_isLeftDescent_iff, wordProd_cons, length_cons, hω]
 
 theorem not_isReduced_cons {ω : List (B W)} (hω : cs.IsReduced ω) (i : B W) :
-  ¬ cs.IsReduced (i :: ω) ↔ cs.IsLeftDescent (cs.wordProd ω) i :=
-  Iff.not_left (isReduced_cons hω i)
+  ¬ cs.IsReduced (i :: ω) ↔ cs.IsLeftDescent (cs.wordProd ω) i := (isReduced_cons hω i).not_left
 
 theorem isReduced_of_append_left {μ ω : List (B W)} (h : cs.IsReduced (μ ++ ω)) : cs.IsReduced μ :=
   take_left.subst (h.take (μ.length))
@@ -68,12 +68,12 @@ theorem leftInvSeq_append (μ ω : List (B W)) :
   | cons i μ ih =>
       simp [leftInvSeq, ih, wordProd_cons]
 
-theorem tail_alternatingWord (i j : (B W)) (p : ℕ) :
+theorem tail_alternatingWord (i j : B W) (p : ℕ) :
   tail (alternatingWord i j (p + 1)) = alternatingWord i j p := by
   rw [alternatingWord_succ']
   rfl
 
-theorem drop_alternatingWord (i j : (B W)) (p q : ℕ) :
+theorem drop_alternatingWord (i j : B W) (p q : ℕ) :
   drop p (alternatingWord i j (p + q)) = alternatingWord i j q := by
   induction p generalizing q with
   | zero => simp
@@ -115,7 +115,8 @@ theorem reverse_alternatingWord (i i' : B W) (k : ℕ) :
   | zero =>
       simp [alternatingWord]
   | succ k ih =>
-      simp only [alternatingWord, Nat.mul_eq, concat_eq_append, append_assoc, cons_append,
+      rw [mul_add]
+      simp only [alternatingWord, concat_eq_append, append_assoc, cons_append,
         nil_append, reverse_append, reverse_cons, reverse_nil]
       rw [ih]
       trans alternatingWord i' i (2 * k + 2)
@@ -151,7 +152,7 @@ variable {w : W}
 instance : CoeOut (ReducedWord w) (List (B W)) where
   coe := Subtype.val
 
-instance : Nonempty (ReducedWord w) := ⟨(Classical.indefiniteDescription _ (cs.exists_isReduced w))⟩
+instance : Nonempty (ReducedWord w) := nonempty_subtype.mpr (cs.exists_isReduced w)
 
 namespace ReducedWord
 
@@ -160,9 +161,9 @@ def reverse (ω : ReducedWord w) : ReducedWord w⁻¹ :=
   ⟨ω.val.reverse, ω.prop.1.reverse, (congr_arg Inv.inv ω.prop.2).trans (cs.wordProd_reverse _).symm⟩
 
 theorem length_eq (ω : ReducedWord w) : ω.val.length = cs.length w := by
-  rw [←ω.2.1, ←ω.2.2]
+  rw [←ω.property.1, ←ω.property.2]
 
-theorem wordProd_eq (ω : ReducedWord w) : cs.wordProd ω = w := ω.2.2.symm
+theorem wordProd_eq (ω : ReducedWord w) : cs.wordProd ω = w := ω.property.2.symm
 
 end ReducedWord
 
@@ -224,7 +225,7 @@ theorem wordProd_op (ω : List (B W)) : (@cs Wᵐᵒᵖ).wordProd ω = op (cs.wo
       rw [wordProd_cons, reverse_cons, wordProd_append, op_mul, hi, wordProd_singleton, simple_op]
 
 theorem length_op (w : W) : cs.length (op w) = cs.length w := by
-  apply eq_of_le_of_ge
+  apply le_antisymm
   · have ⟨ω, hω1, hω2⟩ := cs.exists_isReduced w
     rw [hω2, hω1]
     nth_rw 1 [←reverse_reverse ω, ←wordProd_op, ←length_reverse]
@@ -261,7 +262,7 @@ theorem leftInvSeq_op (ω : List (B W)) : (@cs Wᵐᵒᵖ).leftInvSeq ω = map o
   | nil => rfl
   | cons i is ih =>
       dsimp [leftInvSeq]
-      rw [ih, simple_op, map_map, map_map]
+      rw [ih, simple_op, map_map, map_cons, map_map]
       congr 2
       ext w
       dsimp

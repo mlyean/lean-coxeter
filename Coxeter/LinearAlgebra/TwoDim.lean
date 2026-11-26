@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 Ming Yean Lim. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Ming Yean Lim
+-/
 module
 
 public import Mathlib.Geometry.Euclidean.Angle.Oriented.Rotation
@@ -56,8 +61,7 @@ theorem reflect_reflect {x y : E} (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) :
   match i with
   | 0 =>
       simp only [Fin.isValue, Orientation.coe_basisRightAngleRotation, Nat.succ_eq_add_one,
-        Nat.reduceAdd, Matrix.cons_val_zero, LinearEquiv.coe_coe, LinearEquiv.trans_apply,
-        b]
+        Nat.reduceAdd, Matrix.cons_val_zero, LinearEquiv.coe_coe, LinearEquiv.trans_apply, b]
       calc
         reflect hy (reflect hx x) = reflect hy (-x) := by simp [reflect]
         _ = -x - (2 * ⟪y, -x⟫) • y := by rw [reflect_apply]
@@ -72,10 +76,10 @@ theorem reflect_reflect {x y : E} (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) :
         rw [inner_add_left, inner_smul_left, inner_smul_left]
         simp [hx]
       · match_scalars
-        · simp only [neg_mul, mul_one, sub_neg_eq_add]
+        · simp only [neg_mul, sub_neg_eq_add]
           rw [cos_two_nsmul, ←Real.Angle.cos_sq_add_sin_sq]
           ring
-        · simp only [neg_mul, mul_one, neg_neg]
+        · simp only [neg_mul, neg_neg]
           rw [Real.Angle.sin_two_nsmul]
           ring
   | 1 =>
@@ -98,10 +102,9 @@ theorem reflect_reflect {x y : E} (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) :
         rw [inner_add_left, inner_smul_left, inner_smul_left]
         simp [hx]
       · match_scalars
-        · simp only [mul_one]
-          rw [cos_two_nsmul, ←Real.Angle.cos_sq_add_sin_sq]
+        · rw [cos_two_nsmul, ←Real.Angle.cos_sq_add_sin_sq]
           ring
-        · simp only [mul_one, neg_inj]
+        · simp only [neg_inj]
           rw [Real.Angle.sin_two_nsmul]
           ring
 
@@ -113,10 +116,8 @@ theorem reflect_reflect_apply {x y : E} (hx : ‖x‖ = 1) (hy : ‖y‖ = 1) (v
 
 theorem rotation_inj : Injective o.rotation := by
   intro θ₁ θ₂ h
-  have ⟨x, hx⟩ : ∃ (x : E), x ≠ 0 := by
-    have b := Module.finBasisOfFinrankEq ℝ E hdim2.out
-    exists b 0
-    exact Basis.ne_zero b 0
+  have : Nontrivial E := nontrivial_of_finrank_eq_succ hdim2.out
+  obtain ⟨x, hx⟩ := exists_ne (0 : E)
   have h2 : o.rotation (θ₂ - θ₁) (o.rotation θ₁ x) = o.rotation θ₁ x := by
     simp only [Orientation.rotation_rotation, sub_add_cancel]
     rw [h]

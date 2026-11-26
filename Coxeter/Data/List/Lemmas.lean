@@ -1,9 +1,16 @@
+/-
+Copyright (c) 2026 Ming Yean Lim. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Ming Yean Lim
+-/
 module
 
 public import Mathlib.Algebra.Group.Basic
 public import Mathlib.Algebra.Group.Nat.Defs
 public import Mathlib.Data.List.Sublists
 public import Mathlib.Data.Set.Finite.Basic
+
+/-! Lemmas about lists -/
 
 @[expose] public section
 
@@ -29,8 +36,6 @@ theorem reverse_eraseIdx {l : List α} {i : ℕ} (hi : i < l.length) :
     ←reverse_append, Nat.sub_one_add_one hi, Nat.sub_add_eq]
 
 theorem finite_sublist (l : List α) : {l' : List α | l' <+ l}.Finite := by
-  have h := l.sublists.finite_toSet
-  simp only [mem_sublists] at h
-  assumption
+  simpa [mem_sublists] using l.sublists.finite_toSet
 
 end List

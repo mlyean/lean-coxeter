@@ -1,6 +1,12 @@
+/-
+Copyright (c) 2026 Ming Yean Lim. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Ming Yean Lim
+-/
 module
 
 public import Mathlib.Data.List.Palindrome
+public import Mathlib.Data.List.GetD
 public import Coxeter.PermutationRepresentation
 public import Coxeter.Data.List.Lemmas
 
@@ -62,7 +68,7 @@ def equiv_IsLeftInversion (ω : List (B W)) (hω : cs.IsReduced ω) :
 instance {w : W} : Finite {t : W // cs.IsLeftInversion w t} := by
   have ⟨ω, h1, h2⟩ := cs.exists_isReduced w
   subst h2
-  haveI : Finite {x // x ∈ cs.leftInvSeq ω} := List.finite_toSet _
+  have : Finite {x // x ∈ cs.leftInvSeq ω} := List.finite_toSet _
   exact Finite.of_equiv _ (equiv_IsLeftInversion ω h1).symm
 
 /-- Bjorner--Brenti Corollary 1.4.5 -/
@@ -78,9 +84,7 @@ theorem card_of_isLeftInversion (w : W) :
 theorem deletion_property {ω : List (B W)} (hω : ¬ cs.IsReduced ω) :
   ∃ i j, i < j ∧ j < ω.length ∧ cs.wordProd ω = cs.wordProd ((ω.eraseIdx j).eraseIdx i) := by
   induction ω with
-  | nil =>
-      absurd hω
-      exact isReduced_nil
+  | nil => exact absurd isReduced_nil hω
   | cons k ks ih =>
       by_cases h : cs.IsReduced ks
       · rw [not_isReduced_cons h k] at hω

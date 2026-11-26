@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 Ming Yean Lim. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Ming Yean Lim
+-/
 module
 
 public import Mathlib.Order.Grade
@@ -56,33 +61,20 @@ theorem eq_of_le_of_length_ge {u w : W} (h : u ≤ w) (h2 : cs.length u ≥ cs.l
 theorem eq_of_le_of_length_eq {u w : W} (h : u ≤ w) (h2 : cs.length u = cs.length w) : u = w :=
   eq_of_le_of_length_ge h (ge_of_eq h2)
 
-def lt (u w : W) : Prop := u ≤ w ∧ u ≠ w
-
-instance : LT W where
-  lt := lt
-
-theorem lt_iff_le_and_length_lt (u w : W) : u < w ↔ u ≤ w ∧ cs.length u < cs.length w := by
-  change (u ≤ w ∧ ¬ u = w) ↔ u ≤ w ∧ cs.length u < cs.length w
-  rw [and_congr_right_iff, not_iff_comm, not_lt]
-  intro h
-  refine ⟨eq_of_le_of_length_ge h, ?_⟩
-  intro h2
-  rw [h2]
-
 instance : PartialOrder W where
   le_refl := le.rfl
   le_trans u v w huv hvw := by
     induction hvw with
     | rfl => tauto
     | step v w _ h1 h2 ih => exact le.step u v w ih h1 h2
-  lt_iff_le_not_ge u w := by
-    rw [lt_iff_le_and_length_lt, and_congr_right_iff, iff_not_comm, not_lt]
-    intro h
-    refine ⟨length_le_of_le, ?_⟩
-    intro h2
-    rw [eq_of_le_of_length_ge h h2]
-    apply le.rfl
   le_antisymm u w h1 h2 := eq_of_le_of_length_ge h1 (length_le_of_le h2)
+
+theorem lt_iff_le_and_length_lt (u w : W) : u < w ↔ u ≤ w ∧ cs.length u < cs.length w := by
+  rw [lt_iff_le_and_ne, and_congr_right_iff, not_iff_comm, not_lt]
+  intro h
+  refine ⟨eq_of_le_of_length_ge h, ?_⟩
+  intro h2
+  rw [h2]
 
 theorem monotone_length : Monotone (@cs W).length := by apply length_le_of_le
 
@@ -167,39 +159,36 @@ private theorem reduced_subword_extend_aux (α μ ω : List (B W))
       have ht : cs.IsReflection t := (cs.isReflection_simple i).conj _
       by_cases! h1 : cs.IsLeftInversion (cs.wordProd (α ++ μ)) t
       · rw [isLeftInversion_iff_mem_leftInvSeq hμ, leftInvSeq_append, mem_append, mem_map] at h1
-        cases h1 with
-        | inl h1 =>
-            absurd h1
-            rw [append_cons] at hω
-            apply isReduced_of_append_left at hω
-            replace hω := hω.nodup_leftInvSeq
-            rw [←concat_eq_append, leftInvSeq_concat, nodup_concat] at hω
-            exact hω.1
-        | inr h1 =>
-            obtain ⟨w, hw1, hw2⟩ := h1
-            rw [MulAut.conj_apply, mul_left_inj, mul_right_inj] at hw2
-            subst hw2
-            rw [←isLeftInversion_iff_mem_leftInvSeq (isReduced_of_append_right hμ),
-              isLeftInversion_simple_iff_isLeftDescent] at hw1
-            have ⟨j, hj1, hj2⟩ := exchange_property hw1
-            rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hj2
-            have h : cs.IsReduced (α ++ i :: μ.eraseIdx j) := by
-              unfold CoxeterSystem.IsReduced
-              rw [wordProd_append, ←hj2, ←wordProd_append, hμ, length_append, length_append,
-                length_cons, length_eraseIdx_of_lt hj1]
-              lia
-            rw [append_cons] at h hω
-            have ⟨ν, hν1, hν2, hν3⟩ := ih ω (Nat.lt_succ_self _) (α ++ [i]) (μ.eraseIdx j) h hω
-              (Sublist.trans (eraseIdx_sublist ..) hsub) ?_
-            · rw [←append_cons] at hν1 hν2 hν3
-              rw [wordProd_append, ←hj2, ←wordProd_append] at hν2
-              rw [length_append, length_cons, length_eraseIdx_add_one hj1] at hν3
-              rw [length_append]
-              exists ν
-            · apply_fun length
-              rw [length_eraseIdx_of_lt hj1]
-              replace hsub := hsub.length_le
-              lia
+        rcases h1 with h1 | ⟨w, hw1, hw2⟩
+        · absurd h1
+          rw [append_cons] at hω
+          apply isReduced_of_append_left at hω
+          replace hω := hω.nodup_leftInvSeq
+          rw [←concat_eq_append, leftInvSeq_concat, nodup_concat] at hω
+          exact hω.1
+        · rw [MulAut.conj_apply, mul_left_inj, mul_right_inj] at hw2
+          subst hw2
+          rw [←isLeftInversion_iff_mem_leftInvSeq (isReduced_of_append_right hμ),
+            isLeftInversion_simple_iff_isLeftDescent] at hw1
+          have ⟨j, hj1, hj2⟩ := exchange_property hw1
+          rw [←eq_inv_mul_iff_mul_eq, inv_simple, ←wordProd_cons] at hj2
+          have h : cs.IsReduced (α ++ i :: μ.eraseIdx j) := by
+            unfold CoxeterSystem.IsReduced
+            rw [wordProd_append, ←hj2, ←wordProd_append, hμ, length_append, length_append,
+              length_cons, length_eraseIdx_of_lt hj1]
+            lia
+          rw [append_cons] at h hω
+          have ⟨ν, hν1, hν2, hν3⟩ := ih ω (Nat.lt_succ_self _) (α ++ [i]) (μ.eraseIdx j) h hω
+            (Sublist.trans (eraseIdx_sublist ..) hsub) ?_
+          · rw [←append_cons] at hν1 hν2 hν3
+            rw [wordProd_append, ←hj2, ←wordProd_append] at hν2
+            rw [length_append, length_cons, length_eraseIdx_add_one hj1] at hν3
+            rw [length_append]
+            exists ν
+          · apply_fun length
+            rw [length_eraseIdx_of_lt hj1]
+            replace hsub := hsub.length_le
+            lia
       · exists α ++ i :: μ
         have h2 : t * cs.wordProd (α ++ μ) = cs.wordProd (α ++ i :: μ) := by
           rw [wordProd_append, wordProd_append, mul_inv_mul_mul_cancel, wordProd_cons, mul_assoc]
@@ -229,7 +218,7 @@ theorem reduced_subword_extend {u w : W} (ω : ReducedWord w)
   let ν : ReducedWord v := ⟨ν', ?_, rfl⟩
   · refine ⟨hν2, ?_, ν, hν1⟩
     rwa [←ν.length_eq]
-  · apply eq_of_le_of_ge (length_wordProd_le ..)
+  · apply le_antisymm (length_wordProd_le ..)
     rw [hν3, μ.length_eq, ←μ.wordProd_eq]
     exact strictMono_length hν2
 
@@ -304,9 +293,9 @@ private theorem chooseReducedSubword_inj {w : W} (ω : ReducedWord w) :
 
 theorem finite_Icc (u w : W) : Finite (Set.Icc u w) := by
   have ω : ReducedWord w := Classical.ofNonempty
-  let f : Set.Icc u w → {μ : List (B W) | μ <+ ω} := @Set.restrict₂ _
+  let f : Set.Icc u w → {μ : List (B W) | μ <+ ω} := @Set.domRestrict₂ _
     (fun _ => {μ : List (B W) | μ <+ ω}) _ _ Set.Icc_subset_Iic_self (chooseReducedSubword ω)
-  haveI : Finite {x | x <+ ω.val} := finite_sublist _
+  have : Finite {x | x <+ ω.val} := finite_sublist _
   apply Finite.of_injective f
   intro x y h
   apply chooseReducedSubword_inj ω at h
@@ -335,7 +324,7 @@ theorem card_Icc_le (u w : W) : (Finset.Icc u w).card ≤ 2 ^ cs.length w := by
     intro x y h
     rw [Subtype.mk.injEq, Subtype.val_inj] at h
     apply chooseReducedSubword_inj ω at h
-    rwa [Subtype.mk.injEq, Subtype.val_inj] at h
+    grind
   rw [←ω.length_eq, ←length_sublists]
   exact (Finset.card_le_card_of_injective hf_inj).trans (toFinset_card_le _)
 
@@ -513,9 +502,8 @@ instance : IsDirectedOrder W where
     induction u using WellFoundedLT.induction with | ind u ih =>
     intro w
     by_cases h : u = 1
-    · exists w
-      rw [h]
-      exact ⟨bot_le, le_refl _⟩
+    · subst h
+      exact ⟨w, bot_le, le_rfl⟩
     · have ⟨i, hi⟩ := cs.exists_leftDescent_of_ne_one h
       have hlt : cs.simple i * u < u := by
         rwa [simple_mul_lt_self_iff]
@@ -581,7 +569,7 @@ theorem finite_of_orderTop [OrderTop W] : Finite W := by
 /-- Bjorner--Brenti Proposition 2.3.1 (ii) -/
 theorem finite_of_exists_all_isLeftDescent (h : ∃ x : W, ∀ (i : B W), cs.IsLeftDescent x i) :
   Finite W := by
-  haveI : OrderTop W := {
+  have : OrderTop W := {
     top := h.choose
     le_top := isTop_iff_all_isLeftDescent.mp h.choose_spec
   }
@@ -688,7 +676,6 @@ theorem antitone_mul_w₀ : Antitone (Equiv.mulRight (w₀ : W)) := by
       rw [←ht, mul_assoc, lt_reflection_mul_self_iff h2]
       simp only [IsLeftInversion, h2, true_and, not_lt]
       rw [←mul_assoc, length_mul_w₀, length_mul_w₀, ht]
-      have := length_le_length_w₀ w
       lia
 
 theorem strictAnti_mul_w₀ : StrictAnti (Equiv.mulRight (w₀ : W)) :=
