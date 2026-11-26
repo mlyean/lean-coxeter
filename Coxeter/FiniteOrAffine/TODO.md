@@ -1,4 +1,4 @@
-# FiniteOrAffine: open `axiom`/`proof_wanted`/`sorry` stubs
+# FiniteOrAffine: open `proof_wanted` stubs
 
 Everything in this directory that is not yet a real proof, grouped by file; each item names the
 declaration and what's needed to close it.
@@ -28,11 +28,6 @@ declaration and what's needed to close it.
 
 ## Affine types
 
-The `axiom` matrices below (`B̃`, `C̃`) block every downstream `proof_wanted` in their file. Matrix
-definitions should mirror `TypeD.lean`'s `typeDMatrix`-style construction (explicit `Matrix.of`
-with the standard affine Dynkin diagram shape) or reuse mathlib's affine matrices if/when
-available.
-
 For the `IsIrreducibleAffineCoxeter`/`IsIrreducibleAffineWeyl` goals: irreducibility is
 connectivity of the diagram (as in `typeD_isIrreducible`), and the affine condition is positive
 semidefinite but degenerate `bil`, with radical spanned by the null root.
@@ -43,18 +38,12 @@ semidefinite but degenerate `bil`, with radical spanned by the null root.
   — the diagram is a cycle; the null root is `(1, …, 1)`.
 
 ### AffineTypeB.lean
-- `axiom affineTypeBMatrix (n : ℕ) : CoxeterMatrix (Fin (n + 1))`
 - `proof_wanted affineTypeB_isIrreducibleAffineCoxeter (n : ℕ) (hn : 2 ≤ n) : @IsIrreducibleAffineCoxeter _ (affineTypeBGroup n hn)`
 - `proof_wanted affineTypeB_isIrreducibleAffineWeyl (n : ℕ) (hn : 2 ≤ n) : @IsIrreducibleAffineWeyl _ (affineTypeBGroup n hn)`
 
 ### AffineTypeC.lean
-- `axiom affineTypeCMatrix (n : ℕ) : CoxeterMatrix (Fin (n + 1))`
 - `proof_wanted affineTypeC_isIrreducibleAffineCoxeter (n : ℕ) (hn : 2 ≤ n) : @IsIrreducibleAffineCoxeter _ (affineTypeCGroup n hn)`
 - `proof_wanted affineTypeC_isIrreducibleAffineWeyl (n : ℕ) (hn : 2 ≤ n) : @IsIrreducibleAffineWeyl _ (affineTypeCGroup n hn)`
-- `proof_wanted affineTypeC_two_identifies_affineTypeB_two : HEq (@CoxeterGroup.cs _ (affineTypeCGroup 2 _)) (@CoxeterGroup.cs _ (affineTypeBGroup 2 _))`
-  — the accidental `C₂-hat = B₂-hat` identification; blocked on both `affineTypeCMatrix` and
-  `affineTypeBMatrix` being defined, same shape as `typeBC_one_identifies_typeA_one` once they
-  are.
 
 ### AffineTypeD.lean
 - `proof_wanted affineTypeD_isIrreducibleAffineCoxeter (n : ℕ) [NeZero n] : @IsIrreducibleAffineCoxeter _ (affineTypeDGroup n)`
@@ -87,6 +76,4 @@ semidefinite but degenerate `bil`, with radical spanned by the null root.
    tractable than a general argument; the rank-2 machinery in `Coxeter.GeometricRepresentation`
    (`bil_restrict_E_diag`/`bil_restrict_E_isPosSemidef`/`bil_restrict_E_nondegenerate_iff`)
    generalizes to any pair of generators, not just rank-2 whole diagrams, and may help.
-3. The `Ãₙ`, `D̃ₙ`, `Ẽ₆`–`Ẽ₈`, `F̃₄`, `G̃₂` `IsIrreducibleAffineCoxeter`/`IsIrreducibleAffineWeyl`
-   goals, whose matrices are already defined.
-4. Define the remaining affine matrices (`B̃`, `C̃`), then their goals.
+3. The affine `IsIrreducibleAffineCoxeter`/`IsIrreducibleAffineWeyl` goals.
