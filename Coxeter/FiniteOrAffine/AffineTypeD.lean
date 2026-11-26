@@ -6,9 +6,9 @@ public import Coxeter.SpecialFeatures
 /-!
 # Affine Coxeter groups of type D
 
-This file defines the affine type `D` Coxeter matrix and Coxeter group, and the Euler lattice of
-`D̃ₙ` for `n ≥ 4`, whose Coxeter transformation is quasi-unipotent of index exactly `2`. The
-classification statements are left as `proof_wanted`.
+This file defines the affine type `D` Coxeter matrix and Coxeter group, proves that `D̃ₙ` is an
+irreducible affine Coxeter group and an irreducible affine Weyl group for `n ≥ 4`, and defines the
+Euler lattice of `D̃ₙ`, whose Coxeter transformation is quasi-unipotent of index exactly `2`.
 
 ## Main definitions
 
@@ -17,6 +17,7 @@ classification statements are left as `proof_wanted`.
 
 ## Main statements
 
+* `Coxeter.affineTypeD_isIrreducibleAffineCoxeter`, `Coxeter.affineTypeD_isIrreducibleAffineWeyl`
 * `Coxeter.affineTypeDBilinearLattice_isQuasiUnipotent`
 
 ## Implementation notes
@@ -64,11 +65,165 @@ def affineTypeDMatrix (n : ℕ) : CoxeterMatrix (Fin (n + 1)) where
   M := affineTypeDMatrix n
   cs := (affineTypeDMatrix n).toCoxeterSystem
 
-proof_wanted affineTypeD_isIrreducibleAffineCoxeter (n : ℕ) [NeZero n] :
-    @IsIrreducibleAffineCoxeter _ (affineTypeDGroup n)
+/-! ### `D̃ₙ` is an irreducible affine Weyl group
 
-proof_wanted affineTypeD_isIrreducibleAffineWeyl (n : ℕ) [NeZero n] :
-    @IsIrreducibleAffineWeyl _ (affineTypeDGroup n)
+By `isIrreducibleAffineWeyl_of_null` it suffices that the diagram is connected, the entries are
+crystallographic, and the null root `δ = (1, 2, …, 2, 1, 1, 1)` (`1` at the four leaves `0`,
+`n - 2`, `n - 1`, `n`) is orthogonal to every `stdBasis j`. We write `n = m + 4`. -/
+
+section Classification
+
+variable {m : ℕ}
+
+/-- `y` read at a natural-number index, `0` out of range. -/
+private def affDN_get (y : Fin (m + 4 + 1) → ℝ) (k : ℕ) : ℝ :=
+  if h : k < m + 4 + 1 then y ⟨k, h⟩ else 0
+
+/-- Summing against the indicator of a single index, given by its value in `ℕ`. -/
+private theorem affDN_sum_ite (P : Prop) [Decidable P] (k : ℕ) (f : Fin (m + 4 + 1) → ℝ) :
+    (∑ i : Fin (m + 4 + 1), if P ∧ (i : ℕ) = k then f i else 0) =
+      if P then affDN_get f k else 0 := by
+  by_cases hP : P
+  · simp only [hP, true_and, ↓reduceIte, affDN_get]
+    split_ifs with h
+    · rw [Finset.sum_eq_single ⟨k, h⟩ (fun j _ hj ↦ ite_eq_right fun hjk ↦ hj (Fin.ext hjk))
+        (fun h' ↦ absurd (Finset.mem_univ _) h'), ite_eq_left rfl]
+    · exact Finset.sum_eq_zero fun j _ ↦ ite_eq_right (by omega)
+  · simp only [hP, false_and, ↓reduceIte, Finset.sum_const_zero]
+
+private theorem affDN_sum_val (k : ℕ) (f : Fin (m + 4 + 1) → ℝ) :
+    (∑ i : Fin (m + 4 + 1), if (i : ℕ) = k then f i else 0) = affDN_get f k := by
+  simpa using affDN_sum_ite True k f
+
+/-- Column `j` of the Gram matrix of `bil` for `D̃_(m+4)`: one indicator per possible neighbour. -/
+private theorem affineTypeD_gram (i j : Fin (m + 4 + 1)) :
+    -Real.cos (Real.pi / (affineTypeDMatrix (m + 4) i j : ℝ)) =
+      (if (i : ℕ) = j then 1 else 0) -
+        (if (j : ℕ) + 1 ≤ m + 2 ∧ (i : ℕ) = j + 1 then 1 / 2 else 0) -
+        (if (1 ≤ (j : ℕ) ∧ (j : ℕ) ≤ m + 2) ∧ (i : ℕ) = j - 1 then 1 / 2 else 0) -
+        (if (j : ℕ) = m + 1 ∧ (i : ℕ) = m + 3 then 1 / 2 else 0) -
+        (if (j : ℕ) = m + 3 ∧ (i : ℕ) = m + 1 then 1 / 2 else 0) -
+        (if (j : ℕ) = 1 ∧ (i : ℕ) = m + 4 then 1 / 2 else 0) -
+        (if (j : ℕ) = m + 4 ∧ (i : ℕ) = 1 then 1 / 2 else 0) := by
+  have hi := i.isLt
+  have hj := j.isLt
+  unfold affineTypeDMatrix
+  simp only [Matrix.of_apply, Fin.ext_iff]
+  split
+  · simp (disch := omega) only [ite_eq_right]
+    norm_num
+  · split
+    · rename_i hadj
+      rcases hadj with h | h | h | h | h | h
+      all_goals
+        simp (disch := omega) only [ite_eq_left, ite_eq_right]
+        norm_num [Real.cos_pi_div_three]
+    · simp (disch := omega) only [ite_eq_right]
+      norm_num
+
+/-- The null root of `D̃_(m+4)`. -/
+private noncomputable def affineTypeDNull : Fin (m + 4 + 1) →₀ ℝ :=
+  Finsupp.equivFunOnFinite.symm fun i ↦ if (i : ℕ) = 0 ∨ m + 2 ≤ (i : ℕ) then 1 else 2
+
+private theorem affineTypeDNull_pos (i : Fin (m + 4 + 1)) : 0 < affineTypeDNull (m := m) i := by
+  simp only [affineTypeDNull, Finsupp.coe_equivFunOnFinite_symm]
+  split_ifs <;> norm_num
+
+private theorem affDN_get_null (k : ℕ) :
+    affDN_get (affineTypeDNull (m := m)) k =
+      if k < m + 4 + 1 then (if k = 0 ∨ m + 2 ≤ k then 1 else 2) else 0 := by
+  unfold affDN_get
+  split_ifs <;> simp_all [affineTypeDNull]
+
+private theorem affineTypeD_bil_null (j : Fin (m + 4 + 1)) :
+    (@bil _ (affineTypeDGroup (m + 4))) affineTypeDNull
+      (@stdBasis _ (affineTypeDGroup (m + 4)) j) = 0 := by
+  rw [@bil_stdBasis_right_eq_sum _ (affineTypeDGroup (m + 4)) (Fin.fintype (m + 4 + 1))]
+  change ∑ i : Fin (m + 4 + 1),
+    affineTypeDNull i * -Real.cos (Real.pi / (affineTypeDMatrix (m + 4) i j : ℝ)) = 0
+  simp only [affineTypeD_gram, mul_sub, mul_ite, mul_one, mul_zero, Finset.sum_sub_distrib,
+    affDN_sum_ite, affDN_sum_val]
+  have hmul : ∀ k, affDN_get (m := m) (fun i ↦ affineTypeDNull (m := m) i * (1 / 2)) k =
+      affDN_get (m := m) affineTypeDNull k * (1 / 2) := fun k ↦ by
+    unfold affDN_get
+    split_ifs <;> simp
+  simp only [hmul, affDN_get_null]
+  obtain ⟨j, hj⟩ := j
+  simp only
+  rcases Nat.lt_or_ge j 2 with hj2 | hj2
+  · obtain rfl | rfl : j = 0 ∨ j = 1 := by omega
+    all_goals
+      rcases Nat.eq_zero_or_pos m with rfl | hm
+      all_goals
+        simp (disch := omega) only [ite_eq_left, ite_eq_right, ↓reduceIte, true_or]
+        norm_num
+  · rcases Nat.lt_or_ge j (m + 1) with hjm | hjm
+    · simp (disch := omega) only [ite_eq_left, ite_eq_right]
+      norm_num
+    · obtain rfl | rfl | rfl | rfl : j = m + 1 ∨ j = m + 2 ∨ j = m + 3 ∨ j = m + 4 := by omega
+      all_goals
+        simp (disch := omega) only [ite_eq_left, ite_eq_right, ↓reduceIte]
+        norm_num
+
+private theorem affineTypeD_isIrreducible' :
+    @IsIrreducible _ (affineTypeDGroup (m + 4)) := by
+  refine isIrreducibleMatrix_of_exists_lt (affineTypeDMatrix (m + 4)) fun i hi ↦ ?_
+  obtain ⟨i, hi'⟩ := i
+  have hi0 : i ≠ 0 := fun h ↦ hi (Fin.ext h)
+  have key : ∀ j : Fin (m + 4 + 1), (j : ℕ) < i →
+      (((j : ℕ) + 1 = i ∧ i ≤ m + 2) ∨ ((j : ℕ) = m + 1 ∧ i = m + 3) ∨
+        ((j : ℕ) = 1 ∧ i = m + 4)) → affineTypeDMatrix (m + 4) j ⟨i, hi'⟩ ≠ 2 := by
+    intro j _ hj
+    unfold affineTypeDMatrix
+    simp only [Matrix.of_apply, Fin.ext_iff]
+    split_ifs <;> omega
+  by_cases h1 : i ≤ m + 2
+  · exact ⟨⟨i - 1, by omega⟩, Fin.lt_def.mpr (by simp only; omega),
+      key _ (by simp only; omega) (Or.inl ⟨by simp only; omega, h1⟩)⟩
+  · obtain rfl | rfl : i = m + 3 ∨ i = m + 4 := by omega
+    · exact ⟨⟨m + 1, by omega⟩, Fin.lt_def.mpr (by simp only; omega),
+        key _ (by simp only; omega) (Or.inr (Or.inl ⟨rfl, rfl⟩))⟩
+    · exact ⟨⟨1, by omega⟩, Fin.lt_def.mpr (by simp only; omega),
+        key _ (by simp only; omega) (Or.inr (Or.inr ⟨rfl, rfl⟩))⟩
+
+private theorem affineTypeD_isCrystallographic' :
+    @IsCrystallographic _ (affineTypeDGroup (m + 4)) := by
+  intro i i' hii'
+  change affineTypeDMatrix (m + 4) i i' = 0 ∨ affineTypeDMatrix (m + 4) i i' = 2 ∨
+    affineTypeDMatrix (m + 4) i i' = 3 ∨ affineTypeDMatrix (m + 4) i i' = 4 ∨
+    affineTypeDMatrix (m + 4) i i' = 6
+  unfold affineTypeDMatrix
+  simp only [Matrix.of_apply]
+  split_ifs <;> simp_all
+
+end Classification
+
+theorem affineTypeD_isIrreducible (n : ℕ) (hn : 4 ≤ n) :
+    @IsIrreducible _ (@affineTypeDGroup n ⟨by omega⟩) := by
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
+  exact affineTypeD_isIrreducible'
+
+theorem affineTypeD_isCrystallographic (n : ℕ) (hn : 4 ≤ n) :
+    @IsCrystallographic _ (@affineTypeDGroup n ⟨by omega⟩) := by
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
+  exact affineTypeD_isCrystallographic'
+
+/-- `D̃ₙ` is an irreducible affine Coxeter group (`n ≥ 4`; for smaller `n`, `affineTypeDMatrix n`
+is not `D̃ₙ`). -/
+theorem affineTypeD_isIrreducibleAffineCoxeter (n : ℕ) (hn : 4 ≤ n) :
+    @IsIrreducibleAffineCoxeter _ (@affineTypeDGroup n ⟨by omega⟩) := by
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
+  exact @isIrreducibleAffineCoxeter_of_null _ (affineTypeDGroup (m + 4))
+    (Finite.of_fintype (Fin (m + 4 + 1))) affineTypeD_isIrreducible' affineTypeDNull
+    (fun i ↦ affineTypeDNull_pos i) affineTypeD_bil_null
+
+/-- `D̃ₙ` is an irreducible affine Weyl group (`n ≥ 4`). -/
+theorem affineTypeD_isIrreducibleAffineWeyl (n : ℕ) (hn : 4 ≤ n) :
+    @IsIrreducibleAffineWeyl _ (@affineTypeDGroup n ⟨by omega⟩) := by
+  obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
+  exact @isIrreducibleAffineWeyl_of_null _ (affineTypeDGroup (m + 4))
+    (Finite.of_fintype (Fin (m + 4 + 1))) affineTypeD_isIrreducible' affineTypeD_isCrystallographic'
+    affineTypeDNull (fun i ↦ affineTypeDNull_pos i) affineTypeD_bil_null
 
 
 /-! ### Euler lattice -/
