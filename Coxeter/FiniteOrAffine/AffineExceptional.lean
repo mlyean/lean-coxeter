@@ -6,9 +6,9 @@ public import Coxeter.SpecialFeatures
 /-!
 # Exceptional affine Coxeter groups
 
-This file defines the affine Coxeter matrices of types `Ẽ₆`, `Ẽ₇`, `Ẽ₈` and their Euler lattices,
-and reserves names for `F̃₄`, `G̃₂`, whose matrices are still stubs. The classification proofs are
-intentionally left as stubs.
+This file defines the affine Coxeter matrices of types `Ẽ₆`, `Ẽ₇`, `Ẽ₈`, `F̃₄`, `G̃₂`, and the
+Euler lattices of the simply laced ones. The classification proofs are intentionally left as
+stubs.
 -/
 
 @[expose] public section
@@ -71,8 +71,31 @@ def affineTypeE8Matrix : CoxeterMatrix (Fin 9) where
           2, 2, 2, 2, 2, 2, 3, 1, 3;
           2, 2, 2, 2, 2, 2, 2, 3, 1]
 
-axiom affineTypeF4Matrix : CoxeterMatrix (Fin 5)
-axiom affineTypeG2Matrix : CoxeterMatrix (Fin 3)
+set_option backward.isDefEq.respectTransparency false in
+/-- The Coxeter matrix of affine type `F̃₄`: mathlib's `CoxeterMatrix.F₄` with one extra node.
+```
+                    4
+    o --- o --- o --- o --- o
+```
+(the extra node `4` is attached to node `0`, at the left end). -/
+def affineTypeF4Matrix : CoxeterMatrix (Fin 5) where
+  M := !![1, 3, 2, 2, 3;
+          3, 1, 4, 2, 2;
+          2, 4, 1, 3, 2;
+          2, 2, 3, 1, 2;
+          3, 2, 2, 2, 1]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- The Coxeter matrix of affine type `G̃₂`: mathlib's `CoxeterMatrix.G₂` with one extra node.
+```
+             6
+    o --- o --- o
+```
+(the extra node `2` is attached to node `0`, at the left end). -/
+def affineTypeG2Matrix : CoxeterMatrix (Fin 3) where
+  M := !![1, 6, 3;
+          6, 1, 2;
+          3, 2, 1]
 
 @[reducible] noncomputable def affineTypeE6Group : CoxeterGroup affineTypeE6Matrix.Group where
   B := Fin 7

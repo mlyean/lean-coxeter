@@ -28,7 +28,7 @@ declaration and what's needed to close it.
 
 ## Affine types
 
-The `axiom` matrices below block every downstream `proof_wanted` in their file. Matrix
+The `axiom` matrices below (`B̃`, `C̃`) block every downstream `proof_wanted` in their file. Matrix
 definitions should mirror `TypeD.lean`'s `typeDMatrix`-style construction (explicit `Matrix.of`
 with the standard affine Dynkin diagram shape) or reuse mathlib's affine matrices if/when
 available.
@@ -64,8 +64,6 @@ semidefinite but degenerate `bil`, with radical spanned by the null root.
   hypothesis likely needs strengthening to `4 ≤ n`.
 
 ### AffineExceptional.lean
-- `axiom affineTypeF4Matrix : CoxeterMatrix (Fin 5)`
-- `axiom affineTypeG2Matrix : CoxeterMatrix (Fin 3)`
 - `proof_wanted affineTypeE6_isIrreducibleAffineCoxeter : @IsIrreducibleAffineCoxeter _ affineTypeE6Group`
 - `proof_wanted affineTypeE7_isIrreducibleAffineCoxeter : @IsIrreducibleAffineCoxeter _ affineTypeE7Group`
 - `proof_wanted affineTypeE8_isIrreducibleAffineCoxeter : @IsIrreducibleAffineCoxeter _ affineTypeE8Group`
@@ -76,10 +74,10 @@ semidefinite but degenerate `bil`, with radical spanned by the null root.
 - `proof_wanted affineTypeE8_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeE8Group`
 - `proof_wanted affineTypeF4_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeF4Group`
 - `proof_wanted affineTypeG2_isIrreducibleAffineWeyl : @IsIrreducibleAffineWeyl _ affineTypeG2Group`
-  — for `Ẽ₆`–`Ẽ₈` the matrices are fixed, so connectivity is a finite check, and the null root is
-  (a multiple of) the `δ` in the quasi-unipotence proofs. `F̃₄`/`G̃₂` are blocked on their matrix
-  axioms; they are not simply laced, so they have no Euler lattice here (they need valued
-  quivers).
+  — all five matrices are fixed, so connectivity is a finite check. For `Ẽ₆`–`Ẽ₈` the null root
+  is (a multiple of) the `δ` in the quasi-unipotence proofs. `F̃₄`/`G̃₂` are not simply laced, so
+  `bil` has irrational entries (`cos (π / 4)`, `cos (π / 6)`) and they have no Euler lattice here
+  (they need valued quivers).
 
 ## Suggested order of attack
 
@@ -89,6 +87,6 @@ semidefinite but degenerate `bil`, with radical spanned by the null root.
    tractable than a general argument; the rank-2 machinery in `Coxeter.GeometricRepresentation`
    (`bil_restrict_E_diag`/`bil_restrict_E_isPosSemidef`/`bil_restrict_E_nondegenerate_iff`)
    generalizes to any pair of generators, not just rank-2 whole diagrams, and may help.
-3. The `Ãₙ`, `D̃ₙ` and `Ẽ₆`–`Ẽ₈` `IsIrreducibleAffineCoxeter`/`IsIrreducibleAffineWeyl` goals,
-   whose matrices are already defined.
-4. Define the remaining affine matrices (`B̃`, `C̃`, `F̃₄`, `G̃₂`), then their goals.
+3. The `Ãₙ`, `D̃ₙ`, `Ẽ₆`–`Ẽ₈`, `F̃₄`, `G̃₂` `IsIrreducibleAffineCoxeter`/`IsIrreducibleAffineWeyl`
+   goals, whose matrices are already defined.
+4. Define the remaining affine matrices (`B̃`, `C̃`), then their goals.
