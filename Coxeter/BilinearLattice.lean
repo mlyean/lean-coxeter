@@ -608,6 +608,67 @@ theorem ofUnimodular_S_pow_eq_one
   rw [hS]
   exact h.symm
 
+/-- If `C * Q = -Cᵀ`
+then the Coxeter transformation `S`
+of `ofUnimodular C hC` is `Q`, viewed as an
+endomorphism through the algebra equivalence
+`Matrix.toLinAlgEquiv'`. -/
+theorem ofUnimodular_S_eq_toLinAlgEquiv'
+  (C : Matrix (Fin n) (Fin n) ℤ)
+  (hC : IsUnit C.det) (Q : Matrix (Fin n) (Fin n) ℤ) (hQ : C * Q = -Cᵀ) :
+  ((ofUnimodular C hC).S : Module.End ℤ (ofUnimodular C hC)) = Matrix.toLinAlgEquiv' Q :=
+  LinearMap.ext fun (x : Fin n → ℤ) ↦
+    ((ofUnimodular_S_eq_iff C hC x (Q *ᵥ x)).2 (by rw [mulVec_mulVec, hQ, neg_mulVec])).trans
+      (Matrix.toLinAlgEquiv'_apply Q x).symm
+
+/-- If `C * Q = -Cᵀ` and `Q ^ m - 1` is square-zero for some `m > 0`,
+then the Coxeter transformation of `ofUnimodular C hC` is quasi-unipotent of index `2`. -/
+theorem ofUnimodular_isQuasiUnipotentOfIndex_two
+  (C : Matrix (Fin n) (Fin n) ℤ)
+  (hC : IsUnit C.det) (Q : Matrix (Fin n) (Fin n) ℤ) (hQ : C * Q = -Cᵀ) {m : ℕ} (hm : 0 < m)
+  (h : (Q ^ m - 1) ^ 2 = 0) :
+  Module.End.IsQuasiUnipotentOfIndex
+    ((ofUnimodular C hC).S : Module.End ℤ (ofUnimodular C hC)) 2 := by
+  refine ⟨m, hm, ?_⟩
+  have key : (Matrix.toLinAlgEquiv' Q ^ m - 1) ^ 2 = (0 : Module.End ℤ (Fin n → ℤ)) := by
+    rw [← map_pow, ← map_one Matrix.toLinAlgEquiv', ← map_sub, ← map_pow, h, map_zero]
+  rw [ofUnimodular_S_eq_toLinAlgEquiv' C hC Q hQ]
+  exact key
+
+/-- A witness that the Coxeter transformation has infinite order:
+if `Q ^ h` fixes `δ ≠ 0` and
+translates `v` by `δ`, then `Q ^ (h * k)` translates `v` by `k • δ`.
+So no power of `Q` is `1`.
+Hence the Coxeter transformation of `ofUnimodular C hC` is not quasi-unipotent of index `1`. -/
+theorem ofUnimodular_not_isQuasiUnipotentOfIndex_one
+  (C : Matrix (Fin n) (Fin n) ℤ)
+  (hC : IsUnit C.det) (Q : Matrix (Fin n) (Fin n) ℤ) (hQ : C * Q = -Cᵀ) {h : ℕ}
+  (v δ : Fin n → ℤ) (hδ : Q ^ h *ᵥ δ = δ) (hv : Q ^ h *ᵥ v = v + δ) (hδ0 : δ ≠ 0) :
+  ¬ Module.End.IsQuasiUnipotentOfIndex
+    ((ofUnimodular C hC).S : Module.End ℤ (ofUnimodular C hC)) 1 := by
+  rintro ⟨m, hm, h1⟩
+  rw [pow_one, sub_eq_zero, ofUnimodular_S_eq_toLinAlgEquiv' C hC Q hQ] at h1
+  have h1' : Matrix.toLinAlgEquiv' Q ^ m = (1 : Module.End ℤ (Fin n → ℤ)) := h1
+  rw [← map_pow, ← map_one Matrix.toLinAlgEquiv'] at h1'
+  have hQm : Q ^ m = 1 := Matrix.toLinAlgEquiv'.injective h1'
+  have hδk : ∀ k : ℕ, (Q ^ h) ^ k *ᵥ δ = δ := by
+    intro k
+    induction k with
+    | zero => rw [pow_zero, one_mulVec]
+    | succ k ih => rw [pow_succ, ← mulVec_mulVec, hδ, ih]
+  have hvk : ∀ k : ℕ, (Q ^ h) ^ k *ᵥ v = v + (k : ℤ) • δ := by
+    intro k
+    induction k with
+    | zero => rw [pow_zero, one_mulVec, Nat.cast_zero, zero_smul, add_zero]
+    | succ k ih =>
+        rw [pow_succ, ← mulVec_mulVec, hv, mulVec_add, ih, hδk, Nat.cast_succ, add_smul, one_smul,
+          add_assoc]
+  have hvm := hvk m
+  rw [← pow_mul, mul_comm, pow_mul, hQm, one_pow, one_mulVec, left_eq_add] at hvm
+  rcases smul_eq_zero.mp hvm with h0 | h0
+  · exact absurd (Int.ofNat_eq_zero.mp h0) hm.ne'
+  · exact hδ0 h0
+
 /-- The cone of dimension vectors `ℕⁿ ⊆ ℤⁿ`. -/
 def positiveCone (n : ℕ) : AddSubmonoid (Fin n → ℤ) where
   carrier := {x | ∀ i, 0 ≤ x i}
