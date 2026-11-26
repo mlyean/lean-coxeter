@@ -9,6 +9,7 @@ public import Coxeter.CartanMatrix
 public import Coxeter.Combinatorics.SimpleGraph
 public import Coxeter.Component
 public import Coxeter.Dihedral
+public import Coxeter.Data.Fin
 public import Coxeter.Data.List.Lemmas
 public import Coxeter.FiniteOrAffine.Affine
 public import Coxeter.FiniteOrAffine.Finite
